@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mdfind -name \"node\" -onlyin /usr/local)",
+      "Bash(grep -v \".node$\")",
+      "Read(//Users/alfredosilva/.volta/**)",
+      "Read(//Users/alfredosilva/**)",
+      "Read(//Users/alfredosilva/n/**)",
+      "Read(//Users/alfredosilva/.asdf/**)",
+      "WebSearch",
+      "WebFetch(domain:www.fifa.com)",
+      "WebFetch(domain:worldsoccertalk.com)",
+      "WebFetch(domain:www.nbcsports.com)",
+      "WebFetch(domain:www.olympics.com)",
+      "WebFetch(domain:sports.yahoo.com)"
+    ]
+  }
+}
