@@ -5,12 +5,19 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { User } from '@/types/user';
 
+interface FirebaseUser {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+  photoURL: string | null;
+}
+
 interface AuthState {
   user: User | null;
   token: string | null;
   setAuth: (user: User, token: string) => void;
   clearAuth: () => void;
-  loginWithGoogle: () => void;
+  loginWithGoogle: (firebaseUser: FirebaseUser) => void;
   loginWithEmail: (email: string, password: string, displayName?: string) => User;
   register: (email: string, password: string, displayName: string) => User;
   addPoints: (pts: number) => void;
@@ -29,17 +36,16 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, token) => set({ user, token }),
       clearAuth: () => set({ user: null, token: null }),
 
-      loginWithGoogle: () => {
-        const id = uuidv4();
+      loginWithGoogle: (firebaseUser) => {
         const user: User = {
-          id,
-          displayName: 'Google User',
-          avatarUrl: `https://i.pravatar.cc/150?u=${id}`,
-          email: `user-${id.slice(0, 6)}@gmail.com`,
+          id: firebaseUser.uid,
+          displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
+          avatarUrl: firebaseUser.photoURL,
+          email: firebaseUser.email ?? '',
           totalPoints: 0,
           globalRank: null,
         };
-        set({ user, token: `mock-token-${id}` });
+        set({ user, token: firebaseUser.uid });
       },
 
       loginWithEmail: (email, _password, displayName) => {
