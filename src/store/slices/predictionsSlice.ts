@@ -4,17 +4,20 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { Prediction } from '@/types/prediction';
+import { savePredictionToFirestore, saveAllPredictionsToFirestore, subscribeToCommunityPredictions } from '@/lib/predictionsService';
 
 interface PredictionsState {
-  // Persisted submitted predictions
-  saved: Record<string, Prediction>; // matchId → submitted prediction
-  // In-progress draft inputs
+  saved: Record<string, Prediction>;
   draft: Record<string, { homeScore: number; awayScore: number }>;
+  community: Prediction[];
+  syncedToFirestore: boolean;
 
   setDraft: (matchId: string, home: number, away: number) => void;
   clearDraft: (matchId: string) => void;
   submitPrediction: (matchId: string, userId: string) => Prediction | null;
   getAllSaved: () => Prediction[];
+  syncSavedToFirestore: (userId: string) => Promise<void>;
+  subscribeCommunity: () => () => void;
 }
 
 const safeStorage = typeof window !== 'undefined'
@@ -26,6 +29,8 @@ export const usePredictionsStore = create<PredictionsState>()(
     (set, get) => ({
       saved: {},
       draft: {},
+      community: [],
+      syncedToFirestore: false,
 
       setDraft: (matchId, home, away) =>
         set((s) => ({ draft: { ...s.draft, [matchId]: { homeScore: home, awayScore: away } } })),
@@ -54,15 +59,33 @@ export const usePredictionsStore = create<PredictionsState>()(
           saved: { ...s.saved, [matchId]: prediction },
           draft: (() => { const n = { ...s.draft }; delete n[matchId]; return n; })(),
         }));
+        // Fire-and-forget save to Firestore
+        savePredictionToFirestore(prediction).catch(console.error);
         return prediction;
       },
 
       getAllSaved: () => Object.values(get().saved),
+
+      // Upload all locally saved predictions to Firestore (one-time sync for existing users)
+      syncSavedToFirestore: async (userId) => {
+        const { saved, syncedToFirestore } = get();
+        if (syncedToFirestore) return;
+        const predictions = Object.values(saved).filter(p => p.userId === userId);
+        if (predictions.length === 0) return;
+        await saveAllPredictionsToFirestore(predictions);
+        set({ syncedToFirestore: true });
+      },
+
+      subscribeCommunity: () => {
+        return subscribeToCommunityPredictions((predictions) => {
+          set({ community: predictions });
+        });
+      },
     }),
     {
       name: 'wc2026-predictions',
       storage: createJSONStorage(() => safeStorage),
-      partialize: (s) => ({ saved: s.saved }),
+      partialize: (s) => ({ saved: s.saved, syncedToFirestore: s.syncedToFirestore }),
     }
   )
 );

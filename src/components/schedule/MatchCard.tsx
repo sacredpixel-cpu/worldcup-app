@@ -9,7 +9,7 @@ import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 import { formatKickoff } from '@/lib/utils/formatDate';
 import { STAGE_LABELS } from '@/data/matches';
-import { getCrowdAverage } from '@/data/mockPredictions';
+import { usePredictionsStore } from '@/store/slices/predictionsSlice';
 
 interface MatchCardProps {
   match: Match;
@@ -43,7 +43,23 @@ function TeamBlock({ team, score, side }: {
 }
 
 export function MatchCard({ match, userPrediction, allUserPredictions, isAuthenticated, userId }: MatchCardProps) {
-  const crowd = getCrowdAverage(match.id, allUserPredictions);
+  const { community } = usePredictionsStore();
+  const matchPredictions = community.filter(p => p.matchId === match.id);
+  const crowd = matchPredictions.length === 0 ? null : (() => {
+    const avgHome = Math.round(matchPredictions.reduce((s, p) => s + p.homeScore, 0) / matchPredictions.length * 10) / 10;
+    const avgAway = Math.round(matchPredictions.reduce((s, p) => s + p.awayScore, 0) / matchPredictions.length * 10) / 10;
+    const homeWins = matchPredictions.filter(p => p.homeScore > p.awayScore).length;
+    const draws = matchPredictions.filter(p => p.homeScore === p.awayScore).length;
+    const awayWins = matchPredictions.length - homeWins - draws;
+    return {
+      homeAvg: avgHome,
+      awayAvg: avgAway,
+      count: matchPredictions.length,
+      homePct: Math.round(homeWins / matchPredictions.length * 100),
+      drawPct: Math.round(draws / matchPredictions.length * 100),
+      awayPct: Math.round(awayWins / matchPredictions.length * 100),
+    };
+  })();
   const isTbd = match.homeTeam.id === 'tbd';
 
   return (
