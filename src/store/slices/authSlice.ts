@@ -21,6 +21,8 @@ interface AuthState {
   loginWithEmail: (email: string, password: string, displayName?: string) => User;
   register: (email: string, password: string, displayName: string) => User;
   addPoints: (pts: number) => void;
+  updateAvatar: (url: string) => void;
+  updateDisplayName: (name: string) => void;
 }
 
 const safeStorage = typeof window !== 'undefined'
@@ -82,6 +84,18 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
         set({ user: { ...user, totalPoints: user.totalPoints + pts } });
+      },
+
+      updateAvatar: (url) => {
+        const { user } = get();
+        if (!user) return;
+        set({ user: { ...user, avatarUrl: url } });
+      },
+
+      updateDisplayName: (name) => {
+        const { user } = get();
+        if (!user) return;
+        set({ user: { ...user, displayName: name } });
       },
     }),
     {
