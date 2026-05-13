@@ -84,6 +84,7 @@ function GroupsContent() {
 
   function handleCreate() {
     if (!newGroupName.trim()) { setCreateError('Enter a group name.'); return; }
+    if (!user) return;
     createGroup(newGroupName.trim(), user.id, user.displayName, user.avatarUrl);
     setNewGroupName('');
     setShowCreate(false);
