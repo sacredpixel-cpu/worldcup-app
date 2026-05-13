@@ -88,7 +88,9 @@ function LeaderboardContent() {
   }, [user, saved]);
 
   const globalBoard = useMemo(() => {
-    const all = [...MOCK_USERS];
+    const tournamentStart = new Date('2026-06-11T00:00:00');
+    const showMocks = new Date() < tournamentStart;
+    const all = showMocks ? [...MOCK_USERS] : [];
     if (userEntry) all.push(userEntry);
     return all.sort((a, b) => b.totalPoints - a.totalPoints);
   }, [userEntry]);
