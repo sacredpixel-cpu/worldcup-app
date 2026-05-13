@@ -8,9 +8,10 @@ import { useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { uploadAvatar } from '@/lib/uploadService';
+import { COUNTRIES, US_STATES } from '@/data/countries';
 
 function ProfileContent() {
-  const { user, clearAuth, updateAvatar } = useAuthStore();
+  const { user, clearAuth, updateAvatar, updateLocation } = useAuthStore();
   const { saved } = usePredictionsStore();
   const { groups } = useGroupsStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,6 +155,55 @@ function ProfileContent() {
           </div>
         </div>
       )}
+
+      {/* Location */}
+      <div className="mx-4 mb-4 rounded-xl border border-border bg-card p-4">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-white/40">Where are you from?</h2>
+        <div className="flex flex-col gap-3">
+          <div className="relative">
+            <select
+              value={user.countryCode ?? ''}
+              onChange={e => {
+                const c = COUNTRIES.find(c => c.code === e.target.value);
+                if (c) updateLocation(c.name, c.code, c.code === 'us' ? user.state : undefined);
+              }}
+              className="w-full appearance-none rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-white pr-8 focus:outline-none focus:border-brand"
+            >
+              <option value="">Select country…</option>
+              {COUNTRIES.map(c => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40">▾</span>
+          </div>
+
+          {user.countryCode === 'us' && (
+            <div className="relative">
+              <select
+                value={user.state ?? ''}
+                onChange={e => updateLocation('USA', 'us', e.target.value)}
+                className="w-full appearance-none rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-white pr-8 focus:outline-none focus:border-brand"
+              >
+                <option value="">Select state…</option>
+                {US_STATES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40">▾</span>
+            </div>
+          )}
+
+          {user.countryCode && (
+            <div className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`https://flagcdn.com/w40/${user.countryCode}.png`} alt="" className="h-4 w-6 object-cover rounded-sm" />
+              <span className="text-sm text-white/70">
+                {user.country}{user.state ? `, ${user.state}` : ''}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Scoring legend */}
       <div className="mx-4 mb-4 rounded-xl border border-border bg-card p-4">

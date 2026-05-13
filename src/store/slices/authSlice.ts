@@ -23,6 +23,7 @@ interface AuthState {
   addPoints: (pts: number) => void;
   updateAvatar: (url: string) => void;
   updateDisplayName: (name: string) => void;
+  updateLocation: (country: string, countryCode: string, state?: string) => void;
 }
 
 const safeStorage = typeof window !== 'undefined'
@@ -90,12 +91,25 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
         set({ user: { ...user, avatarUrl: url } });
+        import('@/lib/usersService').then(({ saveUserProfile }) =>
+          saveUserProfile({ userId: user.id, displayName: user.displayName, avatarUrl: url, country: user.country, countryCode: user.countryCode, state: user.state })
+        ).catch(console.error);
       },
 
       updateDisplayName: (name) => {
         const { user } = get();
         if (!user) return;
         set({ user: { ...user, displayName: name } });
+      },
+
+      updateLocation: (country, countryCode, state) => {
+        const { user } = get();
+        if (!user) return;
+        const updated = { ...user, country, countryCode, state: state ?? undefined };
+        set({ user: updated });
+        import('@/lib/usersService').then(({ saveUserProfile }) =>
+          saveUserProfile({ userId: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, country, countryCode, state })
+        ).catch(console.error);
       },
     }),
     {

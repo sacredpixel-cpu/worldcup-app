@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useAuthStore, usePredictionsStore, useGroupsStore } from '@/store';
+import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
 import { ALL_MATCHES } from '@/data/matches';
 import { calcPoints } from '@/lib/utils/calcPoints';
 import { ClientOnly } from '@/components/ui/ClientOnly';
@@ -38,12 +39,16 @@ function RankBadge({ rank }: { rank: number }) {
   return <span className="w-8 text-center text-sm font-bold text-white/40">{rank}</span>;
 }
 
-function LeaderboardRow({ entry, rank, isMe }: { entry: LeaderboardEntry; rank: number; isMe: boolean }) {
+function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntry; rank: number; isMe: boolean; profile?: UserProfile }) {
+  const location = profile?.countryCode
+    ? `${profile.countryCode === 'us' && profile.state ? profile.state + ', ' : ''}${profile.country}`
+    : null;
+
   return (
     <div className={`flex items-center gap-3 rounded-xl px-4 py-3 ${isMe ? 'border border-brand/40 bg-brand/10' : 'bg-card'}`}>
       <RankBadge rank={rank} />
       {entry.avatarUrl ? (
-        <Image src={entry.avatarUrl} alt={entry.displayName} width={36} height={36} className="rounded-full" unoptimized />
+        <Image src={entry.avatarUrl} alt={entry.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
       ) : (
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
           {entry.displayName[0].toUpperCase()}
@@ -53,9 +58,17 @@ function LeaderboardRow({ entry, rank, isMe }: { entry: LeaderboardEntry; rank: 
         <p className={`truncate text-sm font-semibold ${isMe ? 'text-brand-light' : 'text-white'}`}>
           {entry.displayName} {isMe && '(You)'}
         </p>
-        <p className="text-xs text-white/40">
-          {entry.correctScores} exact · {entry.correctOutcomes} correct
-        </p>
+        {location ? (
+          <div className="flex items-center gap-1 mt-0.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`https://flagcdn.com/w20/${profile!.countryCode}.png`} alt="" className="h-3 w-4 object-cover rounded-sm" />
+            <span className="text-xs text-white/40 truncate">{location}</span>
+          </div>
+        ) : (
+          <p className="text-xs text-white/40">
+            {entry.correctScores} exact · {entry.correctOutcomes} correct
+          </p>
+        )}
       </div>
       <div className="text-right">
         <p className="text-lg font-black text-gold">{entry.totalPoints}</p>
@@ -70,6 +83,12 @@ function LeaderboardContent() {
   const { saved } = usePredictionsStore();
   const { groups } = useGroupsStore();
   const [tab, setTab] = useState<'global' | string>('global');
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+
+  useEffect(() => {
+    const unsub = subscribeToUserProfiles(setUserProfiles);
+    return () => unsub();
+  }, []);
 
   const userEntry = useMemo<LeaderboardEntry | null>(() => {
     if (!user) return null;
@@ -166,6 +185,7 @@ function LeaderboardContent() {
             entry={entry}
             rank={i + 1}
             isMe={entry.userId === user?.id}
+            profile={userProfiles[entry.userId]}
           />
         ))}
       </div>
