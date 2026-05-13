@@ -2,12 +2,12 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyB_bqubbQVKORTWT3SCgOxepo7Lss_PPoo",
+  authDomain: "worldcup-2026-43ab4.firebaseapp.com",
+  projectId: "worldcup-2026-43ab4",
+  storageBucket: "worldcup-2026-43ab4.firebasestorage.app",
+  messagingSenderId: "541778389034",
+  appId: "1:541778389034:web:f31f81976eac934a28fb53",
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];

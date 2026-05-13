@@ -42,7 +42,12 @@ export default function RegisterPage() {
 
   async function handleGoogle() {
     setLoading(true);
-    await signInWithRedirect(auth, googleProvider);
+    try {
+      await signInWithRedirect(auth, googleProvider);
+    } catch (err: any) {
+      setErrors({ google: err.message || 'Google sign-in failed.' });
+      setLoading(false);
+    }
   }
 
   function validate() {

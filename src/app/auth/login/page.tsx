@@ -39,7 +39,12 @@ export default function LoginPage() {
 
   async function handleGoogle() {
     setLoading(true);
-    await signInWithRedirect(auth, googleProvider);
+    try {
+      await signInWithRedirect(auth, googleProvider);
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed.');
+      setLoading(false);
+    }
   }
 
   function handleEmail(e: React.FormEvent) {
