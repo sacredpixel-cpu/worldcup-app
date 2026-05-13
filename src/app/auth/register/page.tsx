@@ -2,10 +2,10 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/Button';
@@ -22,6 +22,28 @@ export default function RegisterPage() {
   const [usePhone, setUsePhone] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setLoading(true);
+    getRedirectResult(auth)
+      .then(result => {
+        if (result) {
+          loginWithGoogle(result.user);
+          router.push('/schedule');
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        setErrors({ google: 'Google sign-in failed. Please try again.' });
+        setLoading(false);
+      });
+  }, []);
+
+  async function handleGoogle() {
+    setLoading(true);
+    await signInWithRedirect(auth, googleProvider);
+  }
 
   function validate() {
     const e: Record<string, string> = {};
@@ -41,18 +63,6 @@ export default function RegisterPage() {
       register(usePhone ? `${phone}@phone.wc2026` : email, password, name.trim());
       router.push('/schedule');
     }, 500);
-  }
-
-  async function handleGoogle() {
-    setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      loginWithGoogle(result.user);
-      router.push('/schedule');
-    } catch (err: any) {
-      setErrors({ google: 'Google sign-in failed. Please try again.' });
-      setLoading(false);
-    }
   }
 
   return (
