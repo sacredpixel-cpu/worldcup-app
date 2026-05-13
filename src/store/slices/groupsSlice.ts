@@ -1,71 +1,74 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { Group, GroupMember } from '@/types/group';
-
-interface GroupsState {
-  groups: Group[];
-  createGroup: (name: string, userId: string, displayName: string, avatarUrl: string | null) => Group;
-  joinGroup: (inviteCode: string, userId: string, displayName: string, avatarUrl: string | null) => Group | null;
-  getGroup: (id: string) => Group | undefined;
-  leaveGroup: (groupId: string, userId: string) => void;
-}
+import {
+  createGroupInFirestore,
+  getGroupByInviteCode,
+  addMemberToGroup,
+  getUserGroups,
+  subscribeToUserGroups,
+} from '@/lib/groupsService';
 
 function randomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-const safeStorage = typeof window !== 'undefined'
-  ? localStorage
-  : { getItem: () => null, setItem: () => {}, removeItem: () => {} } as Storage;
+interface GroupsState {
+  groups: Group[];
+  loading: boolean;
+  setGroups: (groups: Group[]) => void;
+  createGroup: (name: string, userId: string, displayName: string, avatarUrl: string | null) => Promise<Group>;
+  joinGroup: (inviteCode: string, userId: string, displayName: string, avatarUrl: string | null) => Promise<Group | null>;
+  getGroup: (id: string) => Group | undefined;
+  fetchUserGroups: (userId: string) => Promise<void>;
+  subscribeGroups: (userId: string) => () => void;
+}
 
-export const useGroupsStore = create<GroupsState>()(
-  persist(
-    (set, get) => ({
-      groups: [],
+export const useGroupsStore = create<GroupsState>((set, get) => ({
+  groups: [],
+  loading: false,
 
-      createGroup: (name, userId, displayName, avatarUrl) => {
-        const member: GroupMember = { userId, displayName, avatarUrl, totalPoints: 0, rank: 1 };
-        const group: Group = {
-          id: uuidv4(),
-          name,
-          inviteCode: randomCode(),
-          creatorId: userId,
-          members: [member],
-          createdAt: new Date().toISOString(),
-        };
-        set((s) => ({ groups: [...s.groups, group] }));
-        return group;
-      },
+  setGroups: (groups) => set({ groups }),
 
-      joinGroup: (inviteCode, userId, displayName, avatarUrl) => {
-        const { groups } = get();
-        const group = groups.find(g => g.inviteCode === inviteCode.toUpperCase());
-        if (!group) return null;
-        if (group.members.some(m => m.userId === userId)) return group;
-        const member: GroupMember = { userId, displayName, avatarUrl, totalPoints: 0, rank: group.members.length + 1 };
-        const updated = { ...group, members: [...group.members, member] };
-        set((s) => ({ groups: s.groups.map(g => g.id === group.id ? updated : g) }));
-        return updated;
-      },
+  createGroup: async (name, userId, displayName, avatarUrl) => {
+    const member: GroupMember = { userId, displayName, avatarUrl, totalPoints: 0, rank: 1 };
+    const group: Group = {
+      id: uuidv4(),
+      name,
+      inviteCode: randomCode(),
+      creatorId: userId,
+      members: [member],
+      createdAt: new Date().toISOString(),
+    };
+    await createGroupInFirestore(group);
+    set((s) => ({ groups: [...s.groups.filter(g => g.id !== group.id), group] }));
+    return group;
+  },
 
-      getGroup: (id) => get().groups.find(g => g.id === id),
+  joinGroup: async (inviteCode, userId, displayName, avatarUrl) => {
+    const group = await getGroupByInviteCode(inviteCode);
+    if (!group) return null;
+    if (group.members.some(m => m.userId === userId)) return group;
+    const member: GroupMember = {
+      userId, displayName, avatarUrl, totalPoints: 0, rank: group.members.length + 1,
+    };
+    await addMemberToGroup(group.id, member);
+    const updated = { ...group, members: [...group.members, member] };
+    set((s) => ({ groups: [...s.groups.filter(g => g.id !== group.id), updated] }));
+    return updated;
+  },
 
-      leaveGroup: (groupId, userId) => {
-        set((s) => ({
-          groups: s.groups.map(g =>
-            g.id === groupId
-              ? { ...g, members: g.members.filter(m => m.userId !== userId) }
-              : g
-          ).filter(g => g.members.length > 0),
-        }));
-      },
-    }),
-    {
-      name: 'wc2026-groups',
-      storage: createJSONStorage(() => safeStorage),
-    }
-  )
-);
+  getGroup: (id) => get().groups.find(g => g.id === id),
+
+  fetchUserGroups: async (userId) => {
+    set({ loading: true });
+    const groups = await getUserGroups(userId);
+    set({ groups, loading: false });
+  },
+
+  subscribeGroups: (userId) => {
+    return subscribeToUserGroups(userId, (groups) => set({ groups }));
+  },
+}));

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore, useGroupsStore } from '@/store';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import { Button } from '@/components/ui/Button';
@@ -58,7 +58,7 @@ function GroupCard({ group, userId }: { group: Group; userId: string }) {
 
 function GroupsContent() {
   const { user } = useAuthStore();
-  const { groups, createGroup, joinGroup } = useGroupsStore();
+  const { groups, loading, createGroup, joinGroup, subscribeGroups } = useGroupsStore();
 
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
@@ -66,6 +66,14 @@ function GroupsContent() {
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
   const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeGroups(user.id);
+    return () => unsub();
+  }, [user?.id]);
 
   if (!user) {
     return (
@@ -80,28 +88,39 @@ function GroupsContent() {
     );
   }
 
-  const userId = user?.id ?? '';
-  const userDisplayName = user?.displayName ?? '';
-  const userAvatarUrl = user?.avatarUrl ?? null;
-
+  const userId = user.id;
   const myGroups = groups.filter(g => g.members.some(m => m.userId === userId));
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!userId) return;
     if (!newGroupName.trim()) { setCreateError('Enter a group name.'); return; }
-    createGroup(newGroupName.trim(), userId, userDisplayName, userAvatarUrl);
-    setNewGroupName('');
-    setShowCreate(false);
+    setCreating(true);
+    try {
+      await createGroup(newGroupName.trim(), userId, user.displayName, user.avatarUrl);
+      setNewGroupName('');
+      setShowCreate(false);
+    } catch {
+      setCreateError('Failed to create group. Try again.');
+    } finally {
+      setCreating(false);
+    }
   }
 
-  function handleJoin() {
+  async function handleJoin() {
     if (!userId) return;
     if (!joinCode.trim()) { setJoinError('Enter an invite code.'); return; }
-    const g = joinGroup(joinCode.trim(), userId, userDisplayName, userAvatarUrl);
-    if (!g) { setJoinError('Group not found. Check the code and try again.'); return; }
-    setJoinCode('');
-    setJoinError('');
-    setShowJoin(false);
+    setJoining(true);
+    try {
+      const g = await joinGroup(joinCode.trim(), userId, user.displayName, user.avatarUrl);
+      if (!g) { setJoinError('Group not found. Check the code and try again.'); return; }
+      setJoinCode('');
+      setJoinError('');
+      setShowJoin(false);
+    } catch {
+      setJoinError('Failed to join group. Try again.');
+    } finally {
+      setJoining(false);
+    }
   }
 
   return (
@@ -114,7 +133,11 @@ function GroupsContent() {
         </div>
       </div>
 
-      {myGroups.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+        </div>
+      ) : myGroups.length === 0 ? (
         <div className="flex flex-col items-center py-16 text-center px-6">
           <div className="mb-3 text-4xl">🤝</div>
           <p className="text-sm text-white/50 mb-4">No groups yet. Create one and share the code with friends!</p>
@@ -123,12 +146,11 @@ function GroupsContent() {
       ) : (
         <div className="flex flex-col gap-3 px-4">
           {myGroups.map(g => (
-            <GroupCard key={g.id} group={g} userId={user.id} />
+            <GroupCard key={g.id} group={g} userId={userId} />
           ))}
         </div>
       )}
 
-      {/* Create modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Group">
         <div className="flex flex-col gap-4">
           <Input
@@ -139,11 +161,10 @@ function GroupsContent() {
             error={createError}
             autoFocus
           />
-          <Button onClick={handleCreate} className="w-full">Create Group</Button>
+          <Button onClick={handleCreate} className="w-full" loading={creating}>Create Group</Button>
         </div>
       </Modal>
 
-      {/* Join modal */}
       <Modal open={showJoin} onClose={() => setShowJoin(false)} title="Join Group">
         <div className="flex flex-col gap-4">
           <Input
@@ -155,7 +176,7 @@ function GroupsContent() {
             maxLength={6}
             autoFocus
           />
-          <Button onClick={handleJoin} className="w-full">Join Group</Button>
+          <Button onClick={handleJoin} className="w-full" loading={joining}>Join Group</Button>
         </div>
       </Modal>
     </div>
