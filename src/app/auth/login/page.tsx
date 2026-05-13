@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { signInWithRedirect } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginWithGoogle, loginWithEmail } = useAuthStore();
+  const { user, loginWithEmail } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,21 +21,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    getRedirectResult(auth)
-      .then(result => {
-        if (result) {
-          loginWithGoogle(result.user);
-          router.push('/schedule');
-        } else {
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        setError('Google sign-in failed. Please try again.');
-        setLoading(false);
-      });
-  }, []);
+    if (user) router.push('/schedule');
+  }, [user]);
 
   async function handleGoogle() {
     setLoading(true);

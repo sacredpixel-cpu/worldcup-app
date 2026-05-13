@@ -37,13 +37,15 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () => set({ user: null, token: null }),
 
       loginWithGoogle: (firebaseUser) => {
+        const existing = get().user;
+        const isSameUser = existing?.id === firebaseUser.uid;
         const user: User = {
           id: firebaseUser.uid,
           displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
           avatarUrl: firebaseUser.photoURL,
           email: firebaseUser.email ?? '',
-          totalPoints: 0,
-          globalRank: null,
+          totalPoints: isSameUser ? existing!.totalPoints : 0,
+          globalRank: isSameUser ? existing!.globalRank : null,
         };
         set({ user, token: firebaseUser.uid });
       },
