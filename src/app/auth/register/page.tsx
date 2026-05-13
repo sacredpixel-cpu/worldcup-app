@@ -1,17 +1,14 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-function RegisterForm() {
+export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const from = searchParams.get('from') ?? '/schedule';
-
   const { register, loginWithGoogle } = useAuthStore();
 
   const [name, setName] = useState('');
@@ -38,13 +35,13 @@ function RegisterForm() {
     setLoading(true);
     setTimeout(() => {
       register(usePhone ? `${phone}@phone.wc2026` : email, password, name.trim());
-      router.push(from);
+      router.push('/schedule');
     }, 500);
   }
 
   function handleGoogle() {
     loginWithGoogle();
-    router.push(from);
+    router.push('/schedule');
   }
 
   return (
@@ -71,77 +68,30 @@ function RegisterForm() {
         <div className="flex-1 border-t border-border" />
       </div>
 
-      {/* Email / Phone toggle */}
       <div className="mb-4 flex w-full rounded-xl border border-border p-1">
         {['Email', 'Phone'].map((opt, i) => (
-          <button
-            key={opt}
-            onClick={() => setUsePhone(i === 1)}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
-              usePhone === (i === 1) ? 'bg-brand text-white' : 'text-white/40'
-            }`}
-          >
+          <button key={opt} onClick={() => setUsePhone(i === 1)}
+            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${usePhone === (i === 1) ? 'bg-brand text-white' : 'text-white/40'}`}>
             {opt}
           </button>
         ))}
       </div>
 
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
-        <Input
-          label="Display Name"
-          placeholder="Your name"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          error={errors.name}
-        />
+        <Input label="Display Name" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} error={errors.name} />
         {!usePhone ? (
-          <Input
-            label="Email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            error={errors.email}
-            autoComplete="email"
-          />
+          <Input label="Email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} error={errors.email} autoComplete="email" />
         ) : (
-          <Input
-            label="Phone Number"
-            type="tel"
-            placeholder="+1 555 000 0000"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            error={errors.phone}
-          />
+          <Input label="Phone Number" type="tel" placeholder="+1 555 000 0000" value={phone} onChange={e => setPhone(e.target.value)} error={errors.phone} />
         )}
-        <Input
-          label="Password"
-          type="password"
-          placeholder="At least 6 characters"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          error={errors.password}
-          autoComplete="new-password"
-        />
-        <Button type="submit" size="lg" className="w-full" loading={loading}>
-          Create Account
-        </Button>
+        <Input label="Password" type="password" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} error={errors.password} autoComplete="new-password" />
+        <Button type="submit" size="lg" className="w-full" loading={loading}>Create Account</Button>
       </form>
 
       <p className="mt-6 text-sm text-white/40">
         Already have an account?{' '}
-        <Link href={`/auth/login?from=${encodeURIComponent(from)}`} className="text-brand-light hover:underline">
-          Sign in
-        </Link>
+        <Link href="/auth/login" className="text-brand-light hover:underline">Sign in</Link>
       </p>
     </div>
-  );
-}
-
-export default function RegisterPage() {
-  return (
-    <Suspense fallback={<div className="flex min-h-[80vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" /></div>}>
-      <RegisterForm />
-    </Suspense>
   );
 }

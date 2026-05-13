@@ -1,17 +1,14 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-function LoginForm() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const from = searchParams.get('from') ?? '/schedule';
-
   const { loginWithGoogle, loginWithEmail } = useAuthStore();
 
   const [email, setEmail] = useState('');
@@ -21,7 +18,7 @@ function LoginForm() {
 
   function handleGoogle() {
     loginWithGoogle();
-    router.push(from);
+    router.push('/schedule');
   }
 
   function handleEmail(e: React.FormEvent) {
@@ -30,7 +27,7 @@ function LoginForm() {
     setLoading(true);
     setTimeout(() => {
       loginWithEmail(email, password);
-      router.push(from);
+      router.push('/schedule');
     }, 500);
   }
 
@@ -42,13 +39,7 @@ function LoginForm() {
         <p className="mt-1 text-sm text-white/50">Sign in to submit predictions</p>
       </div>
 
-      {/* Google OAuth */}
-      <Button
-        variant="google"
-        size="lg"
-        className="mb-6 w-full"
-        onClick={handleGoogle}
-      >
+      <Button variant="google" size="lg" className="mb-6 w-full" onClick={handleGoogle}>
         <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -66,41 +57,15 @@ function LoginForm() {
 
       <form onSubmit={handleEmail} className="flex w-full flex-col gap-4">
         {error && <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm text-red-400">{error}</p>}
-        <Input
-          label="Email"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          autoComplete="email"
-        />
-        <Input
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          autoComplete="current-password"
-        />
-        <Button type="submit" size="lg" className="w-full" loading={loading}>
-          Sign In
-        </Button>
+        <Input label="Email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+        <Input label="Password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+        <Button type="submit" size="lg" className="w-full" loading={loading}>Sign In</Button>
       </form>
 
       <p className="mt-6 text-sm text-white/40">
         No account?{' '}
-        <Link href={`/auth/register?from=${encodeURIComponent(from)}`} className="text-brand-light hover:underline">
-          Create one
-        </Link>
+        <Link href="/auth/register" className="text-brand-light hover:underline">Create one</Link>
       </p>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="flex min-h-[80vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" /></div>}>
-      <LoginForm />
-    </Suspense>
   );
 }
