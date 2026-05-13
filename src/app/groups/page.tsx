@@ -80,20 +80,24 @@ function GroupsContent() {
     );
   }
 
-  const myGroups = user ? groups.filter(g => g.members.some(m => m.userId === user.id)) : [];
+  const userId = user?.id ?? '';
+  const userDisplayName = user?.displayName ?? '';
+  const userAvatarUrl = user?.avatarUrl ?? null;
+
+  const myGroups = groups.filter(g => g.members.some(m => m.userId === userId));
 
   function handleCreate() {
-    if (!user) return;
+    if (!userId) return;
     if (!newGroupName.trim()) { setCreateError('Enter a group name.'); return; }
-    createGroup(newGroupName.trim(), user.id, user.displayName, user.avatarUrl);
+    createGroup(newGroupName.trim(), userId, userDisplayName, userAvatarUrl);
     setNewGroupName('');
     setShowCreate(false);
   }
 
   function handleJoin() {
-    if (!user) return;
+    if (!userId) return;
     if (!joinCode.trim()) { setJoinError('Enter an invite code.'); return; }
-    const g = joinGroup(joinCode.trim(), user.id, user.displayName, user.avatarUrl);
+    const g = joinGroup(joinCode.trim(), userId, userDisplayName, userAvatarUrl);
     if (!g) { setJoinError('Group not found. Check the code and try again.'); return; }
     setJoinCode('');
     setJoinError('');
