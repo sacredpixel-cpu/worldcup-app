@@ -209,7 +209,7 @@ function ProfileContent() {
       <div className="mx-4 mb-4 rounded-xl border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-white/40">Scoring Rules</h2>
         {[
-          { pts: '5 pts', desc: 'Exact scoreline', color: 'text-gold' },
+          { pts: '5 pts', desc: 'Exact score per team (max 10)', color: 'text-gold' },
           { pts: '3 pts', desc: 'Correct outcome (W/D/L)', color: 'text-brand-light' },
           { pts: '4 pts', desc: 'Correct finalist', color: 'text-blue-400' },
           { pts: '10 pts', desc: 'Correct champion', color: 'text-yellow-400' },

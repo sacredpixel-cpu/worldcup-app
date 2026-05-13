@@ -5,16 +5,18 @@ export function calcPoints(
   prediction: Prediction,
   actual: { homeScore: number; awayScore: number },
 ): number {
-  const exact =
-    prediction.homeScore === actual.homeScore &&
-    prediction.awayScore === actual.awayScore;
+  let pts = 0;
 
-  if (exact) return SCORING.CORRECT_SCORE;
+  // 5 points per team score that's exactly correct (max 10)
+  if (prediction.homeScore === actual.homeScore) pts += SCORING.CORRECT_SCORE_PER_TEAM;
+  if (prediction.awayScore === actual.awayScore) pts += SCORING.CORRECT_SCORE_PER_TEAM;
 
-  const predictedOutcome = Math.sign(prediction.homeScore - prediction.awayScore);
-  const actualOutcome = Math.sign(actual.homeScore - actual.awayScore);
+  // If neither score is exact, check for correct outcome (W/D/L)
+  if (pts === 0) {
+    const predictedOutcome = Math.sign(prediction.homeScore - prediction.awayScore);
+    const actualOutcome = Math.sign(actual.homeScore - actual.awayScore);
+    if (predictedOutcome === actualOutcome) pts = SCORING.CORRECT_OUTCOME;
+  }
 
-  if (predictedOutcome === actualOutcome) return SCORING.CORRECT_OUTCOME;
-
-  return 0;
+  return pts;
 }
