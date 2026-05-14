@@ -11,13 +11,13 @@ function ScoreStepper({ value, onChange, locked }: { value: number; onChange: (v
       <button
         disabled={locked || value <= 0}
         onClick={() => onChange(value - 1)}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-lg font-bold text-white disabled:opacity-30 active:scale-90"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-lg font-bold text-gray-900 disabled:opacity-30 active:scale-90"
       >−</button>
-      <span className="w-6 text-center text-xl font-bold text-white">{value}</span>
+      <span className="w-6 text-center text-xl font-bold text-gray-900">{value}</span>
       <button
         disabled={locked || value >= 9}
         onClick={() => onChange(value + 1)}
-        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-lg font-bold text-white disabled:opacity-30 active:scale-90"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-lg font-bold text-gray-900 disabled:opacity-30 active:scale-90"
       >+</button>
     </div>
   );
@@ -56,7 +56,7 @@ function ShareButton({ match, prediction }: { match: Match; prediction: Predicti
     <div className="mt-2 flex gap-2">
       <button
         onClick={handleShare}
-        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card/50 py-2 text-xs font-semibold text-white/70 hover:bg-card active:scale-95"
+        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card/50 py-2 text-xs font-semibold text-gray-600 hover:bg-card active:scale-95"
       >
         {copied ? '✓ Copied!' : '↑ Share'}
       </button>
@@ -104,7 +104,7 @@ export function PredictionInput({ match, userId, existing }: {
       <div className="mt-2">
         <div className="flex items-center justify-between rounded-lg border border-brand/30 bg-brand/10 px-3 py-2">
           <span className="text-xs text-brand-light">Your pick: {existing.homeScore}–{existing.awayScore}</span>
-          <button onClick={() => setDraft(match.id, existing.homeScore, existing.awayScore)} className="text-xs text-white/50 hover:text-white">Edit</button>
+          <button onClick={() => setDraft(match.id, existing.homeScore, existing.awayScore)} className="text-xs text-gray-500 hover:text-white">Edit</button>
         </div>
         <ShareButton match={match} prediction={existing} />
       </div>
@@ -115,9 +115,9 @@ export function PredictionInput({ match, userId, existing }: {
     return (
       <div className="mt-2">
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card/50 px-3 py-2">
-          <span className="text-xs text-white/50">Your pick:</span>
-          <span className="text-sm font-bold text-white">{existing.homeScore}–{existing.awayScore}</span>
-          <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/40">Locked</span>
+          <span className="text-xs text-gray-500">Your pick:</span>
+          <span className="text-sm font-bold text-gray-900">{existing.homeScore}–{existing.awayScore}</span>
+          <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-xs text-gray-400">Locked</span>
         </div>
         <ShareButton match={match} prediction={existing} />
       </div>
@@ -128,14 +128,14 @@ export function PredictionInput({ match, userId, existing }: {
 
   return (
     <div className="mt-2 rounded-lg border border-border bg-card/50 px-3 py-2">
-      <p className="mb-2 text-xs text-white/50">Your prediction</p>
+      <p className="mb-2 text-xs text-gray-500">Your prediction</p>
       <div className="flex items-center justify-between">
         <ScoreStepper value={homeScore} onChange={(v) => setDraft(match.id, v, awayScore)} locked={isLocked} />
-        <span className="mx-2 text-lg font-bold text-white/30">–</span>
+        <span className="mx-2 text-lg font-bold text-gray-400">–</span>
         <ScoreStepper value={awayScore} onChange={(v) => setDraft(match.id, homeScore, v)} locked={isLocked} />
       </div>
       {isDirty && (
-        <button onClick={() => submitPrediction(match.id, userId)} className="mt-2 w-full rounded-lg bg-brand py-1.5 text-sm font-semibold text-white active:scale-95">
+        <button onClick={() => submitPrediction(match.id, userId)} className="mt-2 w-full rounded-lg bg-brand py-1.5 text-sm font-semibold text-gray-900 active:scale-95">
           Submit Prediction
         </button>
       )}

@@ -56,15 +56,26 @@ function ProfileContent() {
     return (
       <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
         <div className="mb-4 text-5xl">👤</div>
-        <h2 className="mb-2 text-xl font-bold text-white">Your Profile</h2>
-        <p className="mb-6 text-sm text-white/50">Sign in to track your stats and compete with friends</p>
+        <h2 className="mb-2 text-xl font-bold text-gray-900">Your Profile</h2>
+        <p className="mb-6 text-sm text-gray-500">Sign in to track your stats and compete with friends</p>
         <div className="flex flex-col gap-3 w-full">
-          <Link href="/auth/register" className="block w-full rounded-xl bg-brand py-3.5 text-center text-sm font-semibold text-white">
+          <Link href="/auth/register" className="block w-full rounded-xl bg-brand py-3.5 text-center text-sm font-semibold text-gray-900">
             Create Account
           </Link>
-          <Link href="/auth/login" className="block w-full rounded-xl border border-border py-3.5 text-center text-sm font-semibold text-white">
+          <Link href="/auth/login" className="block w-full rounded-xl border border-border py-3.5 text-center text-sm font-semibold text-gray-900">
             Sign In
           </Link>
+        </div>
+        <div className="mt-12 flex flex-col items-center gap-2">
+          <Image
+            src="/mexillicious-logo.png"
+            alt="Mexillicious"
+            width={100}
+            height={40}
+            className="object-contain opacity-80"
+            unoptimized
+          />
+          <p className="text-[10px] text-gray-400 tracking-wide">Mexillicious™ LLC 2026</p>
         </div>
       </div>
     );
@@ -88,7 +99,7 @@ function ProfileContent() {
               unoptimized
             />
           ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand text-3xl font-black text-white">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand text-3xl font-black text-gray-900">
               {user.displayName[0].toUpperCase()}
             </div>
           )}
@@ -99,11 +110,11 @@ function ProfileContent() {
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
             ) : (
               <>
-                <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="h-5 w-5 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span className="text-[10px] text-white mt-0.5">Edit</span>
+                <span className="text-[10px] text-gray-900 mt-0.5">Edit</span>
               </>
             )}
           </div>
@@ -118,9 +129,9 @@ function ProfileContent() {
           onChange={handleAvatarChange}
         />
 
-        <h1 className="text-xl font-black text-white">{user.displayName}</h1>
-        <p className="text-sm text-white/40">{user.email}</p>
-        <p className="mt-1 text-xs text-white/30">Tap photo to change</p>
+        <h1 className="text-xl font-black text-gray-900">{user.displayName}</h1>
+        <p className="text-sm text-gray-400">{user.email}</p>
+        <p className="mt-1 text-xs text-gray-400">Tap photo to change</p>
       </div>
 
       {/* Stats grid */}
@@ -128,13 +139,13 @@ function ProfileContent() {
         <div className="mx-4 mb-4 grid grid-cols-2 gap-3">
           {[
             { label: 'Total Points', value: stats.pts, color: 'text-gold' },
-            { label: 'Predictions', value: stats.totalPredictions, color: 'text-white' },
+            { label: 'Predictions', value: stats.totalPredictions, color: 'text-gray-900' },
             { label: 'Exact Scores', value: stats.exact, color: 'text-brand-light' },
-            { label: 'Accuracy', value: `${stats.accuracy}%`, color: 'text-white' },
+            { label: 'Accuracy', value: `${stats.accuracy}%`, color: 'text-gray-900' },
           ].map(s => (
             <div key={s.label} className="rounded-xl bg-card p-4 text-center">
               <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-white/40 mt-1">{s.label}</p>
+              <p className="text-xs text-gray-400 mt-1">{s.label}</p>
             </div>
           ))}
         </div>
@@ -143,13 +154,13 @@ function ProfileContent() {
       {/* My Groups */}
       {myGroups.length > 0 && (
         <div className="mx-4 mb-4">
-          <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-white/40">My Groups</h2>
+          <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-gray-400">My Groups</h2>
           <div className="flex flex-col gap-2">
             {myGroups.map(g => (
               <Link key={g.id} href={`/groups/${g.id}`}
                 className="flex items-center justify-between rounded-xl bg-card px-4 py-3">
-                <span className="text-sm font-semibold text-white">{g.name}</span>
-                <span className="text-xs text-white/40">{g.members.length} members →</span>
+                <span className="text-sm font-semibold text-gray-900">{g.name}</span>
+                <span className="text-xs text-gray-400">{g.members.length} members →</span>
               </Link>
             ))}
           </div>
@@ -158,7 +169,7 @@ function ProfileContent() {
 
       {/* Location */}
       <div className="mx-4 mb-4 rounded-xl border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-white/40">Where are you from?</h2>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-400">Where are you from?</h2>
         <div className="flex flex-col gap-3">
           <div className="relative">
             <select
@@ -167,14 +178,14 @@ function ProfileContent() {
                 const c = COUNTRIES.find(c => c.code === e.target.value);
                 if (c) updateLocation(c.name, c.code, c.code === 'us' ? user.state : undefined);
               }}
-              className="w-full appearance-none rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-white pr-8 focus:outline-none focus:border-brand"
+              className="w-full appearance-none rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-gray-900 pr-8 focus:outline-none focus:border-brand"
             >
               <option value="">Select country…</option>
               {COUNTRIES.map(c => (
                 <option key={c.code} value={c.code}>{c.name}</option>
               ))}
             </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40">▾</span>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
           </div>
 
           {user.countryCode === 'us' && (
@@ -182,14 +193,14 @@ function ProfileContent() {
               <select
                 value={user.state ?? ''}
                 onChange={e => updateLocation('USA', 'us', e.target.value)}
-                className="w-full appearance-none rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-white pr-8 focus:outline-none focus:border-brand"
+                className="w-full appearance-none rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-gray-900 pr-8 focus:outline-none focus:border-brand"
               >
                 <option value="">Select state…</option>
                 {US_STATES.map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40">▾</span>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">▾</span>
             </div>
           )}
 
@@ -197,7 +208,7 @@ function ProfileContent() {
             <div className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`https://flagcdn.com/w40/${user.countryCode}.png`} alt="" className="h-4 w-6 object-cover rounded-sm" />
-              <span className="text-sm text-white/70">
+              <span className="text-sm text-gray-600">
                 {user.country}{user.state ? `, ${user.state}` : ''}
               </span>
             </div>
@@ -207,7 +218,7 @@ function ProfileContent() {
 
       {/* Scoring legend */}
       <div className="mx-4 mb-4 rounded-xl border border-border bg-card p-4">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-white/40">Scoring Rules</h2>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-400">Scoring Rules</h2>
         {[
           { pts: '5 pts', desc: 'Exact score per team (max 10)', color: 'text-gold' },
           { pts: '3 pts', desc: 'Correct outcome (W/D/L)', color: 'text-brand-light' },
@@ -215,7 +226,7 @@ function ProfileContent() {
           { pts: '10 pts', desc: 'Correct champion', color: 'text-yellow-400' },
         ].map(r => (
           <div key={r.desc} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-            <span className="text-sm text-white/70">{r.desc}</span>
+            <span className="text-sm text-gray-600">{r.desc}</span>
             <span className={`text-sm font-bold ${r.color}`}>{r.pts}</span>
           </div>
         ))}
@@ -228,6 +239,19 @@ function ProfileContent() {
       >
         Sign Out
       </button>
+
+      {/* Mexillicious branding footer */}
+      <div className="mt-8 mb-2 flex flex-col items-center gap-2 px-4">
+        <Image
+          src="/mexillicious-logo.png"
+          alt="Mexillicious"
+          width={100}
+          height={40}
+          className="object-contain opacity-80"
+          unoptimized
+        />
+        <p className="text-[10px] text-gray-400 tracking-wide">Mexillicious™ LLC 2026</p>
+      </div>
     </div>
   );
 }

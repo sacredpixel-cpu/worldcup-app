@@ -1,20 +1,20 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./src/**/*.{ts,tsx}'],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#1A6B3C',
-          light: '#22A85A',
-          dark: '#115228',
+          DEFAULT: '#E91E8C',   // Mexillicious hot pink
+          light: '#F048A8',
+          dark: '#C4157A',
         },
-        accent: '#C8102E',
+        accent: '#2D9E35',      // Mexillicious green
         gold: '#F5A623',
-        surface: '#1A1A1A',
-        card: '#242424',
-        border: '#2E2E2E',
+        surface: '#F2EEEB',     // light warm surface
+        card: '#FFFFFF',        // white cards
+        border: '#E2DDD8',      // soft warm border
+        muted: '#7A746E',       // muted text
       },
       fontFamily: {
         sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],

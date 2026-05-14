@@ -62,8 +62,8 @@ export default function RegisterPage() {
     <div className="flex min-h-[80vh] flex-col items-center justify-center px-6 py-8">
       <div className="mb-8 text-center">
         <div className="mb-3 text-5xl">🏆</div>
-        <h1 className="text-2xl font-black text-white">Create Account</h1>
-        <p className="mt-1 text-sm text-white/50">Join the prediction challenge</p>
+        <h1 className="text-2xl font-black text-gray-900">Create Account</h1>
+        <p className="mt-1 text-sm text-gray-500">Join the prediction challenge</p>
       </div>
 
       <Button variant="google" size="lg" className="mb-6 w-full" onClick={handleGoogle} loading={loading}>
@@ -80,14 +80,14 @@ export default function RegisterPage() {
 
       <div className="mb-6 flex w-full items-center gap-3">
         <div className="flex-1 border-t border-border" />
-        <span className="text-xs text-white/30">or</span>
+        <span className="text-xs text-gray-400">or</span>
         <div className="flex-1 border-t border-border" />
       </div>
 
       <div className="mb-4 flex w-full rounded-xl border border-border p-1">
         {['Email', 'Phone'].map((opt, i) => (
           <button key={opt} onClick={() => setUsePhone(i === 1)}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${usePhone === (i === 1) ? 'bg-brand text-white' : 'text-white/40'}`}>
+            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${usePhone === (i === 1) ? 'bg-brand text-gray-900' : 'text-gray-400'}`}>
             {opt}
           </button>
         ))}
@@ -104,7 +104,7 @@ export default function RegisterPage() {
         <Button type="submit" size="lg" className="w-full" loading={loading}>Create Account</Button>
       </form>
 
-      <p className="mt-6 text-sm text-white/40">
+      <p className="mt-6 text-sm text-gray-400">
         Already have an account?{' '}
         <Link href="/auth/login" className="text-brand-light hover:underline">Sign in</Link>
       </p>

@@ -73,7 +73,7 @@ function TabBarInner() {
               key={tab.href}
               href={tab.href}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
-                active ? 'text-brand-light' : 'text-white/40 hover:text-white/70'
+                active ? 'text-brand-light' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
               {tab.icon(active)}

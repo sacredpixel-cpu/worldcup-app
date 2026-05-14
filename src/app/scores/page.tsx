@@ -22,7 +22,7 @@ function ScoresContent() {
   return (
     <div className="flex flex-col pb-4">
       <div className="px-4 pt-4 pb-2">
-        <h1 className="text-xl font-black text-white">Scores</h1>
+        <h1 className="text-xl font-black text-gray-900">Scores</h1>
       </div>
 
       {live.length > 0 && (
@@ -38,7 +38,7 @@ function ScoresContent() {
             key={f}
             onClick={() => setFilter(f)}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
-              filter === f ? 'bg-brand text-white' : 'bg-card text-white/50'
+              filter === f ? 'bg-brand text-gray-900' : 'bg-card text-gray-500'
             }`}
           >
             {f === 'all' ? 'All Results' : f === 'live' ? '🔴 Live' : 'Finished'}
@@ -49,8 +49,8 @@ function ScoresContent() {
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center py-20 text-center px-6">
           <div className="mb-3 text-4xl">⏱️</div>
-          <p className="text-sm text-white/50">No matches in this category yet.</p>
-          <p className="text-xs text-white/30 mt-1">Tournament begins June 11, 2026</p>
+          <p className="text-sm text-gray-500">No matches in this category yet.</p>
+          <p className="text-xs text-gray-400 mt-1">Tournament begins June 11, 2026</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3 px-4">

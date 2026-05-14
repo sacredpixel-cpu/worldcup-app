@@ -12,7 +12,7 @@ export function FlagImage({ code, size = 32, className }: FlagImageProps) {
   if (!alpha2) {
     return (
       <div
-        className={`rounded-sm bg-white/10 flex items-center justify-center text-xs text-white/40 ${className ?? ''}`}
+        className={`rounded-sm bg-white/10 flex items-center justify-center text-xs text-gray-400 ${className ?? ''}`}
         style={{ width: size, height: size * 0.67 }}
       >
         ?

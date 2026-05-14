@@ -21,16 +21,16 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#0D0D0D',
+  themeColor: '#E91E8C',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-[#0D0D0D] text-white">
+    <html lang="en">
+      <body className="bg-[#FBFAF7] text-gray-900">
         <Providers>
           {/* Mobile frame wrapper */}
-          <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-[#0D0D0D]">
+          <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-[#FBFAF7]">
             <FirebaseAuthSync />
             <PredictionsSync />
             <AuthBanner />

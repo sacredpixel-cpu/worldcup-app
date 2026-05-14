@@ -36,7 +36,7 @@ function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) return <span className="text-xl">🥇</span>;
   if (rank === 2) return <span className="text-xl">🥈</span>;
   if (rank === 3) return <span className="text-xl">🥉</span>;
-  return <span className="w-8 text-center text-sm font-bold text-white/40">{rank}</span>;
+  return <span className="w-8 text-center text-sm font-bold text-gray-400">{rank}</span>;
 }
 
 function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntry; rank: number; isMe: boolean; profile?: UserProfile }) {
@@ -50,7 +50,7 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
       {entry.avatarUrl ? (
         <Image src={entry.avatarUrl} alt={entry.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
       ) : (
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-gray-900">
           {entry.displayName[0].toUpperCase()}
         </div>
       )}
@@ -62,17 +62,17 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
           <div className="flex items-center gap-1 mt-0.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`https://flagcdn.com/w20/${profile!.countryCode}.png`} alt="" className="h-3 w-4 object-cover rounded-sm" />
-            <span className="text-xs text-white/40 truncate">{location}</span>
+            <span className="text-xs text-gray-400 truncate">{location}</span>
           </div>
         ) : (
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-gray-400">
             {entry.correctScores} exact · {entry.correctOutcomes} correct
           </p>
         )}
       </div>
       <div className="text-right">
         <p className="text-lg font-black text-gold">{entry.totalPoints}</p>
-        <p className="text-[10px] text-white/30">pts</p>
+        <p className="text-[10px] text-gray-400">pts</p>
       </div>
     </div>
   );
@@ -135,7 +135,7 @@ function LeaderboardContent() {
   return (
     <div className="flex flex-col">
       <div className="px-4 pt-4 pb-3">
-        <h1 className="text-xl font-black text-white">Leaderboard</h1>
+        <h1 className="text-xl font-black text-gray-900">Leaderboard</h1>
       </div>
 
       {/* Tab selector */}
@@ -143,7 +143,7 @@ function LeaderboardContent() {
         <button
           onClick={() => setTab('global')}
           className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-            tab === 'global' ? 'bg-brand text-white' : 'bg-card text-white/50'
+            tab === 'global' ? 'bg-brand text-gray-900' : 'bg-card text-gray-500'
           }`}
         >
           Global
@@ -153,7 +153,7 @@ function LeaderboardContent() {
             key={g.id}
             onClick={() => setTab(g.id)}
             className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-              tab === g.id ? 'bg-brand text-white' : 'bg-card text-white/50'
+              tab === g.id ? 'bg-brand text-gray-900' : 'bg-card text-gray-500'
             }`}
           >
             {g.name}
@@ -164,7 +164,7 @@ function LeaderboardContent() {
       {/* Your rank summary */}
       {user && userRank > 0 && (
         <div className="mx-4 mb-3 flex items-center justify-between rounded-xl bg-brand/10 border border-brand/30 px-4 py-2.5">
-          <span className="text-sm text-white/70">Your rank</span>
+          <span className="text-sm text-gray-600">Your rank</span>
           <span className="text-2xl font-black text-brand-light">#{userRank}</span>
           <span className="text-sm text-gold font-semibold">{userEntry?.totalPoints ?? 0} pts</span>
         </div>
@@ -172,7 +172,7 @@ function LeaderboardContent() {
 
       {!user && (
         <div className="mx-4 mb-3 rounded-xl bg-card px-4 py-4 text-center">
-          <p className="text-sm text-white/50 mb-2">Sign in to appear on the leaderboard</p>
+          <p className="text-sm text-gray-500 mb-2">Sign in to appear on the leaderboard</p>
           <Link href="/auth/register" className="text-sm text-brand-light hover:underline">Create an account →</Link>
         </div>
       )}

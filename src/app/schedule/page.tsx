@@ -79,10 +79,10 @@ function ScheduleContent() {
     <div className="flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
-        <h1 className="text-xl font-black text-white">
+        <h1 className="text-xl font-black text-gray-900">
           <span className="text-brand-light">FIFA</span> World Cup 2026
         </h1>
-        <p className="text-xs text-white/40">Jun 11 – Jul 19 · USA · Canada · Mexico</p>
+        <p className="text-xs text-gray-400">Jun 11 – Jul 19 · USA · Canada · Mexico</p>
       </div>
 
       {/* Tabs */}
@@ -92,7 +92,7 @@ function ScheduleContent() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex-shrink-0 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
-              tab === t.id ? 'border-brand-light text-brand-light' : 'border-transparent text-white/40 hover:text-white'
+              tab === t.id ? 'border-brand-light text-brand-light' : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
             {t.label}
@@ -116,7 +116,7 @@ function ScheduleContent() {
               />
             ))}
             {filteredAll.length === 0 && (
-              <p className="py-8 text-center text-sm text-white/30">No matches on this date</p>
+              <p className="py-8 text-center text-sm text-gray-400">No matches on this date</p>
             )}
           </div>
         </>
@@ -132,7 +132,7 @@ function ScheduleContent() {
                 key={g}
                 onClick={() => setSelectedGroup(g)}
                 className={`flex-shrink-0 h-9 w-9 rounded-full text-sm font-bold transition-colors ${
-                  selectedGroup === g ? 'bg-brand text-white' : 'bg-card text-white/50 hover:text-white'
+                  selectedGroup === g ? 'bg-brand text-gray-900' : 'bg-card text-gray-500 hover:text-white'
                 }`}
               >
                 {g}
@@ -147,7 +147,7 @@ function ScheduleContent() {
                 key={v}
                 onClick={() => setGroupView(v)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
-                  groupView === v ? 'bg-brand text-white' : 'bg-card text-white/50'
+                  groupView === v ? 'bg-brand text-gray-900' : 'bg-card text-gray-500'
                 }`}
               >
                 {v === 'matches' ? 'Matches' : 'Standings'}
@@ -183,7 +183,7 @@ function ScheduleContent() {
             const stageMatches = KNOCKOUT_MATCHES.filter(m => m.stage === stage);
             return (
               <div key={stage}>
-                <h2 className="mb-2 text-sm font-bold text-white/60 uppercase tracking-wider">{STAGE_LABELS[stage]}</h2>
+                <h2 className="mb-2 text-sm font-bold text-gray-500 uppercase tracking-wider">{STAGE_LABELS[stage]}</h2>
                 <div className="flex flex-col gap-3">
                   {stageMatches.map(match => (
                     <MatchCard

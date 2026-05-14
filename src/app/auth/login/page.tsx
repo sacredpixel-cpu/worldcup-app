@@ -49,8 +49,8 @@ export default function LoginPage() {
     <div className="flex min-h-[80vh] flex-col items-center justify-center px-6">
       <div className="mb-8 text-center">
         <div className="mb-3 text-5xl">⚽</div>
-        <h1 className="text-2xl font-black text-white">Welcome Back</h1>
-        <p className="mt-1 text-sm text-white/50">Sign in to submit predictions</p>
+        <h1 className="text-2xl font-black text-gray-900">Welcome Back</h1>
+        <p className="mt-1 text-sm text-gray-500">Sign in to submit predictions</p>
       </div>
 
       <Button variant="google" size="lg" className="mb-6 w-full" onClick={handleGoogle} loading={loading}>
@@ -65,7 +65,7 @@ export default function LoginPage() {
 
       <div className="mb-6 flex w-full items-center gap-3">
         <div className="flex-1 border-t border-border" />
-        <span className="text-xs text-white/30">or email</span>
+        <span className="text-xs text-gray-400">or email</span>
         <div className="flex-1 border-t border-border" />
       </div>
 
@@ -76,7 +76,7 @@ export default function LoginPage() {
         <Button type="submit" size="lg" className="w-full" loading={loading}>Sign In</Button>
       </form>
 
-      <p className="mt-6 text-sm text-white/40">
+      <p className="mt-6 text-sm text-gray-400">
         No account?{' '}
         <Link href="/auth/register" className="text-brand-light hover:underline">Create one</Link>
       </p>

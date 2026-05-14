@@ -17,7 +17,7 @@ export function DayFilter({ dates, selected, onChange }: DayFilterProps) {
       <button
         onClick={() => onChange(null)}
         className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-          selected === null ? 'bg-brand text-white' : 'bg-card text-white/50 hover:text-white'
+          selected === null ? 'bg-brand text-gray-900' : 'bg-card text-gray-500 hover:text-white'
         }`}
       >
         All
@@ -27,7 +27,7 @@ export function DayFilter({ dates, selected, onChange }: DayFilterProps) {
           key={d}
           onClick={() => onChange(d)}
           className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-            selected === d ? 'bg-brand text-white' : 'bg-card text-white/50 hover:text-white'
+            selected === d ? 'bg-brand text-gray-900' : 'bg-card text-gray-500 hover:text-white'
           }`}
         >
           {fmt(d)}

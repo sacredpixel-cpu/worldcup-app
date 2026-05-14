@@ -24,9 +24,9 @@ function PredictionsContent() {
     return (
       <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
         <div className="mb-4 text-5xl">🎯</div>
-        <h2 className="mb-2 text-xl font-bold text-white">Your Picks</h2>
-        <p className="mb-6 text-sm text-white/50">Sign in to start making predictions and earn points</p>
-        <Link href="/auth/register" className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white">
+        <h2 className="mb-2 text-xl font-bold text-gray-900">Your Picks</h2>
+        <p className="mb-6 text-sm text-gray-500">Sign in to start making predictions and earn points</p>
+        <Link href="/auth/register" className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-gray-900">
           Create Account
         </Link>
       </div>
@@ -37,9 +37,9 @@ function PredictionsContent() {
     return (
       <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
         <div className="mb-4 text-5xl">🎯</div>
-        <h2 className="mb-2 text-xl font-bold text-white">No Picks Yet</h2>
-        <p className="mb-6 text-sm text-white/50">Head to the schedule to start predicting match scores</p>
-        <Link href="/schedule" className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white">
+        <h2 className="mb-2 text-xl font-bold text-gray-900">No Picks Yet</h2>
+        <p className="mb-6 text-sm text-gray-500">Head to the schedule to start predicting match scores</p>
+        <Link href="/schedule" className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-gray-900">
           View Schedule
         </Link>
       </div>
@@ -52,7 +52,7 @@ function PredictionsContent() {
     if (matches.length === 0) return null;
     return (
       <div className="mb-6">
-        <h2 className="mb-3 px-4 text-sm font-bold uppercase tracking-wider text-white/40">{title}</h2>
+        <h2 className="mb-3 px-4 text-sm font-bold uppercase tracking-wider text-gray-400">{title}</h2>
         <div className="flex flex-col gap-3 px-4">
           {matches.map(m => (
             <MatchCard
@@ -72,8 +72,8 @@ function PredictionsContent() {
   return (
     <div className="flex flex-col pb-4">
       <div className="px-4 pt-4 pb-3">
-        <h1 className="text-xl font-black text-white">My Picks</h1>
-        <p className="text-xs text-white/40">{myMatches.length} predictions made</p>
+        <h1 className="text-xl font-black text-gray-900">My Picks</h1>
+        <p className="text-xs text-gray-400">{myMatches.length} predictions made</p>
       </div>
       <Section title="Live" matches={live} />
       <Section title="Upcoming" matches={upcoming} />

@@ -3,19 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --brand: #1A6B3C;
-  --brand-light: #22A85A;
-  --accent: #C8102E;
+  --brand: #E91E8C;
+  --brand-light: #F048A8;
+  --accent: #2D9E35;
   --gold: #F5A623;
-  --bg: #0D0D0D;
-  --surface: #1A1A1A;
-  --card: #242424;
-  --border: #2E2E2E;
+  --bg: #FBFAF7;
+  --surface: #F2EEEB;
+  --card: #FFFFFF;
+  --border: #E2DDD8;
+  --fg: #1A1A1A;
+  --fg-muted: #7A746E;
 }
 
 html, body {
-  background-color: #0D0D0D;
-  color: #FFFFFF;
+  background-color: #FBFAF7;
+  color: #1A1A1A;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -41,7 +43,7 @@ html, body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2E2E2E;
+  background: #E2DDD8;
   border-radius: 2px;
 }
 

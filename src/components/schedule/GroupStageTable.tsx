@@ -23,28 +23,28 @@ export function GroupStageTable({ standings }: GroupStageTableProps) {
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border bg-surface">
-            <th className="py-2 pl-3 text-left font-medium text-white/40">Team</th>
-            <th className="px-2 py-2 text-center font-medium text-white/40">P</th>
-            <th className="px-2 py-2 text-center font-medium text-white/40">W</th>
-            <th className="px-2 py-2 text-center font-medium text-white/40">D</th>
-            <th className="px-2 py-2 text-center font-medium text-white/40">L</th>
-            <th className="px-2 py-2 text-center font-medium text-white/40">GD</th>
-            <th className="px-2 py-2 pr-3 text-center font-bold text-white/70">Pts</th>
+            <th className="py-2 pl-3 text-left font-medium text-gray-400">Team</th>
+            <th className="px-2 py-2 text-center font-medium text-gray-400">P</th>
+            <th className="px-2 py-2 text-center font-medium text-gray-400">W</th>
+            <th className="px-2 py-2 text-center font-medium text-gray-400">D</th>
+            <th className="px-2 py-2 text-center font-medium text-gray-400">L</th>
+            <th className="px-2 py-2 text-center font-medium text-gray-400">GD</th>
+            <th className="px-2 py-2 pr-3 text-center font-bold text-gray-600">Pts</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((s, i) => (
             <tr key={s.team.id} className={`border-b border-border last:border-0 ${i < 2 ? 'bg-brand/5' : ''}`}>
-              <td className="py-2 pl-3 font-medium text-white">
-                <span className={`mr-1.5 text-[10px] ${i < 2 ? 'text-brand-light' : 'text-white/30'}`}>{i + 1}</span>
+              <td className="py-2 pl-3 font-medium text-gray-900">
+                <span className={`mr-1.5 text-[10px] ${i < 2 ? 'text-brand-light' : 'text-gray-400'}`}>{i + 1}</span>
                 {s.team.name}
               </td>
-              <td className="px-2 py-2 text-center text-white/60">{s.played}</td>
-              <td className="px-2 py-2 text-center text-white/60">{s.won}</td>
-              <td className="px-2 py-2 text-center text-white/60">{s.drawn}</td>
-              <td className="px-2 py-2 text-center text-white/60">{s.lost}</td>
-              <td className="px-2 py-2 text-center text-white/60">{s.gf - s.ga > 0 ? '+' : ''}{s.gf - s.ga}</td>
-              <td className="px-2 py-2 pr-3 text-center font-bold text-white">{s.pts}</td>
+              <td className="px-2 py-2 text-center text-gray-500">{s.played}</td>
+              <td className="px-2 py-2 text-center text-gray-500">{s.won}</td>
+              <td className="px-2 py-2 text-center text-gray-500">{s.drawn}</td>
+              <td className="px-2 py-2 text-center text-gray-500">{s.lost}</td>
+              <td className="px-2 py-2 text-center text-gray-500">{s.gf - s.ga > 0 ? '+' : ''}{s.gf - s.ga}</td>
+              <td className="px-2 py-2 pr-3 text-center font-bold text-gray-900">{s.pts}</td>
             </tr>
           ))}
         </tbody>

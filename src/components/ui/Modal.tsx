@@ -29,8 +29,8 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         'relative z-10 w-full max-w-[430px] rounded-t-2xl border-t border-border bg-surface p-6 pb-8',
         className,
       )}>
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
-        {title && <h2 className="mb-4 text-lg font-bold text-white">{title}</h2>}
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300" />
+        {title && <h2 className="mb-4 text-lg font-bold text-gray-900">{title}</h2>}
         {children}
       </div>
     </div>

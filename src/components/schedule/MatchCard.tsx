@@ -28,15 +28,15 @@ function TeamBlock({ team, score, side }: {
   return (
     <div className={`flex flex-1 flex-col items-center gap-1 ${side === 'away' ? '' : ''}`}>
       {isTbd ? (
-        <div className="h-8 w-12 rounded-sm bg-white/5 flex items-center justify-center text-white/20 text-xs">TBD</div>
+        <div className="h-8 w-12 rounded-sm bg-white/5 flex items-center justify-center text-gray-300 text-xs">TBD</div>
       ) : (
         <FlagImage code={team.code} size={40} />
       )}
-      <span className="text-center text-xs font-semibold text-white leading-tight max-w-[80px]">
+      <span className="text-center text-xs font-semibold text-gray-900 leading-tight max-w-[80px]">
         {isTbd ? 'TBD' : team.name}
       </span>
       {score !== null && (
-        <span className="text-2xl font-black text-white">{score}</span>
+        <span className="text-2xl font-black text-gray-900">{score}</span>
       )}
     </div>
   );
@@ -66,7 +66,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
     <div className="rounded-xl border border-border bg-card px-4 py-3">
       {/* Stage + status badges */}
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider text-white/30">
+        <span className="text-[10px] uppercase tracking-wider text-gray-400">
           {match.homeTeam.group ? `Group ${match.homeTeam.group} · ` : ''}{STAGE_LABELS[match.stage]}
         </span>
         {match.status === 'live' && <Badge variant="live">LIVE</Badge>}
@@ -80,13 +80,13 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
         <div className="flex flex-col items-center gap-0.5">
           {match.status === 'upcoming' ? (
             <>
-              <span className="text-xs font-bold text-white">VS</span>
+              <span className="text-xs font-bold text-gray-900">VS</span>
               {crowd && (
                 <span className="text-[10px] text-gold font-semibold">{crowd.homeAvg}–{crowd.awayAvg}</span>
               )}
             </>
           ) : (
-            <span className="text-2xl font-black text-white">–</span>
+            <span className="text-2xl font-black text-gray-900">–</span>
           )}
         </div>
 
@@ -105,7 +105,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
       )}
 
       {/* Date / venue */}
-      <div className="mt-2 flex items-center justify-between text-[11px] text-white/40">
+      <div className="mt-2 flex items-center justify-between text-[11px] text-gray-400">
         <span>{formatKickoff(match.kickoffAt)}</span>
         <span className="truncate max-w-[140px] text-right">{match.city}</span>
       </div>
@@ -124,7 +124,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
 
       {/* CTA for unauthenticated */}
       {!isAuthenticated && !isTbd && match.status === 'upcoming' && (
-        <p className="mt-2 text-center text-xs text-white/30">Sign in to predict the score</p>
+        <p className="mt-2 text-center text-xs text-gray-400">Sign in to predict the score</p>
       )}
     </div>
   );
