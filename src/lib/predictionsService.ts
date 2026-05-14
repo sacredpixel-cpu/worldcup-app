@@ -1,5 +1,5 @@
 import {
-  doc, setDoc, getDoc, getDocs, collection, onSnapshot, type Unsubscribe,
+  doc, setDoc, getDoc, getDocs, collection, query, where, onSnapshot, type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Prediction } from '@/types/prediction';
@@ -18,6 +18,12 @@ export async function saveAllPredictionsToFirestore(predictions: Prediction[]): 
 export async function getPrediction(userId: string, matchId: string): Promise<Prediction | null> {
   const snap = await getDoc(doc(db, PREDICTIONS, `${userId}_${matchId}`));
   return snap.exists() ? (snap.data() as Prediction) : null;
+}
+
+export async function getUserPredictions(userId: string): Promise<Prediction[]> {
+  const q = query(collection(db, PREDICTIONS), where('userId', '==', userId));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data() as Prediction);
 }
 
 export async function getAllPredictions(): Promise<Prediction[]> {

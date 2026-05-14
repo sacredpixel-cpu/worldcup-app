@@ -6,19 +6,20 @@ import { usePredictionsStore } from '@/store/slices/predictionsSlice';
 
 export function PredictionsSync() {
   const { user } = useAuthStore();
-  const { syncSavedToFirestore, subscribeCommunity } = usePredictionsStore();
+  const { syncSavedToFirestore, loadFromFirestore, subscribeCommunity } = usePredictionsStore();
 
-  // Subscribe to community predictions for real-time bar updates
+  // Subscribe to all community predictions for real-time bar updates
   useEffect(() => {
     const unsub = subscribeCommunity();
     return () => unsub();
   }, []);
 
-  // One-time sync of locally saved predictions to Firestore when user logs in
+  // On login: load user's predictions from Firestore, then sync any local-only ones up
   useEffect(() => {
-    if (user) {
-      syncSavedToFirestore(user.id).catch(console.error);
-    }
+    if (!user) return;
+    loadFromFirestore(user.id)
+      .then(() => syncSavedToFirestore(user.id))
+      .catch(console.error);
   }, [user?.id]);
 
   return null;

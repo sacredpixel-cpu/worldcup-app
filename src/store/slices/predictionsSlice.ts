@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { Prediction } from '@/types/prediction';
-import { savePredictionToFirestore, saveAllPredictionsToFirestore, subscribeToCommunityPredictions } from '@/lib/predictionsService';
+import { savePredictionToFirestore, saveAllPredictionsToFirestore, getUserPredictions, subscribeToCommunityPredictions } from '@/lib/predictionsService';
 
 interface PredictionsState {
   saved: Record<string, Prediction>;
@@ -17,6 +17,7 @@ interface PredictionsState {
   submitPrediction: (matchId: string, userId: string) => Prediction | null;
   getAllSaved: () => Prediction[];
   syncSavedToFirestore: (userId: string) => Promise<void>;
+  loadFromFirestore: (userId: string) => Promise<void>;
   subscribeCommunity: () => () => void;
 }
 
@@ -74,6 +75,16 @@ export const usePredictionsStore = create<PredictionsState>()(
         if (predictions.length === 0) return;
         await saveAllPredictionsToFirestore(predictions);
         set({ syncedToFirestore: true });
+      },
+
+      // Load user's predictions from Firestore into saved state (restores after logout/new device)
+      loadFromFirestore: async (userId) => {
+        const predictions = await getUserPredictions(userId);
+        if (predictions.length === 0) return;
+        const saved: Record<string, Prediction> = {};
+        predictions.forEach(p => { saved[p.matchId] = p; });
+        // Merge with any local predictions, Firestore wins on conflict
+        set((s) => ({ saved: { ...s.saved, ...saved }, syncedToFirestore: true }));
       },
 
       subscribeCommunity: () => {
