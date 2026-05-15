@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/slices/authSlice';
 import { usePredictionsStore } from '@/store/slices/predictionsSlice';
 
 export function PredictionsSync() {
-  const { user } = useAuthStore();
+  const { user, loadProfileFromFirestore } = useAuthStore();
   const { syncSavedToFirestore, loadFromFirestore, subscribeCommunity } = usePredictionsStore();
 
   // Subscribe to all community predictions for real-time bar updates
@@ -14,9 +14,10 @@ export function PredictionsSync() {
     return () => unsub();
   }, []);
 
-  // On login: load user's predictions from Firestore, then sync any local-only ones up
+  // On login: restore full profile (avatar, country, state) + predictions from Firestore
   useEffect(() => {
     if (!user) return;
+    loadProfileFromFirestore(user.id).catch(console.error);
     loadFromFirestore(user.id)
       .then(() => syncSavedToFirestore(user.id))
       .catch(console.error);

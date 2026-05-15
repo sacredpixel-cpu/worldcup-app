@@ -24,6 +24,7 @@ interface AuthState {
   updateAvatar: (url: string) => void;
   updateDisplayName: (name: string) => void;
   updateLocation: (country: string, countryCode: string, state?: string) => void;
+  loadProfileFromFirestore: (userId: string) => Promise<void>;
 }
 
 const safeStorage = typeof window !== 'undefined'
@@ -45,10 +46,15 @@ export const useAuthStore = create<AuthState>()(
         const user: User = {
           id: firebaseUser.uid,
           displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
-          avatarUrl: firebaseUser.photoURL,
+          // Preserve custom avatar if already set; fall back to Google photo
+          avatarUrl: isSameUser && existing!.avatarUrl ? existing!.avatarUrl : firebaseUser.photoURL,
           email: firebaseUser.email ?? '',
           totalPoints: isSameUser ? existing!.totalPoints : 0,
           globalRank: isSameUser ? existing!.globalRank : null,
+          // Preserve location from cache
+          country: isSameUser ? existing!.country : undefined,
+          countryCode: isSameUser ? existing!.countryCode : undefined,
+          state: isSameUser ? existing!.state : undefined,
         };
         set({ user, token: firebaseUser.uid });
       },
@@ -100,6 +106,27 @@ export const useAuthStore = create<AuthState>()(
         const { user } = get();
         if (!user) return;
         set({ user: { ...user, displayName: name } });
+      },
+
+      loadProfileFromFirestore: async (userId) => {
+        try {
+          const { getUserProfile } = await import('@/lib/usersService');
+          const profile = await getUserProfile(userId);
+          if (!profile) return;
+          const { user } = get();
+          if (!user || user.id !== userId) return;
+          set({
+            user: {
+              ...user,
+              avatarUrl: profile.avatarUrl ?? user.avatarUrl,
+              country: profile.country ?? user.country,
+              countryCode: profile.countryCode ?? user.countryCode,
+              state: profile.state ?? user.state,
+            },
+          });
+        } catch (e) {
+          console.error('loadProfileFromFirestore', e);
+        }
       },
 
       updateLocation: (country, countryCode, state) => {

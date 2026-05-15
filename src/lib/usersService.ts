@@ -1,4 +1,4 @@
-import { doc, setDoc, getDocs, collection, onSnapshot, type Unsubscribe } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface UserProfile {
@@ -12,6 +12,11 @@ export interface UserProfile {
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
   await setDoc(doc(db, 'users', profile.userId), profile, { merge: true });
+}
+
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const snap = await getDoc(doc(db, 'users', userId));
+  return snap.exists() ? (snap.data() as UserProfile) : null;
 }
 
 export function subscribeToUserProfiles(cb: (profiles: Record<string, UserProfile>) => void): Unsubscribe {
