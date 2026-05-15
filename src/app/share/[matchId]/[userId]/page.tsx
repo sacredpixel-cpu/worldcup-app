@@ -1,6 +1,19 @@
 import { ALL_MATCHES } from '@/data/matches';
 import { notFound } from 'next/navigation';
-import { SharePageClient } from './SharePageClient';
+import dynamic from 'next/dynamic';
+
+// Load client component with SSR disabled so Firebase never runs server-side
+const SharePageClient = dynamic(
+  () => import('./SharePageClient').then(m => m.SharePageClient),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-screen items-center justify-center bg-[#FBFAF7]">
+        <div className="text-gray-400 animate-pulse">Loading…</div>
+      </div>
+    ),
+  }
+);
 
 export async function generateMetadata({ params }: { params: { matchId: string; userId: string } }) {
   const match = ALL_MATCHES.find(m => m.id === params.matchId);
@@ -36,5 +49,5 @@ export default function SharePage({ params }: { params: { matchId: string; userI
   const match = ALL_MATCHES.find(m => m.id === params.matchId);
   if (!match) notFound();
 
-  return <SharePageClient matchId={params.matchId} userId={params.userId} match={match} />;
+  return <SharePageClient matchId={params.matchId} userId={params.userId} match={match!} />;
 }
