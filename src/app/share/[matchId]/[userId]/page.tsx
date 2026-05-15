@@ -10,13 +10,22 @@ export async function generateMetadata({ params }: { params: { matchId: string; 
   const home = match.homeTeam.name;
   const away = match.awayTeam.name;
   const score = pred ? `${pred.homeScore}–${pred.awayScore}` : '?–?';
+  const description = `Settle the scores at MyWorldCupSchedule.com — Follow the World Cup schedule, predict your own scores, and enjoy leaderboards and group challenges.`;
   return {
     title: `My prediction: ${home} ${score} ${away} | World Cup 2026`,
-    description: `I'm predicting ${home} ${score} ${away} at the 2026 FIFA World Cup. Make your own predictions!`,
+    description,
     openGraph: {
-      title: `${home} ${score} ${away}`,
-      description: `My World Cup 2026 prediction — join me!`,
-      images: [`/share/${params.matchId}/${params.userId}/og.png`],
+      title: `I'm predicting ${home} ${score} ${away} at the 2026 FIFA World Cup!`,
+      description,
+      images: [`/share/${params.matchId}/${params.userId}/opengraph-image`],
+      url: `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}`,
+      siteName: 'MyWorldCupSchedule.com',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `I'm predicting ${home} ${score} ${away}!`,
+      description,
     },
   };
 }

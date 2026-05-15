@@ -26,29 +26,37 @@ function ScoreStepper({ value, onChange, locked }: { value: number; onChange: (v
 function ShareButton({ match, prediction }: { match: Match; prediction: Prediction }) {
   const [copied, setCopied] = useState(false);
   const shareUrl = `https://myworldcupschedule.com/share/${match.id}/${prediction.userId}`;
-  const text = `I'm predicting ${match.homeTeam.name} ${prediction.homeScore}–${prediction.awayScore} ${match.awayTeam.name} at the 2026 FIFA World Cup!`;
-  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+  const caption = `Settle the scores at MyWorldCupSchedule.com — Follow the World Cup schedule, predict your own scores, and enjoy leaderboards and group challenges.\n\nI'm predicting ${match.homeTeam.name} ${prediction.homeScore}–${prediction.awayScore} ${match.awayTeam.name} at the 2026 FIFA World Cup! Can you do better?\n\n${shareUrl}`;
+  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(caption)}`;
 
   async function handleShare() {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'My World Cup Prediction', text, url: shareUrl });
+        await navigator.share({
+          title: `I'm predicting ${match.homeTeam.name} ${prediction.homeScore}–${prediction.awayScore} ${match.awayTeam.name}!`,
+          text: caption,
+          url: shareUrl,
+        });
         return;
       } catch {}
     }
-    // Fallback: copy link
-    await navigator.clipboard.writeText(shareUrl);
+    // Fallback: copy caption + link
+    await navigator.clipboard.writeText(caption);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   async function handleInstagram() {
-    await navigator.clipboard.writeText(shareUrl);
+    await navigator.clipboard.writeText(caption);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
     window.open('https://www.instagram.com/', '_blank');
   }
 
   async function handleTikTok() {
-    await navigator.clipboard.writeText(shareUrl);
+    await navigator.clipboard.writeText(caption);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
     window.open('https://www.tiktok.com/', '_blank');
   }
 
