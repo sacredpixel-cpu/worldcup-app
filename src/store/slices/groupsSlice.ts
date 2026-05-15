@@ -7,6 +7,7 @@ import {
   createGroupInFirestore,
   getGroupByInviteCode,
   addMemberToGroup,
+  removeMemberFromGroup,
   getUserGroups,
   subscribeToUserGroups,
 } from '@/lib/groupsService';
@@ -22,6 +23,8 @@ interface GroupsState {
   createGroup: (name: string, userId: string, displayName: string, avatarUrl: string | null) => Promise<Group>;
   joinGroup: (inviteCode: string, userId: string, displayName: string, avatarUrl: string | null) => Promise<Group | null>;
   getGroup: (id: string) => Group | undefined;
+  leaveGroup: (groupId: string, userId: string) => Promise<void>;
+  removeMember: (groupId: string, userId: string) => Promise<void>;
   fetchUserGroups: (userId: string) => Promise<void>;
   subscribeGroups: (userId: string) => () => void;
 }
@@ -61,6 +64,24 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
   },
 
   getGroup: (id) => get().groups.find(g => g.id === id),
+
+  leaveGroup: async (groupId, userId) => {
+    await removeMemberFromGroup(groupId, userId);
+    set(s => ({
+      groups: s.groups
+        .map(g => g.id !== groupId ? g : { ...g, members: g.members.filter(m => m.userId !== userId) })
+        .filter(g => g.members.length > 0),
+    }));
+  },
+
+  removeMember: async (groupId, userId) => {
+    await removeMemberFromGroup(groupId, userId);
+    set(s => ({
+      groups: s.groups.map(g =>
+        g.id !== groupId ? g : { ...g, members: g.members.filter(m => m.userId !== userId) }
+      ),
+    }));
+  },
 
   fetchUserGroups: async (userId) => {
     set({ loading: true });

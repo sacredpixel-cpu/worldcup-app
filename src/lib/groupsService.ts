@@ -2,6 +2,7 @@ import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc,
   query, where, arrayUnion, onSnapshot, type Unsubscribe,
 } from 'firebase/firestore';
+import type { Group } from '@/types/group';
 import { db } from './firebase';
 import type { Group, GroupMember } from '@/types/group';
 
@@ -29,6 +30,15 @@ export async function getUserGroups(userId: string): Promise<Group[]> {
   return snap.docs
     .map(d => d.data() as Group)
     .filter(g => g.members.some(m => m.userId === userId));
+}
+
+export async function removeMemberFromGroup(groupId: string, userId: string): Promise<void> {
+  const ref = doc(db, GROUPS, groupId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const group = snap.data() as Group;
+  const updatedMembers = group.members.filter(m => m.userId !== userId);
+  await updateDoc(ref, { members: updatedMembers });
 }
 
 export function subscribeToUserGroups(userId: string, cb: (groups: Group[]) => void): Unsubscribe {
