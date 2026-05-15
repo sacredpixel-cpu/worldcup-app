@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/Button';
@@ -13,13 +13,11 @@ import { Input } from '@/components/ui/Input';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { user, register, loginWithGoogle } = useAuthStore();
+  const { user, loginWithGoogle } = useAuthStore();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [usePhone, setUsePhone] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -30,8 +28,8 @@ export default function RegisterPage() {
   async function handleGoogle() {
     setLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged in FirebaseAuthSync will handle the store update
+      await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged in FirebaseAuthSync handles the rest
     } catch (err: any) {
       setErrors({ google: err.message || 'Google sign-in failed.' });
       setLoading(false);
@@ -41,21 +39,38 @@ export default function RegisterPage() {
   function validate() {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = 'Display name is required.';
-    if (!usePhone && !email) e.email = 'Email is required.';
-    if (usePhone && !phone) e.phone = 'Phone number is required.';
+    if (!email) e.email = 'Email is required.';
     if (!password || password.length < 6) e.password = 'Password must be at least 6 characters.';
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    setTimeout(() => {
-      register(usePhone ? `${phone}@phone.wc2026` : email, password, name.trim());
+    try {
+      // Create a real Firebase Auth account
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      // Set the display name on the Firebase profile
+      await updateProfile(credential.user, { displayName: name.trim() });
+      // Immediately hydrate the store with the correct display name
+      loginWithGoogle({
+        uid: credential.user.uid,
+        displayName: name.trim(),
+        email: credential.user.email,
+        photoURL: null,
+      });
       router.push('/schedule');
-    }, 500);
+    } catch (err: any) {
+      const msg =
+        err.code === 'auth/email-already-in-use' ? 'An account with this email already exists.' :
+        err.code === 'auth/weak-password' ? 'Password is too weak. Use at least 6 characters.' :
+        err.code === 'auth/invalid-email' ? 'Please enter a valid email address.' :
+        err.message || 'Registration failed. Please try again.';
+      setErrors({ submit: msg });
+      setLoading(false);
+    }
   }
 
   return (
@@ -76,7 +91,7 @@ export default function RegisterPage() {
         Continue with Google
       </Button>
 
-      {errors.google && <p className="mb-4 w-full rounded-lg bg-accent/10 px-3 py-2 text-sm text-red-400">{errors.google}</p>}
+      {errors.google && <p className="mb-4 w-full rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{errors.google}</p>}
 
       <div className="mb-6 flex w-full items-center gap-3">
         <div className="flex-1 border-t border-border" />
@@ -84,22 +99,10 @@ export default function RegisterPage() {
         <div className="flex-1 border-t border-border" />
       </div>
 
-      <div className="mb-4 flex w-full rounded-xl border border-border p-1">
-        {['Email', 'Phone'].map((opt, i) => (
-          <button key={opt} onClick={() => setUsePhone(i === 1)}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${usePhone === (i === 1) ? 'bg-brand text-gray-900' : 'text-gray-400'}`}>
-            {opt}
-          </button>
-        ))}
-      </div>
-
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+        {errors.submit && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{errors.submit}</p>}
         <Input label="Display Name" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} error={errors.name} />
-        {!usePhone ? (
-          <Input label="Email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} error={errors.email} autoComplete="email" />
-        ) : (
-          <Input label="Phone Number" type="tel" placeholder="+1 555 000 0000" value={phone} onChange={e => setPhone(e.target.value)} error={errors.phone} />
-        )}
+        <Input label="Email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} error={errors.email} autoComplete="email" />
         <Input label="Password" type="password" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} error={errors.password} autoComplete="new-password" />
         <Button type="submit" size="lg" className="w-full" loading={loading}>Create Account</Button>
       </form>

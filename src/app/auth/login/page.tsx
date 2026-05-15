@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loginWithEmail } = useAuthStore();
+  const { user } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,22 +27,33 @@ export default function LoginPage() {
   async function handleGoogle() {
     setLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged in FirebaseAuthSync will handle the store update
+      await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged in FirebaseAuthSync handles the rest
     } catch (err: any) {
       setError(err.message || 'Google sign-in failed.');
       setLoading(false);
     }
   }
 
-  function handleEmail(e: React.FormEvent) {
+  async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !password) { setError('Please fill in all fields.'); return; }
     setLoading(true);
-    setTimeout(() => {
-      loginWithEmail(email, password);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged in FirebaseAuthSync will call loginWithGoogle with real Firebase user
       router.push('/schedule');
-    }, 500);
+    } catch (err: any) {
+      const msg =
+        err.code === 'auth/user-not-found' ? 'No account found with this email.' :
+        err.code === 'auth/wrong-password' ? 'Incorrect password.' :
+        err.code === 'auth/invalid-credential' ? 'Incorrect email or password.' :
+        err.code === 'auth/invalid-email' ? 'Please enter a valid email address.' :
+        err.code === 'auth/too-many-requests' ? 'Too many attempts. Please try again later.' :
+        err.message || 'Sign-in failed. Please try again.';
+      setError(msg);
+      setLoading(false);
+    }
   }
 
   return (
@@ -70,7 +81,7 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleEmail} className="flex w-full flex-col gap-4">
-        {error && <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{error}</p>}
         <Input label="Email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
         <Input label="Password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
         <Button type="submit" size="lg" className="w-full" loading={loading}>Sign In</Button>
