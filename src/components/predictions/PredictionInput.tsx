@@ -27,84 +27,52 @@ function ShareButton({ match, prediction }: { match: Match; prediction: Predicti
   const [status, setStatus] = useState<'idle' | 'loading' | 'copied'>('idle');
   const shareUrl = `https://myworldcupschedule.com/share/${match.id}/${prediction.userId}`;
   const caption = `Settle the scores at MyWorldCupSchedule.com — Follow the World Cup schedule, predict your own scores, and enjoy leaderboards and group challenges.\n\nI'm predicting ${match.homeTeam.name} ${prediction.homeScore}–${prediction.awayScore} ${match.awayTeam.name} at the 2026 FIFA World Cup! Can you do better?\n\n${shareUrl}`;
-  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(caption)}`;
 
-  // Fetch the pre-rendered share card image from our OG image route
-  async function getShareImage(): Promise<File | null> {
-    try {
-      const res = await fetch(`/share/${match.id}/${prediction.userId}/opengraph-image`);
-      const blob = await res.blob();
-      return new File([blob], 'my-world-cup-prediction.png', { type: 'image/png' });
-    } catch {
-      return null;
+  // Facebook: plain sharer URL — OG image + title show automatically as wall post preview
+  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+
+  // Generic native share (↑ Post button): caption + URL, no image needed
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `I'm predicting ${match.homeTeam.name} ${prediction.homeScore}–${prediction.awayScore} ${match.awayTeam.name}!`,
+          text: caption,
+          url: shareUrl,
+        });
+        return;
+      } catch {}
     }
-  }
-
-  // Share with image via native share sheet (works on iOS/Android)
-  // User picks Instagram, TikTok, Facebook, etc. from the sheet → opens app with image ready to post
-  async function shareWithImage() {
-    setStatus('loading');
-    try {
-      const file = await getShareImage();
-      if (navigator.share) {
-        if (file && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], text: caption });
-        } else {
-          await navigator.share({ title: 'My World Cup Prediction', text: caption, url: shareUrl });
-        }
-        setStatus('idle');
-        return;
-      }
-    } catch {}
-    // Desktop fallback: copy caption + URL
+    // Desktop fallback: copy caption
     await navigator.clipboard.writeText(caption);
     setStatus('copied');
     setTimeout(() => setStatus('idle'), 2500);
   }
 
-  // Instagram: fetch image → native share sheet → user picks Instagram → posts to feed
+  // Instagram & TikTok: copy caption + open app
+  // Instagram/TikTok don't allow third-party web posting — user pastes the caption
   async function handleInstagram() {
-    setStatus('loading');
-    try {
-      const file = await getShareImage();
-      if (navigator.share && file && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: caption });
-        setStatus('idle');
-        return;
-      }
-    } catch {}
-    // Fallback: copy caption and open Instagram
     await navigator.clipboard.writeText(caption);
     setStatus('copied');
     setTimeout(() => setStatus('idle'), 2500);
-    window.open('https://www.instagram.com/', '_blank');
+    window.open('https://www.instagram.com/create/story', '_blank');
   }
 
-  // TikTok: same approach
   async function handleTikTok() {
-    setStatus('loading');
-    try {
-      const file = await getShareImage();
-      if (navigator.share && file && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: caption });
-        setStatus('idle');
-        return;
-      }
-    } catch {}
     await navigator.clipboard.writeText(caption);
     setStatus('copied');
     setTimeout(() => setStatus('idle'), 2500);
-    window.open('https://www.tiktok.com/', '_blank');
+    window.open('https://www.tiktok.com/upload', '_blank');
   }
 
-  const shareLabel = status === 'loading' ? '...' : status === 'copied' ? '✓ Copied!' : '↑ Post';
+  const shareLabel = status === 'copied' ? '✓ Caption copied!' : '↑ Post';
 
   return (
-    <div className="mt-2 flex gap-2">
+    <div className="mt-2 flex flex-col gap-1.5">
+      <div className="flex gap-2">
       <button
-        onClick={shareWithImage}
-        disabled={status === 'loading'}
-        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card/50 py-2 text-xs font-semibold text-gray-600 hover:bg-card active:scale-95 disabled:opacity-50"
+        onClick={handleShare}
+        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-card/50 py-2 text-xs font-semibold text-gray-600 hover:bg-card active:scale-95"
       >
         {shareLabel}
       </button>
@@ -132,6 +100,10 @@ function ShareButton({ match, prediction }: { match: Match; prediction: Predicti
           <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.79 1.53V6.77a4.85 4.85 0 01-1.02-.08z"/>
         </svg>
       </button>
+      </div>
+      {status === 'copied' && (
+        <p className="text-center text-[10px] text-gray-400">Caption copied — paste it into your post!</p>
+      )}
     </div>
   );
 }
