@@ -62,7 +62,7 @@ export default async function SharePage({ params }: { params: { matchId: string;
         <div className="mt-6 border-t border-border pt-4">
           <p className="text-xs text-gray-400 mb-3">Think you can do better?</p>
           <Link
-            href="https://worldcup-app-sooty.vercel.app/schedule"
+            href="https://myworldcupschedule.com/schedule"
             className="block w-full rounded-xl bg-brand py-3 text-sm font-bold text-white"
           >
             Make Your Prediction →

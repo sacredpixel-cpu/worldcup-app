@@ -51,7 +51,7 @@ export default async function OGImage({ params }: { params: { matchId: string; u
         </div>
 
         <p style={{ fontSize: 20, color: 'rgba(255,255,255,0.3)', marginTop: 60 }}>
-          worldcup-app-sooty.vercel.app · Make your own prediction!
+          myworldcupschedule.com · Make your own prediction!
         </p>
       </div>
     ),

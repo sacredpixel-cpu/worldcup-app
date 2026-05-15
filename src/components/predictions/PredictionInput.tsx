@@ -25,7 +25,7 @@ function ScoreStepper({ value, onChange, locked }: { value: number; onChange: (v
 
 function ShareButton({ match, prediction }: { match: Match; prediction: Prediction }) {
   const [copied, setCopied] = useState(false);
-  const shareUrl = `https://worldcup-app-sooty.vercel.app/share/${match.id}/${prediction.userId}`;
+  const shareUrl = `https://myworldcupschedule.com/share/${match.id}/${prediction.userId}`;
   const text = `I'm predicting ${match.homeTeam.name} ${prediction.homeScore}–${prediction.awayScore} ${match.awayTeam.name} at the 2026 FIFA World Cup!`;
   const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
 
