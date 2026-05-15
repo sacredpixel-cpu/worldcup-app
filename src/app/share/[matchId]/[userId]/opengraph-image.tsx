@@ -1,23 +1,27 @@
 import { ImageResponse } from 'next/og';
 import { ALL_MATCHES } from '@/data/matches';
-import { getPrediction } from '@/lib/predictionsService';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-export default async function OGImage({ params }: { params: { matchId: string; userId: string } }) {
+// Score is passed as ?h=2&a=1 — no Firebase needed server-side
+export default async function OGImage({
+  params,
+  searchParams,
+}: {
+  params: { matchId: string; userId: string };
+  searchParams: { h?: string; a?: string };
+}) {
   const match = ALL_MATCHES.find(m => m.id === params.matchId);
   if (!match) return new Response('Not found', { status: 404 });
 
-  let pred = null;
-  try { pred = await getPrediction(params.userId, params.matchId); } catch {}
   const home = match.homeTeam.name;
   const away = match.awayTeam.name;
   const homeFlag = `https://flagcdn.com/w160/${match.homeTeam.code.toLowerCase()}.png`;
   const awayFlag = `https://flagcdn.com/w160/${match.awayTeam.code.toLowerCase()}.png`;
-  const homeScore = pred?.homeScore ?? '?';
-  const awayScore = pred?.awayScore ?? '?';
+  const homeScore = searchParams?.h ?? '?';
+  const awayScore = searchParams?.a ?? '?';
 
   return new ImageResponse(
     (
@@ -39,7 +43,6 @@ export default async function OGImage({ params }: { params: { matchId: string; u
           alignItems: 'center',
           justifyContent: 'center',
           padding: '22px 60px',
-          gap: 16,
         }}>
           <span style={{ fontSize: 28, color: 'white', fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase' }}>
             ⚽ FIFA World Cup 2026 · My Prediction
@@ -52,7 +55,6 @@ export default async function OGImage({ params }: { params: { matchId: string; u
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 0,
           padding: '30px 80px',
         }}>
           {/* Home team */}

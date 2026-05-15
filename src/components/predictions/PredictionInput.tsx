@@ -25,7 +25,7 @@ function ScoreStepper({ value, onChange, locked }: { value: number; onChange: (v
 
 function ShareButton({ match, prediction }: { match: Match; prediction: Prediction }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'copied'>('idle');
-  const shareUrl = `https://myworldcupschedule.com/share/${match.id}/${prediction.userId}`;
+  const shareUrl = `https://myworldcupschedule.com/share/${match.id}/${prediction.userId}?h=${prediction.homeScore}&a=${prediction.awayScore}`;
   const caption = `Settle the scores at MyWorldCupSchedule.com — Follow the World Cup schedule, predict your own scores, and enjoy leaderboards and group challenges.\n\nI'm predicting ${match.homeTeam.name} ${prediction.homeScore}–${prediction.awayScore} ${match.awayTeam.name} at the 2026 FIFA World Cup! Can you do better?\n\n${shareUrl}`;
 
   // Facebook: plain sharer URL — OG image + title show automatically as wall post preview
