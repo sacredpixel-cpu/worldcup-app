@@ -10,7 +10,8 @@ export default async function OGImage({ params }: { params: { matchId: string; u
   const match = ALL_MATCHES.find(m => m.id === params.matchId);
   if (!match) return new Response('Not found', { status: 404 });
 
-  const pred = await getPrediction(params.userId, params.matchId);
+  let pred = null;
+  try { pred = await getPrediction(params.userId, params.matchId); } catch {}
   const home = match.homeTeam.name;
   const away = match.awayTeam.name;
   const homeFlag = `https://flagcdn.com/w160/${match.homeTeam.code.toLowerCase()}.png`;
