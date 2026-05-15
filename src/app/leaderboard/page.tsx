@@ -43,12 +43,14 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
   const location = profile?.countryCode
     ? `${profile.countryCode === 'us' && profile.state ? profile.state + ', ' : ''}${profile.country}`
     : null;
+  // Prefer the latest avatar from Firestore over the snapshot in the entry
+  const avatarUrl = profile?.avatarUrl ?? entry.avatarUrl;
 
   return (
     <div className={`flex items-center gap-3 rounded-xl px-4 py-3 ${isMe ? 'border border-brand/40 bg-brand/10' : 'bg-card'}`}>
       <RankBadge rank={rank} />
-      {entry.avatarUrl ? (
-        <Image src={entry.avatarUrl} alt={entry.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
+      {avatarUrl ? (
+        <Image src={avatarUrl} alt={entry.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
       ) : (
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-gray-900">
           {entry.displayName[0].toUpperCase()}

@@ -94,6 +94,8 @@ function GroupDetailContent() {
           const isConfirming = confirmId === m.userId;
           const isRemoving = removingId === m.userId;
           const profile = userProfiles[m.userId];
+          // Prefer the latest avatar from Firestore profiles over the snapshot stored at join time
+          const avatarUrl = profile?.avatarUrl ?? m.avatarUrl;
           const location = profile?.countryCode
             ? (profile.countryCode === 'us' && profile.state ? `${profile.state}, ${profile.country}` : profile.country)
             : null;
@@ -104,8 +106,8 @@ function GroupDetailContent() {
               className={`flex items-center gap-3 rounded-xl px-4 py-3 ${isMe ? 'border border-brand/40 bg-brand/10' : 'bg-card'}`}
             >
               <span className="w-6 text-center text-sm font-bold text-gray-400">{i + 1}</span>
-              {m.avatarUrl ? (
-                <Image src={m.avatarUrl} alt={m.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt={m.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
               ) : (
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
                   {m.displayName[0].toUpperCase()}

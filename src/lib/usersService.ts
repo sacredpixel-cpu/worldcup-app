@@ -11,7 +11,11 @@ export interface UserProfile {
 }
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
-  await setDoc(doc(db, 'users', profile.userId), profile, { merge: true });
+  // Firestore rejects documents containing undefined values — strip them out
+  const clean = Object.fromEntries(
+    Object.entries(profile).filter(([, v]) => v !== undefined && v !== null)
+  );
+  await setDoc(doc(db, 'users', profile.userId), clean, { merge: true });
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
