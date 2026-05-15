@@ -45,9 +45,9 @@ export default function LoginPage() {
       router.push('/schedule');
     } catch (err: any) {
       const msg =
-        err.code === 'auth/user-not-found' ? 'No account found with this email.' :
-        err.code === 'auth/wrong-password' ? 'Incorrect password.' :
-        err.code === 'auth/invalid-credential' ? 'Incorrect email or password.' :
+        err.code === 'auth/user-not-found' ? 'No account found with this email. Please create a new account.' :
+        err.code === 'auth/wrong-password' ? 'Incorrect password. Please try again.' :
+        err.code === 'auth/invalid-credential' ? 'Incorrect email or password. If you registered before May 15, please create a new account.' :
         err.code === 'auth/invalid-email' ? 'Please enter a valid email address.' :
         err.code === 'auth/too-many-requests' ? 'Too many attempts. Please try again later.' :
         err.message || 'Sign-in failed. Please try again.';
@@ -81,7 +81,14 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleEmail} className="flex w-full flex-col gap-4">
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{error}</p>}
+        {error && (
+          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">
+            {error}
+            {(error.includes('create a new account') || error.includes('registered before')) && (
+              <a href="/auth/register" className="ml-1 font-semibold underline">Register here →</a>
+            )}
+          </div>
+        )}
         <Input label="Email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
         <Input label="Password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
         <Button type="submit" size="lg" className="w-full" loading={loading}>Sign In</Button>

@@ -6,12 +6,16 @@ import { auth } from '@/lib/firebase';
 import { useAuthStore } from '@/store';
 
 export function FirebaseAuthSync() {
-  const { loginWithGoogle } = useAuthStore();
+  const { loginWithGoogle, clearAuth } = useAuthStore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         loginWithGoogle(firebaseUser);
+      } else {
+        // No real Firebase session — clear any stale local state
+        // (handles old fake accounts and logged-out users)
+        clearAuth();
       }
     });
     return () => unsubscribe();
