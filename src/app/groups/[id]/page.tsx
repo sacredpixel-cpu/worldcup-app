@@ -5,9 +5,10 @@ import { useAuthStore, useGroupsStore, usePredictionsStore } from '@/store';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import { calcPoints } from '@/lib/utils/calcPoints';
 import { ALL_MATCHES } from '@/data/matches';
+import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function GroupDetailContent() {
   const params = useParams();
@@ -17,6 +18,12 @@ function GroupDetailContent() {
   const { saved } = usePredictionsStore();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+
+  useEffect(() => {
+    const unsub = subscribeToUserProfiles(setUserProfiles);
+    return () => unsub();
+  }, []);
 
   const group = getGroup(params.id as string);
 
@@ -86,6 +93,10 @@ function GroupDetailContent() {
           const isMe = m.userId === user?.id;
           const isConfirming = confirmId === m.userId;
           const isRemoving = removingId === m.userId;
+          const profile = userProfiles[m.userId];
+          const location = profile?.countryCode
+            ? (profile.countryCode === 'us' && profile.state ? `${profile.state}, ${profile.country}` : profile.country)
+            : null;
 
           return (
             <div
@@ -100,13 +111,24 @@ function GroupDetailContent() {
                   {m.displayName[0].toUpperCase()}
                 </div>
               )}
-              <span className={`flex-1 text-sm font-semibold ${isMe ? 'text-brand' : 'text-gray-900'}`}>
-                {m.displayName}
-                {isMe && <span className="ml-1 text-xs text-gray-400">(You)</span>}
-                {m.userId === group.creatorId && !isMe && (
-                  <span className="ml-1 text-[10px] text-brand/70 font-normal">admin</span>
-                )}
-              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1">
+                  <span className={`truncate text-sm font-semibold ${isMe ? 'text-brand' : 'text-gray-900'}`}>
+                    {m.displayName}
+                  </span>
+                  {isMe && <span className="text-xs text-gray-400">(You)</span>}
+                  {m.userId === group.creatorId && !isMe && (
+                    <span className="text-[10px] text-brand/60 font-normal">admin</span>
+                  )}
+                </div>
+                {location ? (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`https://flagcdn.com/w20/${profile!.countryCode}.png`} alt="" className="h-3 w-4 object-cover rounded-sm" />
+                    <span className="text-xs text-gray-400 truncate">{location}</span>
+                  </div>
+                ) : null}
+              </div>
               <span className="text-lg font-black text-gold mr-1">{m.totalPoints}</span>
 
               {/* Remove button — creator only, not for themselves */}
