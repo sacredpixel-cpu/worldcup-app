@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useAuthStore, usePredictionsStore } from '@/store';
 import { ALL_MATCHES, GROUP_STAGE_MATCHES, KNOCKOUT_MATCHES, STAGE_LABELS } from '@/data/matches';
 import { GROUPS } from '@/data/teams';
@@ -8,6 +8,7 @@ import { MatchCard } from '@/components/schedule/MatchCard';
 import { DayFilter } from '@/components/schedule/DayFilter';
 import { GroupStageTable } from '@/components/schedule/GroupStageTable';
 import { ClientOnly } from '@/components/ui/ClientOnly';
+import { subscribeToUserProfiles } from '@/lib/usersService';
 import type { Match } from '@/types/match';
 
 type Tab = 'all' | 'groups' | 'knockout';
@@ -57,6 +58,12 @@ function ScheduleContent() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>('A');
   const [groupView, setGroupView] = useState<'matches' | 'table'>('matches');
+  const [fanCount, setFanCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const unsub = subscribeToUserProfiles(profiles => setFanCount(Object.keys(profiles).length));
+    return () => unsub();
+  }, []);
 
   const allDates = useMemo(() => uniqueDates(ALL_MATCHES), []);
 
@@ -85,9 +92,14 @@ function ScheduleContent() {
     <div className="flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
-        <h1 className="text-xl font-black text-gray-900">
-          <span className="text-brand-light">FIFA</span> World Cup 2026
-        </h1>
+        <div className="flex items-baseline justify-between">
+          <h1 className="text-xl font-black text-gray-900">
+            <span className="text-brand-light">FIFA</span> World Cup 2026
+          </h1>
+          {fanCount !== null && (
+            <span className="text-xs text-gray-400">⚽ Fans: <span className="font-semibold text-brand">{fanCount.toLocaleString()}</span></span>
+          )}
+        </div>
         <p className="text-xs text-gray-400">Jun 11 – Jul 19 · USA · Canada · Mexico</p>
       </div>
 
