@@ -18,7 +18,10 @@ function getDateStr(iso: string) {
 
 function uniqueDates(matches: Match[]) {
   const seen = new Set<string>();
-  return matches.map(m => getDateStr(m.kickoffAt)).filter(d => { if (seen.has(d)) return false; seen.add(d); return true; });
+  return [...matches]
+    .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))
+    .map(m => getDateStr(m.kickoffAt))
+    .filter(d => { if (seen.has(d)) return false; seen.add(d); return true; });
 }
 
 function buildStandings(groupLetter: string, matches: Match[]) {
@@ -58,12 +61,15 @@ function ScheduleContent() {
   const allDates = useMemo(() => uniqueDates(ALL_MATCHES), []);
 
   const filteredAll = useMemo(() => {
-    if (!selectedDate) return ALL_MATCHES;
-    return ALL_MATCHES.filter(m => getDateStr(m.kickoffAt) === selectedDate);
+    const sorted = [...ALL_MATCHES].sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
+    if (!selectedDate) return sorted;
+    return sorted.filter(m => getDateStr(m.kickoffAt) === selectedDate);
   }, [selectedDate]);
 
   const groupMatches = useMemo(() =>
-    GROUP_STAGE_MATCHES.filter(m => m.homeTeam.group === selectedGroup),
+    [...GROUP_STAGE_MATCHES]
+      .filter(m => m.homeTeam.group === selectedGroup)
+      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt)),
     [selectedGroup]
   );
 
@@ -180,7 +186,7 @@ function ScheduleContent() {
       {tab === 'knockout' && (
         <div className="flex flex-col gap-6 px-4 py-3 pb-4">
           {KNOCKOUT_STAGES.map(stage => {
-            const stageMatches = KNOCKOUT_MATCHES.filter(m => m.stage === stage);
+            const stageMatches = [...KNOCKOUT_MATCHES].filter(m => m.stage === stage).sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
             return (
               <div key={stage}>
                 <h2 className="mb-2 text-sm font-bold text-gray-500 uppercase tracking-wider">{STAGE_LABELS[stage]}</h2>
