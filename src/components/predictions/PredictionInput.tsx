@@ -15,7 +15,7 @@ function ScoreStepper({ value, onChange, locked }: { value: number; onChange: (v
       >−</button>
       <span className="w-6 text-center text-xl font-bold text-gray-900">{value}</span>
       <button
-        disabled={locked || value >= 9}
+        disabled={locked || value >= 10}
         onClick={() => onChange(value + 1)}
         className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-lg font-bold text-gray-900 disabled:opacity-30 active:scale-90"
       >+</button>
