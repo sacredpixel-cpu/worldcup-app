@@ -10,6 +10,7 @@ import type { Prediction } from '@/types/prediction';
 import { formatKickoff } from '@/lib/utils/formatDate';
 import { STAGE_LABELS } from '@/data/matches';
 import { usePredictionsStore } from '@/store/slices/predictionsSlice';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
 
 interface MatchCardProps {
   match: Match;
@@ -43,8 +44,10 @@ function TeamBlock({ team, score, side }: {
 }
 
 export function MatchCard({ match, userPrediction, allUserPredictions, isAuthenticated, userId }: MatchCardProps) {
+  const { getLiveMatch } = useMatchesStore();
+  const liveMatch = getLiveMatch(match);
   const { community } = usePredictionsStore();
-  const matchPredictions = community.filter(p => p.matchId === match.id);
+  const matchPredictions = community.filter(p => p.matchId === liveMatch.id);
   const crowd = matchPredictions.length === 0 ? null : (() => {
     const avgHome = Math.round(matchPredictions.reduce((s, p) => s + p.homeScore, 0) / matchPredictions.length * 10) / 10;
     const avgAway = Math.round(matchPredictions.reduce((s, p) => s + p.awayScore, 0) / matchPredictions.length * 10) / 10;
@@ -60,25 +63,25 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
       awayPct: Math.round(awayWins / matchPredictions.length * 100),
     };
   })();
-  const isTbd = match.homeTeam.id === 'tbd';
+  const isTbd = liveMatch.homeTeam.id === 'tbd';
 
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-3">
       {/* Stage + status badges */}
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-wider text-gray-400">
-          {match.homeTeam.group ? `Group ${match.homeTeam.group} · ` : ''}{STAGE_LABELS[match.stage]}
+          {liveMatch.homeTeam.group ? `Group ${liveMatch.homeTeam.group} · ` : ''}{STAGE_LABELS[liveMatch.stage]}
         </span>
-        {match.status === 'live' && <Badge variant="live">LIVE</Badge>}
-        {match.status === 'finished' && <Badge variant="gray">FT</Badge>}
+        {liveMatch.status === 'live' && <Badge variant="live">LIVE</Badge>}
+        {liveMatch.status === 'finished' && <Badge variant="gray">FT</Badge>}
       </div>
 
       {/* Teams vs Score */}
       <div className="flex items-center justify-between gap-2">
-        <TeamBlock team={match.homeTeam} score={match.homeScore} side="home" />
+        <TeamBlock team={liveMatch.homeTeam} score={liveMatch.homeScore} side="home" />
 
         <div className="flex flex-col items-center gap-0.5">
-          {match.status === 'upcoming' ? (
+          {liveMatch.status === 'upcoming' ? (
             <>
               <span className="text-xs font-bold text-gray-900">VS</span>
               {crowd && (
@@ -90,40 +93,40 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
           )}
         </div>
 
-        <TeamBlock team={match.awayTeam} score={match.awayScore} side="away" />
+        <TeamBlock team={liveMatch.awayTeam} score={liveMatch.awayScore} side="away" />
       </div>
 
       {/* Crowd compare bar */}
-      {!isTbd && crowd && match.status === 'upcoming' && (
+      {!isTbd && crowd && liveMatch.status === 'upcoming' && (
         <CrowdCompare
           homeAvg={crowd.homeAvg}
           awayAvg={crowd.awayAvg}
           count={crowd.count}
-          homeTeamName={match.homeTeam.name}
-          awayTeamName={match.awayTeam.name}
+          homeTeamName={liveMatch.homeTeam.name}
+          awayTeamName={liveMatch.awayTeam.name}
         />
       )}
 
       {/* Date / venue */}
       <div className="mt-2 flex items-center justify-between text-[11px] text-gray-400">
-        <span>{formatKickoff(match.kickoffAt)}</span>
-        <span className="truncate max-w-[140px] text-right">{match.city}</span>
+        <span>{formatKickoff(liveMatch.kickoffAt)}</span>
+        <span className="truncate max-w-[140px] text-right">{liveMatch.city}</span>
       </div>
 
       {/* Points badge for finished matches */}
-      {userPrediction && match.status === 'finished' && (
+      {userPrediction && liveMatch.status === 'finished' && (
         <div className="mt-1.5 flex justify-end">
-          <PointsBadge prediction={userPrediction} match={match} />
+          <PointsBadge prediction={userPrediction} match={liveMatch} />
         </div>
       )}
 
       {/* Prediction input for authenticated users */}
       {isAuthenticated && !isTbd && userId && (
-        <PredictionInput match={match} userId={userId} existing={userPrediction} />
+        <PredictionInput match={liveMatch} userId={userId} existing={userPrediction} />
       )}
 
       {/* CTA for unauthenticated */}
-      {!isAuthenticated && !isTbd && match.status === 'upcoming' && (
+      {!isAuthenticated && !isTbd && liveMatch.status === 'upcoming' && (
         <p className="mt-2 text-center text-xs text-gray-400">Sign in to predict the score</p>
       )}
     </div>

@@ -5,6 +5,7 @@ import { AuthBanner } from '@/components/ui/AuthBanner';
 import { BottomTabBar } from '@/components/ui/BottomTabBar';
 import { FirebaseAuthSync } from '@/components/FirebaseAuthSync';
 import { PredictionsSync } from '@/components/PredictionsSync';
+import { MatchUpdatesSync } from '@/components/MatchUpdatesSync';
 
 export const metadata: Metadata = {
   title: 'World Cup 2026',
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-[#FBFAF7]">
             <FirebaseAuthSync />
             <PredictionsSync />
+            <MatchUpdatesSync />
             <AuthBanner />
             <main className="flex-1 overflow-y-auto pb-[72px]">
               {children}

@@ -1,3 +1,4 @@
 export { useAuthStore } from './slices/authSlice';
 export { usePredictionsStore } from './slices/predictionsSlice';
 export { useGroupsStore } from './slices/groupsSlice';
+export { useMatchesStore } from './slices/matchesSlice';
