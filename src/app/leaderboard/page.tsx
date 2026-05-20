@@ -5,6 +5,7 @@ import { useAuthStore, usePredictionsStore, useGroupsStore } from '@/store';
 import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
 import { ALL_MATCHES } from '@/data/matches';
 import { calcPoints } from '@/lib/utils/calcPoints';
+import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -105,6 +106,8 @@ function LeaderboardContent() {
       if (earned === 5) exact++;
       if (earned >= 3) correct++;
     });
+    // Add group-advancement prediction points (+3 winner, +2 runner-up, +1 third)
+    pts += calcGroupPoints(saved).total;
     return { userId: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, totalPoints: pts, correctScores: exact, correctOutcomes: correct };
   }, [user, saved]);
 

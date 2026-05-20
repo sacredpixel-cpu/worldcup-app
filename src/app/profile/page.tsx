@@ -4,6 +4,7 @@ import { useAuthStore, usePredictionsStore, useGroupsStore } from '@/store';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import { ALL_MATCHES } from '@/data/matches';
 import { calcPoints } from '@/lib/utils/calcPoints';
+import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
 import { useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -30,6 +31,8 @@ function ProfileContent() {
       if (earned === 5) exact++;
       if (earned >= 3) correct++;
     });
+    // Add group-advancement prediction points (+3 winner, +2 runner-up, +1 third)
+    pts += calcGroupPoints(saved).total;
     const totalPredictions = preds.length;
     const accuracy = totalPredictions > 0 ? Math.round((correct / Math.max(finished.length, 1)) * 100) : 0;
     return { pts, exact, correct, totalPredictions, accuracy };

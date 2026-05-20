@@ -8,7 +8,8 @@ import { MatchCard } from '@/components/schedule/MatchCard';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import Link from 'next/link';
 import Image from 'next/image';
-import type { Match, Team } from '@/types/match';
+import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
+import type { Team } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
 type SubTab = 'upcoming' | 'groups';
@@ -70,18 +71,22 @@ function buildPredictedStandings(
   return { standings, complete: predictedCount === totalMatches && totalMatches > 0, predictedCount, totalMatches };
 }
 
-function TeamRow({ standing, rank }: { standing: Standing; rank: number }) {
+function TeamRow({ standing, rank, correct }: { standing: Standing; rank: number; correct?: boolean }) {
   const gd = standing.gf - standing.ga;
   const advancesAuto = rank <= 2;
   const advancesThird = rank === 3;
 
   return (
     <div className={`flex items-center gap-2 rounded-lg px-3 py-2 ${
+      correct === true ? 'bg-accent/10 border border-accent/30' :
+      correct === false ? 'bg-red-50 border border-red-200' :
       advancesAuto ? 'bg-accent/10 border border-accent/20' :
       advancesThird ? 'bg-brand/5 border border-brand/10' :
       'bg-card/40 border border-border/50'
     }`}>
       <span className={`w-5 text-center text-xs font-bold ${
+        correct === true ? 'text-accent' :
+        correct === false ? 'text-red-400' :
         advancesAuto ? 'text-accent' : advancesThird ? 'text-brand' : 'text-gray-400'
       }`}>{rank}</span>
       {standing.team.flagUrl && (
@@ -95,13 +100,19 @@ function TeamRow({ standing, rank }: { standing: Standing; rank: number }) {
           {gd > 0 ? '+' : ''}{gd}
         </span>
       </div>
-      {advancesAuto && <span className="text-[10px] font-semibold text-accent">✓ ADV</span>}
-      {advancesThird && <span className="text-[10px] font-semibold text-brand">3rd</span>}
+      {correct === true && <span className="text-[10px] font-semibold text-accent">✓</span>}
+      {correct === false && <span className="text-[10px] font-semibold text-red-400">✗</span>}
+      {correct === undefined && advancesAuto && <span className="text-[10px] font-semibold text-accent">✓ ADV</span>}
+      {correct === undefined && advancesThird && <span className="text-[10px] font-semibold text-brand">3rd</span>}
     </div>
   );
 }
 
-function GroupCard({ letter, saved }: { letter: string; saved: Record<string, Prediction> }) {
+function GroupCard({ letter, saved, pointsResult }: {
+  letter: string;
+  saved: Record<string, Prediction>;
+  pointsResult?: { points: number; winnerCorrect: boolean; runnerUpCorrect: boolean; thirdCorrect: boolean };
+}) {
   const { standings, complete, predictedCount, totalMatches } = useMemo(
     () => buildPredictedStandings(letter, saved),
     [letter, saved]
@@ -111,14 +122,24 @@ function GroupCard({ letter, saved }: { letter: string; saved: Record<string, Pr
     <div className="rounded-xl border border-border bg-card p-3">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-black text-gray-900">Group {letter}</h3>
-        <span className="text-[10px] text-gray-400">{predictedCount}/{totalMatches} predicted</span>
+        <div className="flex items-center gap-2">
+          {pointsResult !== undefined && (
+            <span className={`text-xs font-bold ${pointsResult.points > 0 ? 'text-gold' : 'text-gray-400'}`}>
+              +{pointsResult.points} pts
+            </span>
+          )}
+          <span className="text-[10px] text-gray-400">{predictedCount}/{totalMatches} predicted</span>
+        </div>
       </div>
 
       {complete ? (
         <div className="flex flex-col gap-1.5">
-          {standings.map((s, i) => (
-            <TeamRow key={s.team.id} standing={s} rank={i + 1} />
-          ))}
+          {standings.map((s, i) => {
+            const correctVal = pointsResult !== undefined
+              ? (i === 0 ? pointsResult.winnerCorrect : i === 1 ? pointsResult.runnerUpCorrect : i === 2 ? pointsResult.thirdCorrect : undefined)
+              : undefined;
+            return <TeamRow key={s.team.id} standing={s} rank={i + 1} correct={correctVal} />;
+          })}
           <p className="mt-1 text-[10px] text-gray-400 text-center">
             Based on your score predictions
           </p>
@@ -231,6 +252,31 @@ function BestThirdSection({ saved }: { saved: Record<string, Prediction> }) {
   );
 }
 
+function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
+  const { results, total } = useMemo(() => calcGroupPoints(saved), [saved]);
+  const resultsByGroup = Object.fromEntries(results.map(r => [r.groupLetter, r]));
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 px-4">
+      {total > 0 && (
+        <div className="flex items-center justify-between rounded-xl bg-gold/10 border border-gold/30 px-4 py-2.5">
+          <span className="text-sm text-gray-600">Group stage points earned</span>
+          <span className="text-lg font-black text-gold">+{total} pts</span>
+        </div>
+      )}
+      <p className="text-xs text-gray-500 -mb-1">
+        Your predicted group standings — based on your score picks across all 6 group matches.
+        <span className="text-accent font-semibold"> Green = auto-advance</span>,{' '}
+        <span className="text-brand font-semibold">pink = 3rd place</span>.
+      </p>
+      {Object.keys(GROUPS).map(letter => (
+        <GroupCard key={letter} letter={letter} saved={saved} pointsResult={resultsByGroup[letter]} />
+      ))}
+      <BestThirdSection saved={saved} />
+    </div>
+  );
+}
+
 function PredictionsContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
@@ -335,19 +381,7 @@ function PredictionsContent() {
 
       {/* Groups tab */}
       {subTab === 'groups' && (
-        <div className="mt-4 flex flex-col gap-3 px-4">
-          <p className="text-xs text-gray-500 -mb-1">
-            Your predicted group standings — based on your score picks across all 6 group matches.
-            <span className="text-accent font-semibold"> Green = auto-advance</span>,{' '}
-            <span className="text-brand font-semibold">pink = 3rd place</span>.
-          </p>
-
-          {Object.keys(GROUPS).map(letter => (
-            <GroupCard key={letter} letter={letter} saved={saved} />
-          ))}
-
-          <BestThirdSection saved={saved} />
-        </div>
+        <GroupsTab saved={saved} />
       )}
     </div>
   );
