@@ -34,7 +34,7 @@ function HistoryBar({ label, value, max }: { label: string; value: number; max: 
   const pct = max === 0 ? 0 : Math.round((value / max) * 100);
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="w-28 shrink-0 text-gray-400">{label}</span>
+      <span className="w-28 shrink-0 text-gray-200">{label}</span>
       <div className="flex-1 rounded-full bg-white/10 h-1.5">
         <div className="h-1.5 rounded-full bg-brand" style={{ width: `${pct}%` }} />
       </div>
@@ -56,7 +56,7 @@ function TeamInfo({ teamId, teamName }: { teamId: string; teamName: string }) {
             <span className="ml-1.5 text-[10px] text-gray-500 italic">"{roster.nickname}"</span>
           )}
         </div>
-        <span className="text-[10px] text-gray-400">Coach: {roster.coach}</span>
+        <span className="text-[10px] text-gray-200">Coach: {roster.coach}</span>
       </div>
       <HistoryBar label="World Cup apps" value={h.appearances} max={23} />
       <HistoryBar label="Group stage" value={h.passed_group_stage} max={h.appearances || 1} />
@@ -112,8 +112,8 @@ function PlayerPicker({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-semibold text-gray-300">{teamName} scorer picks</span>
-        <span className="text-[10px] text-gray-500">{picks.length}/2 selected</span>
+        <span className="text-xs font-semibold text-gray-100">{teamName} scorer picks</span>
+        <span className="text-[10px] text-gray-300">{picks.length}/2 selected</span>
       </div>
       {picks.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-1">
@@ -131,7 +131,7 @@ function PlayerPicker({
         return (
           <div key={pos} className="rounded-lg border border-border overflow-hidden">
             <button
-              className="flex w-full items-center justify-between px-3 py-2 bg-card/60 text-xs font-semibold text-gray-300"
+              className="flex w-full items-center justify-between px-3 py-2 bg-card/60 text-xs font-semibold text-gray-100"
               onClick={() => setOpenPos(isOpen ? null : pos)}
             >
               <span>{POSITION_LABELS[pos]}</span>
@@ -211,13 +211,14 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
 
   return (
     <Modal open={open} onClose={onClose} className="max-h-[90vh] overflow-y-auto">
-      {/* Cancel button */}
+      {/* X close button */}
       <div className="flex justify-end mb-2">
         <button
           onClick={onClose}
-          className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white hover:border-gray-400 active:scale-95 transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-400 text-gray-300 hover:border-white hover:text-white active:scale-90 transition-colors"
+          aria-label="Close"
         >
-          Cancel
+          <span className="text-base font-bold leading-none">✕</span>
         </button>
       </div>
 
@@ -249,7 +250,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         {/* Score prediction */}
         {!isLocked && (
           <div className="rounded-xl border border-border bg-card/50 p-3">
-            <p className="mb-3 text-xs font-semibold text-gray-400 text-center">Predict the score</p>
+            <p className="mb-3 text-xs font-semibold text-gray-100 text-center">Predict the score</p>
             <div className="flex items-center justify-center gap-4">
               <ScoreStepper
                 value={homeScore}
@@ -270,8 +271,8 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         {!isLocked && (homeRoster || awayRoster) && (
           <div className="space-y-3">
             <div className="text-center space-y-0.5">
-              <p className="text-xs font-semibold text-gray-300">Who will score? Choose up to 2 players from each team</p>
-              <p className="text-[11px] text-gray-500">+1 pt for each correct choice, -1 point subtracted for each incorrect choice</p>
+              <p className="text-xs font-semibold text-gray-100">Who will score? Choose up to 2 players from each team</p>
+              <p className="text-[11px] text-gray-300">+1 pt for each correct choice, -1 point subtracted for each incorrect choice</p>
             </div>
             {homeRoster && (
               <PlayerPicker
@@ -299,7 +300,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         {/* Locked scorer display */}
         {isLocked && existing && (existing.homeScorerPicks?.length > 0 || existing.awayScorerPicks?.length > 0) && (
           <div className="rounded-xl border border-border bg-card/50 p-3 space-y-2">
-            <p className="text-xs font-semibold text-gray-400">Your scorer picks</p>
+            <p className="text-xs font-semibold text-gray-100">Your scorer picks</p>
             {existing.homeScorerPicks?.length > 0 && (
               <div>
                 <span className="text-[10px] text-gray-500 mr-1">{match.homeTeam.name}:</span>
@@ -321,7 +322,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
 
         {/* Team info */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-400">Team info</p>
+          <p className="text-xs font-semibold text-gray-100">Team info</p>
           <TeamInfo teamId={match.homeTeam.id} teamName={match.homeTeam.name} />
           <TeamInfo teamId={match.awayTeam.id} teamName={match.awayTeam.name} />
         </div>
@@ -337,8 +338,16 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         )}
 
         {isLocked && (
-          <p className="text-center text-xs text-gray-500">Predictions locked — match has started</p>
+          <p className="text-center text-xs text-gray-300">Predictions locked — match has started</p>
         )}
+
+        {/* Bottom cancel button */}
+        <button
+          onClick={onClose}
+          className="w-full rounded-xl border border-gray-400 py-3 text-sm font-semibold text-gray-100 hover:border-white hover:text-white active:scale-95 transition-colors"
+        >
+          Cancel
+        </button>
       </div>
     </Modal>
   );
