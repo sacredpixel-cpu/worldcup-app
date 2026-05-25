@@ -22,21 +22,21 @@ function GroupCard({ group, userId }: { group: Group; userId: string }) {
   const myRank = group.members.findIndex(m => m.userId === userId) + 1;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl p-4" style={{ background: '#0A1128', border: '1px solid rgba(255,255,255,0.07)' }}>
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="font-bold text-gray-900">{group.name}</h3>
-          <p className="text-xs text-gray-400">{group.members.length} member{group.members.length !== 1 ? 's' : ''}</p>
+          <h3 className="font-bold" style={{ color: '#E8F0FF' }}>{group.name}</h3>
+          <p className="text-xs" style={{ color: '#7A91BB' }}>{group.members.length} member{group.members.length !== 1 ? 's' : ''}</p>
         </div>
         {myRank > 0 && (
           <span className="text-sm font-bold text-gold">Rank #{myRank}</span>
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-lg bg-surface px-3 py-2 mb-3">
+      <div className="flex items-center justify-between rounded-lg px-3 py-2 mb-3" style={{ background: 'rgba(255,255,255,0.04)' }}>
         <div>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider">Invite Code</p>
-          <p className="text-lg font-black tracking-widest text-gray-900">{group.inviteCode}</p>
+          <p className="text-[10px] uppercase tracking-wider" style={{ color: '#7A91BB' }}>Invite Code</p>
+          <p className="text-lg font-black tracking-widest" style={{ color: '#E8F0FF', fontFamily: 'var(--font-barlow-condensed)' }}>{group.inviteCode}</p>
         </div>
         <button
           onClick={copyCode}
@@ -48,7 +48,7 @@ function GroupCard({ group, userId }: { group: Group; userId: string }) {
 
       <Link
         href={`/groups/${group.id}`}
-        className="block w-full rounded-lg border border-border py-2 text-center text-sm font-semibold text-gray-900 hover:bg-card/50"
+        className="block w-full rounded-lg py-2 text-center text-sm font-semibold" style={{ border: '1px solid rgba(255,255,255,0.1)', color: '#E8F0FF' }}
       >
         View Leaderboard →
       </Link>
@@ -79,9 +79,9 @@ function GroupsContent() {
     return (
       <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
         <div className="mb-4 text-5xl">👥</div>
-        <h2 className="mb-2 text-xl font-bold text-gray-900">Groups</h2>
-        <p className="mb-6 text-sm text-gray-500">Sign in to create or join prediction groups with friends</p>
-        <Link href="/auth/register" className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-gray-900">
+        <h2 className="mb-2 text-xl font-bold" style={{ color: '#E8F0FF' }}>Groups</h2>
+        <p className="mb-6 text-sm" style={{ color: '#7A91BB' }}>Sign in to create or join prediction groups with friends</p>
+        <Link href="/auth/register" className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold" style={{ color: '#06091A' }}>
           Create Account
         </Link>
       </div>
@@ -126,7 +126,7 @@ function GroupsContent() {
   return (
     <div className="flex flex-col pb-4">
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
-        <h1 className="text-xl font-black text-gray-900">Groups</h1>
+        <h1 className="text-2xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', letterSpacing: '0.02em' }}>GROUPS</h1>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={() => setShowJoin(true)}>Join</Button>
           <Button size="sm" onClick={() => setShowCreate(true)}>+ Create</Button>
@@ -140,7 +140,7 @@ function GroupsContent() {
       ) : myGroups.length === 0 ? (
         <div className="flex flex-col items-center py-16 text-center px-6">
           <div className="mb-3 text-4xl">🤝</div>
-          <p className="text-sm text-gray-500 mb-4">No groups yet. Create one and share the code with friends!</p>
+          <p className="text-sm mb-4" style={{ color: '#7A91BB' }}>No groups yet. Create one and share the code with friends!</p>
           <Button onClick={() => setShowCreate(true)}>Create a Group</Button>
         </div>
       ) : (

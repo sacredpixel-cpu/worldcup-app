@@ -16,13 +16,15 @@ function ScoreStepper({ value, onChange, locked }: { value: number; onChange: (v
       <button
         disabled={locked || value <= 0}
         onClick={() => onChange(value - 1)}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-300 bg-white text-lg font-bold text-gray-800 disabled:opacity-30 active:scale-90"
+        className="flex h-9 w-9 items-center justify-center rounded-xl text-lg font-bold disabled:opacity-30 active:scale-90"
+        style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF' }}
       >−</button>
-      <span className="w-7 text-center text-2xl font-black text-gray-900">{value}</span>
+      <span className="w-7 text-center text-2xl font-black" style={{ color: '#E8F0FF', fontFamily: 'var(--font-barlow-condensed)' }}>{value}</span>
       <button
         disabled={locked || value >= 10}
         onClick={() => onChange(value + 1)}
-        className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-300 bg-white text-lg font-bold text-gray-800 disabled:opacity-30 active:scale-90"
+        className="flex h-9 w-9 items-center justify-center rounded-xl text-lg font-bold disabled:opacity-30 active:scale-90"
+        style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF' }}
       >+</button>
     </div>
   );
@@ -34,11 +36,11 @@ function HistoryBar({ label, value, max }: { label: string; value: number; max: 
   const pct = max === 0 ? 0 : Math.round((value / max) * 100);
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="w-28 shrink-0 text-gray-700">{label}</span>
-      <div className="flex-1 rounded-full bg-gray-200 h-1.5">
+      <span className="w-28 shrink-0" style={{ color: '#7A91BB' }}>{label}</span>
+      <div className="flex-1 rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.08)' }}>
         <div className="h-1.5 rounded-full bg-brand" style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-5 text-right font-semibold text-gray-800">{value}</span>
+      <span className="w-5 text-right font-semibold" style={{ color: '#E8F0FF' }}>{value}</span>
     </div>
   );
 }
@@ -48,15 +50,15 @@ function TeamInfo({ teamId, teamName }: { teamId: string; teamName: string }) {
   if (!roster) return null;
   const h = roster.history;
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-1.5">
+    <div className="rounded-xl p-3 space-y-1.5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-xs font-bold text-gray-900">{teamName}</span>
+          <span className="text-xs font-bold" style={{ color: '#E8F0FF' }}>{teamName}</span>
           {roster.nickname && (
-            <span className="ml-1.5 text-[10px] text-gray-500 italic">"{roster.nickname}"</span>
+            <span className="ml-1.5 text-[10px] italic" style={{ color: '#7A91BB' }}>"{roster.nickname}"</span>
           )}
         </div>
-        <span className="text-[10px] text-gray-600">Coach: {roster.coach}</span>
+        <span className="text-[10px]" style={{ color: '#7A91BB' }}>Coach: {roster.coach}</span>
       </div>
       <HistoryBar label="World Cup apps" value={h.appearances} max={23} />
       <HistoryBar label="Group stage" value={h.passed_group_stage} max={h.appearances || 1} />
@@ -112,8 +114,8 @@ function PlayerPicker({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-semibold text-gray-800">{teamName} scorer picks</span>
-        <span className="text-[10px] text-gray-500 font-medium">{picks.length}/2 selected</span>
+        <span className="text-xs font-semibold" style={{ color: '#E8F0FF' }}>{teamName} scorer picks</span>
+        <span className="text-[10px] font-medium" style={{ color: '#7A91BB' }}>{picks.length}/2 selected</span>
       </div>
       {picks.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-1">
@@ -129,16 +131,17 @@ function PlayerPicker({
         if (!players.length) return null;
         const isOpen = openPos === pos;
         return (
-          <div key={pos} className="rounded-lg border border-gray-200 overflow-hidden">
+          <div key={pos} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
             <button
-              className="flex w-full items-center justify-between px-3 py-2 bg-gray-100 text-xs font-bold text-gray-800"
+              className="flex w-full items-center justify-between px-3 py-2 text-xs font-bold"
+              style={{ background: 'rgba(255,255,255,0.06)', color: '#E8F0FF' }}
               onClick={() => setOpenPos(isOpen ? null : pos)}
             >
               <span>{POSITION_LABELS[pos]}</span>
-              <span className="text-gray-500">{isOpen ? '▲' : '▼'}</span>
+              <span style={{ color: '#7A91BB' }}>{isOpen ? '▲' : '▼'}</span>
             </button>
             {isOpen && (
-              <div className="flex flex-wrap gap-1.5 p-2 bg-white">
+              <div className="flex flex-wrap gap-1.5 p-2" style={{ background: 'rgba(255,255,255,0.02)' }}>
                 {players.map(name => {
                   const selected = picks.includes(name);
                   const maxed = picks.length >= 2 && !selected;
@@ -212,7 +215,8 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
       <div className="flex justify-end mb-2">
         <button
           onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-gray-400 text-gray-600 hover:border-gray-700 hover:text-gray-900 active:scale-90 transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-full active:scale-90 transition-colors"
+          style={{ border: '1px solid rgba(255,255,255,0.15)', color: '#7A91BB' }}
           aria-label="Close"
         >
           <span className="text-base font-bold leading-none">✕</span>
@@ -220,28 +224,28 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
       </div>
 
       {/* H1 headline */}
-      <h1 className="mb-3 text-3xl font-black text-gray-900" style={{ fontFamily: 'var(--font-barlow-condensed)' }}>Predictions</h1>
+      <h1 className="mb-3 text-3xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>Predictions</h1>
 
       {/* Match header */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex flex-1 flex-col items-center gap-0.5">
           <FlagImage code={match.homeTeam.code} size={44} />
-          <span className="text-xs font-bold text-gray-900 text-center leading-tight">{match.homeTeam.name}</span>
+          <span className="text-xs font-bold text-center leading-tight" style={{ color: '#E8F0FF' }}>{match.homeTeam.name}</span>
           {ROSTERS[match.homeTeam.id]?.nickname && (
-            <span className="text-[10px] text-gray-500 text-center leading-tight">{ROSTERS[match.homeTeam.id].nickname}</span>
+            <span className="text-[10px] text-center leading-tight" style={{ color: '#7A91BB' }}>{ROSTERS[match.homeTeam.id].nickname}</span>
           )}
         </div>
         <div className="flex flex-col items-center gap-1">
-          <span className="text-xs text-gray-600 font-semibold">VS</span>
+          <span className="text-xs font-semibold" style={{ color: '#5A6E94' }}>VS</span>
           {isLocked && existing && (
-            <span className="text-sm font-black text-gray-900">{existing.homeScore}–{existing.awayScore}</span>
+            <span className="text-sm font-black" style={{ color: '#E8F0FF', fontFamily: 'var(--font-barlow-condensed)' }}>{existing.homeScore}–{existing.awayScore}</span>
           )}
         </div>
         <div className="flex flex-1 flex-col items-center gap-0.5">
           <FlagImage code={match.awayTeam.code} size={44} />
-          <span className="text-xs font-bold text-gray-900 text-center leading-tight">{match.awayTeam.name}</span>
+          <span className="text-xs font-bold text-center leading-tight" style={{ color: '#E8F0FF' }}>{match.awayTeam.name}</span>
           {ROSTERS[match.awayTeam.id]?.nickname && (
-            <span className="text-[10px] text-gray-500 text-center leading-tight">{ROSTERS[match.awayTeam.id].nickname}</span>
+            <span className="text-[10px] text-center leading-tight" style={{ color: '#7A91BB' }}>{ROSTERS[match.awayTeam.id].nickname}</span>
           )}
         </div>
       </div>
@@ -249,15 +253,15 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
       <div className="space-y-4">
         {/* Score prediction */}
         {!isLocked && (
-          <div className="rounded-xl border border-gray-200 bg-white p-3">
-            <p className="mb-3 text-xs font-semibold text-gray-700 text-center">Predict the score</p>
+          <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="mb-3 text-xs font-semibold text-center" style={{ color: '#7A91BB' }}>Predict the score</p>
             <div className="flex items-center justify-center gap-4">
               <ScoreStepper
                 value={homeScore}
                 onChange={(v) => setDraft(match.id, v, awayScore, homePicks, awayPicks)}
                 locked={isLocked}
               />
-              <span className="text-xl font-black text-gray-500">–</span>
+              <span className="text-xl font-black" style={{ color: '#3A4E6E' }}>–</span>
               <ScoreStepper
                 value={awayScore}
                 onChange={(v) => setDraft(match.id, homeScore, v, homePicks, awayPicks)}
@@ -271,10 +275,10 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         {!isLocked && (homeRoster || awayRoster) && (
           <div className="space-y-3">
             <div className="text-center space-y-1">
-              <h3 className="text-sm font-bold text-gray-900">Who will score? Choose up to 2 players from each team</h3>
-              <p className="text-[11px] text-gray-600">
-                <span className="font-bold text-green-600">+1 pt</span> for each correct choice,{' '}
-                <span className="font-bold text-red-600">-1 pt</span> subtracted for each incorrect choice
+              <h3 className="text-sm font-bold" style={{ color: '#E8F0FF' }}>Who will score? Choose up to 2 players from each team</h3>
+              <p className="text-[11px]" style={{ color: '#7A91BB' }}>
+                <span className="font-bold" style={{ color: '#00C44F' }}>+1 pt</span> for each correct choice,{' '}
+                <span className="font-bold" style={{ color: '#FF4D4D' }}>-1 pt</span> subtracted for each incorrect choice
               </p>
             </div>
             {homeRoster && (
@@ -302,21 +306,21 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
 
         {/* Locked scorer display */}
         {isLocked && existing && (existing.homeScorerPicks?.length > 0 || existing.awayScorerPicks?.length > 0) && (
-          <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
-            <p className="text-xs font-semibold text-gray-800">Your scorer picks</p>
+          <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="text-xs font-semibold" style={{ color: '#E8F0FF' }}>Your scorer picks</p>
             {existing.homeScorerPicks?.length > 0 && (
               <div>
-                <span className="text-[10px] text-gray-500 mr-1">{match.homeTeam.name}:</span>
+                <span className="text-[10px] mr-1" style={{ color: '#7A91BB' }}>{match.homeTeam.name}:</span>
                 {existing.homeScorerPicks.map(p => (
-                  <span key={p} className="mr-1 text-[11px] font-semibold text-gray-800">{p}</span>
+                  <span key={p} className="mr-1 text-[11px] font-semibold" style={{ color: '#E8F0FF' }}>{p}</span>
                 ))}
               </div>
             )}
             {existing.awayScorerPicks?.length > 0 && (
               <div>
-                <span className="text-[10px] text-gray-500 mr-1">{match.awayTeam.name}:</span>
+                <span className="text-[10px] mr-1" style={{ color: '#7A91BB' }}>{match.awayTeam.name}:</span>
                 {existing.awayScorerPicks.map(p => (
-                  <span key={p} className="mr-1 text-[11px] font-semibold text-gray-800">{p}</span>
+                  <span key={p} className="mr-1 text-[11px] font-semibold" style={{ color: '#E8F0FF' }}>{p}</span>
                 ))}
               </div>
             )}
@@ -325,7 +329,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
 
         {/* Team info */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-800">Team info</p>
+          <p className="text-xs font-semibold" style={{ color: '#E8F0FF' }}>Team info</p>
           <TeamInfo teamId={match.homeTeam.id} teamName={match.homeTeam.name} />
           <TeamInfo teamId={match.awayTeam.id} teamName={match.awayTeam.name} />
         </div>
@@ -341,13 +345,14 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         )}
 
         {isLocked && (
-          <p className="text-center text-xs text-gray-600">Predictions locked — match has started</p>
+          <p className="text-center text-xs" style={{ color: '#7A91BB' }}>Predictions locked — match has started</p>
         )}
 
         {/* Bottom cancel button */}
         <button
           onClick={onClose}
-          className="w-full rounded-xl border border-gray-400 py-3 text-sm font-semibold text-gray-700 hover:border-gray-700 hover:text-gray-900 active:scale-95 transition-colors"
+          className="w-full rounded-xl py-3 text-sm font-semibold active:scale-95 transition-colors"
+          style={{ border: '1px solid rgba(255,255,255,0.12)', color: '#7A91BB' }}
         >
           Cancel
         </button>

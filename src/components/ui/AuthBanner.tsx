@@ -10,31 +10,31 @@ function BannerInner() {
   const { user, clearAuth } = useAuthStore();
   const pathname = usePathname();
 
-  const isAuthPage = pathname.startsWith('/auth');
-  if (isAuthPage) return null;
+  if (pathname.startsWith('/auth')) return null;
+
+  const bannerStyle = {
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    background: 'rgba(255,255,255,0.02)',
+  };
 
   if (!user) {
     return (
-      <div className="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-border bg-surface/95 px-4 py-2.5 backdrop-blur">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-2 px-4 py-2.5 backdrop-blur" style={bannerStyle}>
+        <span className="text-[12px]" style={{ color: '#7A91BB' }}>Sign in to submit predictions</span>
         <div className="flex items-center gap-2">
-          <span className="text-2xl">⚽</span>
-          <div>
-            <p className="text-sm font-bold text-gray-900">World Cup 2026</p>
-            <p className="text-xs text-gray-500">Sign in to predict scores</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
           <Link
             href={`/auth/login?from=${encodeURIComponent(pathname)}`}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-gray-900 hover:bg-card"
+            className="rounded-full px-3 py-1 text-[12px] font-bold"
+            style={{ background: 'rgba(255,255,255,0.06)', color: '#C8D0E0', border: '1px solid rgba(255,255,255,0.09)' }}
           >
-            Log In
+            Log in
           </Link>
           <Link
             href={`/auth/register?from=${encodeURIComponent(pathname)}`}
-            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-gray-900 hover:bg-brand-light"
+            className="rounded-full px-3 py-1 text-[12px] font-bold"
+            style={{ background: '#FF1F8E', color: '#06091A' }}
           >
-            Sign Up
+            Sign up
           </Link>
         </div>
       </div>
@@ -42,25 +42,24 @@ function BannerInner() {
   }
 
   return (
-    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-2 backdrop-blur">
-      <div className="flex items-center gap-2.5">
+    <div className="sticky top-0 z-40 flex items-center justify-between gap-2 px-4 py-2 backdrop-blur" style={bannerStyle}>
+      <div className="flex items-center gap-2">
         {user.avatarUrl ? (
-          <Image src={user.avatarUrl} alt={user.displayName} width={32} height={32} className="rounded-full" unoptimized />
+          <Image src={user.avatarUrl} alt={user.displayName} width={28} height={28} className="rounded-full object-cover" unoptimized />
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-bold text-gray-900">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-black text-white" style={{ background: 'linear-gradient(135deg,#FF1F8E,#C0106A)' }}>
             {user.displayName[0].toUpperCase()}
           </div>
         )}
-        <div>
-          <p className="text-sm font-semibold text-gray-900">{user.displayName}</p>
-          <p className="text-xs text-gold">{user.totalPoints} pts</p>
-        </div>
+        <span className="text-[12px] font-semibold" style={{ color: '#C8D0E0' }}>{user.displayName}</span>
+        <span className="text-[12px] font-bold" style={{ color: '#FFB020' }}>{user.totalPoints} pts</span>
       </div>
       <button
         onClick={clearAuth}
-        className="rounded-lg border border-border px-3 py-1.5 text-xs text-gray-500 hover:text-gray-900 hover:bg-surface"
+        className="rounded-full px-3 py-1 text-[11px] font-semibold"
+        style={{ color: '#7A91BB', border: '1px solid rgba(255,255,255,0.08)' }}
       >
-        Sign Out
+        Sign out
       </button>
     </div>
   );
@@ -69,7 +68,7 @@ function BannerInner() {
 export function AuthBanner() {
   return (
     <ClientOnly fallback={
-      <div className="sticky top-0 z-40 h-[52px] border-b border-border bg-surface" />
+      <div className="sticky top-0 z-40 h-[42px]" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }} />
     }>
       <BannerInner />
     </ClientOnly>

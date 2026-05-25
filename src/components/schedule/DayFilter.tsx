@@ -16,9 +16,10 @@ export function DayFilter({ dates, selected, onChange }: DayFilterProps) {
     <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-2">
       <button
         onClick={() => onChange(null)}
-        className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-          selected === null ? 'bg-brand text-gray-900' : 'bg-card text-gray-500 hover:text-white'
-        }`}
+        className="flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+        style={selected === null
+          ? { background: '#FF1F8E', color: '#06091A' }
+          : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
       >
         All
       </button>
@@ -26,9 +27,10 @@ export function DayFilter({ dates, selected, onChange }: DayFilterProps) {
         <button
           key={d}
           onClick={() => onChange(d)}
-          className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-            selected === d ? 'bg-brand text-gray-900' : 'bg-card text-gray-500 hover:text-white'
-          }`}
+          className="flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+          style={selected === d
+            ? { background: '#FF1F8E', color: '#06091A' }
+            : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
         >
           {fmt(d)}
         </button>

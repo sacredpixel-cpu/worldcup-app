@@ -19,7 +19,7 @@ const TABS = [
   },
   {
     href: '/predictions',
-    label: 'Picks',
+    label: 'My Picks',
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} className="h-6 w-6">
         <circle cx="12" cy="12" r="10" />
@@ -64,20 +64,32 @@ function TabBarInner() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-border bg-surface pb-safe">
-      <div className="flex">
+    <nav
+      className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 safe-bottom"
+      style={{ background: 'rgba(6,9,26,0.97)', borderTop: '1px solid rgba(255,255,255,0.07)' }}
+    >
+      <div className="flex items-end pb-1">
         {TABS.map((tab) => {
           const active = pathname.startsWith(tab.href);
           return (
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
-                active ? 'text-brand-light' : 'text-gray-400 hover:text-gray-600'
-              }`}
+              className="flex flex-1 flex-col items-center gap-0.5 pb-2 pt-1 transition-colors"
+              style={{ color: active ? '#FF1F8E' : '#7A91BB' }}
             >
-              {tab.icon(active)}
-              <span>{tab.label}</span>
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200"
+                style={active
+                  ? { background: '#FF1F8E', color: '#06091A', marginTop: '-10px', boxShadow: '0 4px 18px rgba(255,31,142,0.45)' }
+                  : { background: 'transparent', color: '#7A91BB' }
+                }
+              >
+                {tab.icon(active)}
+              </div>
+              <span className="text-[10px] font-semibold" style={{ fontFamily: 'var(--font-golos-text)' }}>
+                {tab.label}
+              </span>
             </Link>
           );
         })}

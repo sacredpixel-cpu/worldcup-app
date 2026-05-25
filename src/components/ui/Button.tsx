@@ -12,11 +12,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const base = 'inline-flex items-center justify-center rounded-xl font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none';
 
     const variants = {
-      primary: 'bg-brand text-gray-900 hover:bg-brand-light',
-      secondary: 'bg-card border border-border text-gray-900 hover:bg-surface',
-      ghost: 'text-gray-700 hover:bg-surface',
-      danger: 'bg-accent text-gray-900 hover:bg-red-700',
-      google: 'bg-white text-gray-800 hover:bg-gray-100 border border-gray-200',
+      primary: 'bg-brand text-[#06091A] hover:bg-brand-light',
+      secondary: 'bg-card border border-border text-[#E8F0FF] hover:bg-surface',
+      ghost: 'text-[#7A91BB] hover:bg-surface',
+      danger: 'bg-accent text-[#06091A] hover:bg-red-700',
+      google: 'text-[#E8F0FF] hover:opacity-90 border',
     };
 
     const sizes = {

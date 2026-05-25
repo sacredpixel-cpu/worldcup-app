@@ -3,22 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --brand: #E91E8C;
-  --brand-light: #F048A8;
-  --accent: #2D9E35;
-  --gold: #F5A623;
-  --bg: #FBFAF7;
-  --surface: #F2EEEB;
-  --card: #FFFFFF;
-  --border: #E2DDD8;
-  --fg: #1A1A1A;
-  --fg-muted: #7A746E;
+  --brand: #FF1F8E;
+  --brand-light: #FF4DA8;
+  --accent: #00C44F;
+  --gold: #FFB020;
+  --bg: #06091A;
+  --surface: #0E1535;
+  --card: #0A1128;
+  --border: rgba(255,255,255,0.07);
+  --fg: #E8F0FF;
+  --fg-muted: #7A91BB;
 }
 
 html, body {
-  background-color: #FBFAF7;
-  color: #1A1A1A;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #06091A;
+  color: #E8F0FF;
+  font-family: var(--font-golos-text), -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

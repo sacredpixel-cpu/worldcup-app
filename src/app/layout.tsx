@@ -41,10 +41,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${barlowCondensed.variable} ${golosText.variable}`}>
-      <body className="bg-[#FBFAF7] text-gray-900">
+      <body className="bg-[#06091A] text-[#E8F0FF]">
         <Providers>
           {/* Mobile frame wrapper */}
-          <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-[#FBFAF7]">
+          <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-[#06091A]">
             <FirebaseAuthSync />
             <PredictionsSync />
             <MatchUpdatesSync />

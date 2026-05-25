@@ -13,16 +13,16 @@ export function CrowdCompare({ homeAvg, awayAvg, count, homeTeamName, awayTeamNa
 
   return (
     <div className="mt-1">
-      <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+      <div className="flex items-center justify-between text-xs mb-1" style={{ color: '#7A91BB' }}>
         <span>Community avg: {homeAvg}–{awayAvg}</span>
         <span>{count} picks</span>
       </div>
       <div className="flex h-1.5 w-full overflow-hidden rounded-full">
-        <div style={{ width: `${homeWinPct}%` }} className="bg-brand-light" title={homeTeamName} />
-        <div style={{ width: `${drawPct}%` }} className="bg-white/20" title="Draw" />
-        <div style={{ width: `${awayWinPct}%` }} className="bg-accent" title={awayTeamName} />
+        <div style={{ width: `${homeWinPct}%`, background: '#FF1F8E' }} title={homeTeamName} />
+        <div style={{ width: `${drawPct}%`, background: 'rgba(255,255,255,0.08)' }} title="Draw" />
+        <div style={{ width: `${awayWinPct}%`, background: '#00C44F' }} title={awayTeamName} />
       </div>
-      <div className="mt-0.5 flex justify-between text-[10px] text-gray-400">
+      <div className="mt-0.5 flex justify-between text-[10px]" style={{ color: '#7A91BB' }}>
         <span>{homeWinPct}% {homeTeamName.split(' ')[0]}</span>
         <span>{drawPct}% Draw</span>
         <span>{awayWinPct}% {awayTeamName.split(' ')[0]}</span>

@@ -22,29 +22,29 @@ export function GroupStageTable({ standings }: GroupStageTableProps) {
     <div className="overflow-hidden rounded-xl border border-border">
       <table className="w-full text-xs">
         <thead>
-          <tr className="border-b border-border bg-surface">
-            <th className="py-2 pl-3 text-left font-medium text-gray-400">Team</th>
-            <th className="px-2 py-2 text-center font-medium text-gray-400">P</th>
-            <th className="px-2 py-2 text-center font-medium text-gray-400">W</th>
-            <th className="px-2 py-2 text-center font-medium text-gray-400">D</th>
-            <th className="px-2 py-2 text-center font-medium text-gray-400">L</th>
-            <th className="px-2 py-2 text-center font-medium text-gray-400">GD</th>
-            <th className="px-2 py-2 pr-3 text-center font-bold text-gray-600">Pts</th>
+          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: '#0E1535' }}>
+            <th className="py-2 pl-3 text-left font-medium" style={{ color: '#7A91BB' }}>Team</th>
+            <th className="px-2 py-2 text-center font-medium" style={{ color: '#7A91BB' }}>P</th>
+            <th className="px-2 py-2 text-center font-medium" style={{ color: '#7A91BB' }}>W</th>
+            <th className="px-2 py-2 text-center font-medium" style={{ color: '#7A91BB' }}>D</th>
+            <th className="px-2 py-2 text-center font-medium" style={{ color: '#7A91BB' }}>L</th>
+            <th className="px-2 py-2 text-center font-medium" style={{ color: '#7A91BB' }}>GD</th>
+            <th className="px-2 py-2 pr-3 text-center font-bold" style={{ color: '#5A6E94' }}>Pts</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((s, i) => (
-            <tr key={s.team.id} className={`border-b border-border last:border-0 ${i < 2 ? 'bg-brand/5' : ''}`}>
-              <td className="py-2 pl-3 font-medium text-gray-900">
-                <span className={`mr-1.5 text-[10px] ${i < 2 ? 'text-brand-light' : 'text-gray-400'}`}>{i + 1}</span>
+            <tr key={s.team.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: i < 2 ? 'rgba(255,31,142,0.05)' : 'transparent' }}>
+              <td className="py-2 pl-3 font-medium" style={{ color: '#E8F0FF' }}>
+                <span className="mr-1.5 text-[10px]" style={{ color: i < 2 ? '#FF4DA8' : '#5A6E94' }}>{i + 1}</span>
                 {s.team.name}
               </td>
-              <td className="px-2 py-2 text-center text-gray-500">{s.played}</td>
-              <td className="px-2 py-2 text-center text-gray-500">{s.won}</td>
-              <td className="px-2 py-2 text-center text-gray-500">{s.drawn}</td>
-              <td className="px-2 py-2 text-center text-gray-500">{s.lost}</td>
-              <td className="px-2 py-2 text-center text-gray-500">{s.gf - s.ga > 0 ? '+' : ''}{s.gf - s.ga}</td>
-              <td className="px-2 py-2 pr-3 text-center font-bold text-gray-900">{s.pts}</td>
+              <td className="px-2 py-2 text-center" style={{ color: '#7A91BB' }}>{s.played}</td>
+              <td className="px-2 py-2 text-center" style={{ color: '#7A91BB' }}>{s.won}</td>
+              <td className="px-2 py-2 text-center" style={{ color: '#7A91BB' }}>{s.drawn}</td>
+              <td className="px-2 py-2 text-center" style={{ color: '#7A91BB' }}>{s.lost}</td>
+              <td className="px-2 py-2 text-center" style={{ color: '#7A91BB' }}>{s.gf - s.ga > 0 ? '+' : ''}{s.gf - s.ga}</td>
+              <td className="px-2 py-2 pr-3 text-center font-bold" style={{ color: '#E8F0FF' }}>{s.pts}</td>
             </tr>
           ))}
         </tbody>

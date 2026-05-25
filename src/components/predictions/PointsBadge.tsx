@@ -21,7 +21,7 @@ export function PointsBadge({ prediction, match }: { prediction: Prediction; mat
 
   return (
     <div className="flex items-center justify-between gap-2 text-[11px]">
-      <span className="text-gray-400">
+      <span style={{ color: '#7A91BB' }}>
         Your pick: {prediction.homeScore}–{prediction.awayScore}
       </span>
       {badge}

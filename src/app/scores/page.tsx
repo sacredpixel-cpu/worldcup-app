@@ -22,7 +22,7 @@ function ScoresContent() {
   return (
     <div className="flex flex-col pb-4">
       <div className="px-4 pt-4 pb-2">
-        <h1 className="text-xl font-black text-gray-900">Scores</h1>
+        <h1 className="text-2xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', letterSpacing: '0.02em' }}>SCORES</h1>
       </div>
 
       {live.length > 0 && (
@@ -37,9 +37,8 @@ function ScoresContent() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
-              filter === f ? 'bg-brand text-gray-900' : 'bg-card text-gray-500'
-            }`}
+            className="rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors"
+            style={filter === f ? { background: '#FF1F8E', color: '#06091A' } : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
           >
             {f === 'all' ? 'All Results' : f === 'live' ? '🔴 Live' : 'Finished'}
           </button>
@@ -49,8 +48,8 @@ function ScoresContent() {
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center py-20 text-center px-6">
           <div className="mb-3 text-4xl">⏱️</div>
-          <p className="text-sm text-gray-500">No matches in this category yet.</p>
-          <p className="text-xs text-gray-400 mt-1">Tournament begins June 11, 2026</p>
+          <p className="text-sm" style={{ color: '#7A91BB' }}>No matches in this category yet.</p>
+          <p className="text-xs mt-1" style={{ color: '#5A6E94' }}>Tournament begins June 11, 2026</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3 px-4">

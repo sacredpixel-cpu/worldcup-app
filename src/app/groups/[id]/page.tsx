@@ -30,7 +30,7 @@ function GroupDetailContent() {
   if (!group) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-6">
-        <p className="text-gray-500 mb-4">Group not found.</p>
+        <p className="mb-4" style={{ color: '#7A91BB' }}>Group not found.</p>
         <Link href="/groups" className="text-brand-light hover:underline">← Back to Groups</Link>
       </div>
     );
@@ -74,14 +74,14 @@ function GroupDetailContent() {
   return (
     <div className="flex flex-col pb-4">
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-        <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-700">
+        <button onClick={() => router.back()} style={{ color: '#7A91BB' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
         <div>
-          <h1 className="text-xl font-black text-gray-900">{group.name}</h1>
-          <p className="text-xs text-gray-400">
+          <h1 className="text-xl font-black" style={{ color: '#E8F0FF' }}>{group.name}</h1>
+          <p className="text-xs" style={{ color: '#7A91BB' }}>
             {group.members.length} members · Code: {group.inviteCode}
             {isCreator && <span className="ml-2 text-brand font-semibold">· You're the admin</span>}
           </p>
@@ -105,7 +105,7 @@ function GroupDetailContent() {
               key={m.userId}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 ${isMe ? 'border border-brand/40 bg-brand/10' : 'bg-card'}`}
             >
-              <span className="w-6 text-center text-sm font-bold text-gray-400">{i + 1}</span>
+              <span className="w-6 text-center text-sm font-bold" style={{ color: '#7A91BB' }}>{i + 1}</span>
               {avatarUrl ? (
                 <Image src={avatarUrl} alt={m.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
               ) : (
@@ -115,10 +115,10 @@ function GroupDetailContent() {
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
-                  <span className={`truncate text-sm font-semibold ${isMe ? 'text-brand' : 'text-gray-900'}`}>
+                  <span className="truncate text-sm font-semibold" style={{ color: isMe ? '#FF1F8E' : '#E8F0FF' }}>
                     {m.displayName}
                   </span>
-                  {isMe && <span className="text-xs text-gray-400">(You)</span>}
+                  {isMe && <span className="text-xs" style={{ color: '#7A91BB' }}>(You)</span>}
                   {m.userId === group.creatorId && !isMe && (
                     <span className="text-[10px] text-brand/60 font-normal">admin</span>
                   )}
@@ -127,7 +127,7 @@ function GroupDetailContent() {
                   <div className="flex items-center gap-1 mt-0.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={`https://flagcdn.com/w20/${profile!.countryCode}.png`} alt="" className="h-3 w-4 object-cover rounded-sm" />
-                    <span className="text-xs text-gray-400 truncate">{location}</span>
+                    <span className="text-xs truncate" style={{ color: '#7A91BB' }}>{location}</span>
                   </div>
                 ) : null}
               </div>
@@ -138,11 +138,8 @@ function GroupDetailContent() {
                 <button
                   onClick={() => handleRemove(m.userId)}
                   disabled={isRemoving}
-                  className={`flex items-center justify-center rounded-lg px-2 py-1 text-xs font-semibold transition-all active:scale-95 disabled:opacity-40 ${
-                    isConfirming
-                      ? 'bg-red-500 text-white animate-pulse'
-                      : 'border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500'
-                  }`}
+                  className={`flex items-center justify-center rounded-lg px-2 py-1 text-xs font-semibold active:scale-95 disabled:opacity-40 ${isConfirming ? 'bg-red-500 text-white animate-pulse' : 'hover:text-red-400'}`}
+                  style={!isConfirming ? { border: '1px solid rgba(255,255,255,0.12)', color: '#7A91BB' } : undefined}
                 >
                   {isRemoving ? '…' : isConfirming ? 'Confirm?' : '✕'}
                 </button>
@@ -154,13 +151,13 @@ function GroupDetailContent() {
 
       {/* Tap outside confirm to cancel */}
       {confirmId && (
-        <p className="mt-2 text-center text-xs text-gray-400">Tap ✕ again to confirm removal</p>
+        <p className="mt-2 text-center text-xs" style={{ color: '#7A91BB' }}>Tap ✕ again to confirm removal</p>
       )}
 
       {user && group.members.some(m => m.userId === user.id) && !isCreator && (
         <button
           onClick={() => { leaveGroup(group.id, user.id); router.push('/groups'); }}
-          className="mx-4 mt-6 rounded-xl border border-red-200 py-2.5 text-sm font-semibold text-red-400 hover:text-red-600 hover:border-red-400 transition-colors"
+          className="mx-4 mt-6 rounded-xl py-2.5 text-sm font-semibold transition-colors" style={{ border: '1px solid rgba(255,77,77,0.3)', color: 'rgba(255,77,77,0.7)' }}
         >
           Leave Group
         </button>

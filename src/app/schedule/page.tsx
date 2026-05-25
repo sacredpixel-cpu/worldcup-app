@@ -92,26 +92,32 @@ function ScheduleContent() {
     <div className="flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-xl font-black text-gray-900">
-            <span className="text-brand-light">FIFA</span> World Cup 2026
-          </h1>
+        <h1 className="text-2xl font-black leading-tight" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', letterSpacing: '0.02em' }}>
+          <span style={{ color: '#FF1F8E' }}>FIFA</span> WORLD CUP 2026
+        </h1>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-xs" style={{ color: '#7A91BB' }}>Jun 11 – Jul 19 · USA · Canada · Mexico</span>
           {fanCount !== null && (
-            <span className="text-xs text-gray-400">⚽ Fans: <span className="font-semibold text-brand">{fanCount.toLocaleString()}</span></span>
+            <>
+              <span style={{ color: '#3A4E6E' }}>·</span>
+              <span className="text-xs" style={{ color: '#7A91BB' }}>
+                ⚽ <span className="font-semibold" style={{ color: '#FFB020' }}>{fanCount.toLocaleString()}</span> fans
+              </span>
+            </>
           )}
         </div>
-        <p className="text-xs text-gray-400">Jun 11 – Jul 19 · USA · Canada · Mexico</p>
       </div>
 
       {/* Tabs */}
-      <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-border px-4">
+      <div className="no-scrollbar flex gap-1 overflow-x-auto px-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-shrink-0 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
-              tab === t.id ? 'border-brand-light text-brand-light' : 'border-transparent text-gray-400 hover:text-white'
-            }`}
+            className="flex-shrink-0 px-3 py-2.5 text-sm font-semibold transition-colors"
+            style={tab === t.id
+              ? { borderBottom: '2px solid #FF4DA8', color: '#FF4DA8' }
+              : { borderBottom: '2px solid transparent', color: '#7A91BB' }}
           >
             {t.label}
           </button>
@@ -134,7 +140,7 @@ function ScheduleContent() {
               />
             ))}
             {filteredAll.length === 0 && (
-              <p className="py-8 text-center text-sm text-gray-400">No matches on this date</p>
+              <p className="py-8 text-center text-sm" style={{ color: '#7A91BB' }}>No matches on this date</p>
             )}
           </div>
         </>
@@ -149,9 +155,10 @@ function ScheduleContent() {
               <button
                 key={g}
                 onClick={() => setSelectedGroup(g)}
-                className={`flex-shrink-0 h-9 w-9 rounded-full text-sm font-bold transition-colors ${
-                  selectedGroup === g ? 'bg-brand text-gray-900' : 'bg-card text-gray-500 hover:text-white'
-                }`}
+                className="flex-shrink-0 h-9 w-9 rounded-full text-sm font-bold transition-colors"
+                style={selectedGroup === g
+                  ? { background: '#FF1F8E', color: '#06091A' }
+                  : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
               >
                 {g}
               </button>
@@ -164,9 +171,10 @@ function ScheduleContent() {
               <button
                 key={v}
                 onClick={() => setGroupView(v)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
-                  groupView === v ? 'bg-brand text-gray-900' : 'bg-card text-gray-500'
-                }`}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors"
+                style={groupView === v
+                  ? { background: '#FF1F8E', color: '#06091A' }
+                  : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB' }}
               >
                 {v === 'matches' ? 'Matches' : 'Standings'}
               </button>
@@ -201,7 +209,7 @@ function ScheduleContent() {
             const stageMatches = [...KNOCKOUT_MATCHES].filter(m => m.stage === stage).sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
             return (
               <div key={stage}>
-                <h2 className="mb-2 text-sm font-bold text-gray-500 uppercase tracking-wider">{STAGE_LABELS[stage]}</h2>
+                <h2 className="mb-2 text-xs font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>{STAGE_LABELS[stage]}</h2>
                 <div className="flex flex-col gap-3">
                   {stageMatches.map(match => (
                     <MatchCard

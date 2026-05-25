@@ -37,7 +37,7 @@ function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) return <span className="text-xl">🥇</span>;
   if (rank === 2) return <span className="text-xl">🥈</span>;
   if (rank === 3) return <span className="text-xl">🥉</span>;
-  return <span className="w-8 text-center text-sm font-bold text-gray-400">{rank}</span>;
+  return <span className="w-8 text-center text-sm font-bold" style={{ color: '#7A91BB' }}>{rank}</span>;
 }
 
 function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntry; rank: number; isMe: boolean; profile?: UserProfile }) {
@@ -65,17 +65,17 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
           <div className="flex items-center gap-1 mt-0.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`https://flagcdn.com/w20/${profile!.countryCode}.png`} alt="" className="h-3 w-4 object-cover rounded-sm" />
-            <span className="text-xs text-gray-400 truncate">{location}</span>
+            <span className="text-xs truncate" style={{ color: '#7A91BB' }}>{location}</span>
           </div>
         ) : (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs" style={{ color: '#7A91BB' }}>
             {entry.correctScores} exact · {entry.correctOutcomes} correct
           </p>
         )}
       </div>
       <div className="text-right">
         <p className="text-lg font-black text-gold">{entry.totalPoints}</p>
-        <p className="text-[10px] text-gray-400">pts</p>
+        <p className="text-[10px]" style={{ color: '#7A91BB' }}>pts</p>
       </div>
     </div>
   );
@@ -140,16 +140,17 @@ function LeaderboardContent() {
   return (
     <div className="flex flex-col">
       <div className="px-4 pt-4 pb-3">
-        <h1 className="text-xl font-black text-gray-900">Leaderboard</h1>
+        <h1 className="text-2xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', letterSpacing: '0.02em' }}>LEADERBOARD</h1>
       </div>
 
       {/* Tab selector */}
       <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3">
         <button
           onClick={() => setTab('global')}
-          className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-            tab === 'global' ? 'bg-brand text-gray-900' : 'bg-card text-gray-500'
-          }`}
+          className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
+          style={tab === 'global'
+            ? { background: '#FF1F8E', color: '#06091A' }
+            : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
         >
           Global
         </button>
@@ -157,9 +158,10 @@ function LeaderboardContent() {
           <button
             key={g.id}
             onClick={() => setTab(g.id)}
-            className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-              tab === g.id ? 'bg-brand text-gray-900' : 'bg-card text-gray-500'
-            }`}
+            className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
+            style={tab === g.id
+              ? { background: '#FF1F8E', color: '#06091A' }
+              : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
           >
             {g.name}
           </button>
@@ -168,17 +170,17 @@ function LeaderboardContent() {
 
       {/* Your rank summary */}
       {user && userRank > 0 && (
-        <div className="mx-4 mb-3 flex items-center justify-between rounded-xl bg-brand/10 border border-brand/30 px-4 py-2.5">
-          <span className="text-sm text-gray-600">Your rank</span>
-          <span className="text-2xl font-black text-brand-light">#{userRank}</span>
-          <span className="text-sm text-gold font-semibold">{userEntry?.totalPoints ?? 0} pts</span>
+        <div className="mx-4 mb-3 flex items-center justify-between rounded-xl px-4 py-2.5" style={{ background: 'rgba(255,31,142,0.08)', border: '1px solid rgba(255,31,142,0.2)' }}>
+          <span className="text-sm" style={{ color: '#7A91BB' }}>Your rank</span>
+          <span className="text-2xl font-black" style={{ color: '#FF4DA8', fontFamily: 'var(--font-barlow-condensed)' }}>#{userRank}</span>
+          <span className="text-sm font-semibold" style={{ color: '#FFB020' }}>{userEntry?.totalPoints ?? 0} pts</span>
         </div>
       )}
 
       {!user && (
-        <div className="mx-4 mb-3 rounded-xl bg-card px-4 py-4 text-center">
-          <p className="text-sm text-gray-500 mb-2">Sign in to appear on the leaderboard</p>
-          <Link href="/auth/register" className="text-sm text-brand-light hover:underline">Create an account →</Link>
+        <div className="mx-4 mb-3 rounded-xl px-4 py-4 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <p className="text-sm mb-2" style={{ color: '#7A91BB' }}>Sign in to appear on the leaderboard</p>
+          <Link href="/auth/register" className="text-sm hover:underline" style={{ color: '#FF4DA8' }}>Create an account →</Link>
         </div>
       )}
 

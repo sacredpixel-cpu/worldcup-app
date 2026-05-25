@@ -26,11 +26,11 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       {/* Sheet */}
       <div className={cn(
-        'relative z-10 w-full max-w-[430px] rounded-t-2xl border-t border-border bg-surface p-6 pb-8',
+        'relative z-10 w-full max-w-[430px] rounded-t-2xl p-6 pb-8',
         className,
-      )}>
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300" />
-        {title && <h2 className="mb-4 text-lg font-bold text-gray-900">{title}</h2>}
+      )} style={{ background: '#0E1535', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+        {title && <h2 className="mb-4 text-lg font-bold" style={{ color: '#E8F0FF' }}>{title}</h2>}
         {children}
       </div>
     </div>

@@ -27,13 +27,13 @@ function BracketMatchRow({ match }: { match: Match }) {
             {isTbd ? 'TBD' : team.name}
           </span>
           {match.status !== 'upcoming' && score !== null && (
-            <span className="text-lg font-black text-gray-900">{score}</span>
+            <span className="text-lg font-black" style={{ color: '#E8F0FF', fontFamily: 'var(--font-barlow-condensed)' }}>{score}</span>
           )}
         </div>
       ))}
       {/* Match info */}
       <div className="flex items-center justify-between border-t border-border/50 bg-surface/50 px-3 py-1.5">
-        <span className="text-[10px] text-gray-400">{formatKickoff(match.kickoffAt)}</span>
+        <span className="text-[10px]" style={{ color: '#7A91BB' }}>{formatKickoff(match.kickoffAt)}</span>
         {match.status === 'live' && <Badge variant="live">LIVE</Badge>}
         {match.status === 'finished' && <Badge variant="gray">FT</Badge>}
       </div>
@@ -50,15 +50,15 @@ export default function BracketPage() {
   return (
     <div className="flex flex-col pb-4">
       <div className="px-4 pt-4 pb-3">
-        <h1 className="text-xl font-black text-gray-900">Bracket</h1>
-        <p className="text-xs text-gray-400">Knockout stage — Jun 29 · Jul 19</p>
+        <h1 className="text-2xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', letterSpacing: '0.02em' }}>BRACKET</h1>
+        <p className="text-xs" style={{ color: '#7A91BB' }}>Knockout stage — Jun 29 · Jul 19</p>
       </div>
 
       {daysLeft > 0 && (
         <div className="mx-4 mb-4 rounded-xl bg-brand/10 border border-brand/30 px-4 py-4 text-center">
-          <p className="text-3xl font-black text-gray-900">{daysLeft}</p>
+          <p className="text-3xl font-black" style={{ color: '#E8F0FF', fontFamily: 'var(--font-barlow-condensed)' }}>{daysLeft}</p>
           <p className="text-sm text-brand-light">days until kickoff</p>
-          <p className="mt-1 text-xs text-gray-400">Jun 11, 2026 · Group Stage begins</p>
+          <p className="mt-1 text-xs" style={{ color: '#7A91BB' }}>Jun 11, 2026 · Group Stage begins</p>
         </div>
       )}
 
@@ -66,7 +66,7 @@ export default function BracketPage() {
         const matches = KNOCKOUT_MATCHES.filter(m => m.stage === stage);
         return (
           <div key={stage} className="mb-6">
-            <h2 className="mb-2 px-4 text-sm font-bold uppercase tracking-wider text-gray-400">
+            <h2 className="mb-2 px-4 text-xs font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>
               {STAGE_LABELS[stage]}
             </h2>
             <div className={`grid gap-3 px-4 ${stage === 'round-of-32' ? 'grid-cols-2' : 'grid-cols-1'}`}>
