@@ -51,14 +51,16 @@ function TeamFaceOff({ match }: { match: Match }) {
 
       {/* Flags + names + coaches */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, padding: '14px 14px 10px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-          <FlagImage code={match.homeTeam.code} size={36} />
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#E8F0FF', lineHeight: 1.1 }}>{match.homeTeam.name}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+            <FlagImage code={match.homeTeam.code} size={36} className="rounded-sm" />
+          </div>
+          <span style={{ fontSize: 16, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.homeTeam.name}</span>
           {homeRoster?.nickname && (
-            <span style={{ fontSize: 9, color: '#7A91BB', fontStyle: 'italic' }}>"{homeRoster.nickname}"</span>
+            <span style={{ fontSize: 12, color: '#7A91BB', fontStyle: 'italic' }}>"{homeRoster.nickname}"</span>
           )}
           {homeRoster?.coach && (
-            <span style={{ fontSize: 9, color: '#5A7099' }}>🧑‍💼 {homeRoster.coach}</span>
+            <span style={{ fontSize: 10, color: '#5A7099' }}>🧑‍💼 {homeRoster.coach}</span>
           )}
         </div>
 
@@ -66,14 +68,16 @@ function TeamFaceOff({ match }: { match: Match }) {
           <span style={{ fontSize: 10, fontWeight: 700, color: '#3A4E6E', letterSpacing: '0.06em' }}>VS</span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <FlagImage code={match.awayTeam.code} size={36} />
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'right' }}>{match.awayTeam.name}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+            <FlagImage code={match.awayTeam.code} size={36} className="rounded-sm" />
+          </div>
+          <span style={{ fontSize: 16, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.awayTeam.name}</span>
           {awayRoster?.nickname && (
-            <span style={{ fontSize: 9, color: '#7A91BB', fontStyle: 'italic' }}>"{awayRoster.nickname}"</span>
+            <span style={{ fontSize: 12, color: '#7A91BB', fontStyle: 'italic', textAlign: 'right' }}>"{awayRoster.nickname}"</span>
           )}
           {awayRoster?.coach && (
-            <span style={{ fontSize: 9, color: '#5A7099', textAlign: 'right' }}>{awayRoster.coach} 🧑‍💼</span>
+            <span style={{ fontSize: 10, color: '#5A7099', textAlign: 'right' }}>{awayRoster.coach} 🧑‍💼</span>
           )}
         </div>
       </div>
@@ -167,7 +171,7 @@ function SideBySidePicker({
                       onClick={() => toggle(homePicks, onHomePicks, name)}
                       style={{
                         display: 'block', width: '100%', textAlign: 'left',
-                        padding: '4px 10px', fontSize: 10, lineHeight: 1.4,
+                        padding: '6px 10px', fontSize: 12, lineHeight: 1.4,
                         fontWeight: selected ? 700 : 400,
                         color: selected ? '#00C44F' : maxed ? 'rgba(154,174,212,0.3)' : '#9AAED4',
                         background: selected ? 'rgba(0,196,79,0.08)' : 'transparent',
@@ -203,7 +207,7 @@ function SideBySidePicker({
                       onClick={() => toggle(awayPicks, onAwayPicks, name)}
                       style={{
                         display: 'block', width: '100%', textAlign: 'right',
-                        padding: '4px 10px', fontSize: 10, lineHeight: 1.4,
+                        padding: '6px 10px', fontSize: 12, lineHeight: 1.4,
                         fontWeight: selected ? 700 : 400,
                         color: selected ? '#FF4DA8' : maxed ? 'rgba(154,174,212,0.3)' : '#9AAED4',
                         background: selected ? 'rgba(255,77,168,0.08)' : 'transparent',
@@ -273,7 +277,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         </button>
       </div>
 
-      <h1 className="mb-3 text-3xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>Predictions</h1>
+      <h1 className="mb-3 text-3xl font-black text-center" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Predictions</h1>
 
       <div className="space-y-4">
         {/* 1. Face-off: flags, coaches, tournament history */}
