@@ -140,12 +140,12 @@ function PlayerPicker({
                       key={name}
                       disabled={locked || maxed}
                       onClick={() => toggle(name)}
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                         selected
-                          ? 'bg-brand text-gray-900'
+                          ? 'border-brand bg-brand text-gray-900'
                           : maxed
-                          ? 'bg-white/5 text-gray-600 cursor-not-allowed'
-                          : 'bg-white/10 text-gray-200 hover:bg-white/20 active:scale-95'
+                          ? 'border-white/10 bg-white/5 text-gray-600 cursor-not-allowed'
+                          : 'border-white/30 bg-white/15 text-white hover:border-white/60 hover:bg-white/25 active:scale-95'
                       }`}
                     >
                       {name}
@@ -204,7 +204,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
       <div className="flex justify-end mb-2">
         <button
           onClick={onClose}
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-white/10 active:scale-95 transition-colors"
+          className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white hover:border-gray-400 active:scale-95 transition-colors"
         >
           Cancel
         </button>
