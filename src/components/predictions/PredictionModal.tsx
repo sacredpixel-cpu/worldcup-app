@@ -222,6 +222,9 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         </button>
       </div>
 
+      {/* H1 headline */}
+      <h1 className="text-2xl font-black text-gray-900 mb-3">Predictions</h1>
+
       {/* Match header */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex flex-1 flex-col items-center gap-0.5">
@@ -270,9 +273,12 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         {/* Scorer picks */}
         {!isLocked && (homeRoster || awayRoster) && (
           <div className="space-y-3">
-            <div className="text-center space-y-0.5">
-              <p className="text-xs font-semibold text-gray-100">Who will score? Choose up to 2 players from each team</p>
-              <p className="text-[11px] text-gray-300">+1 pt for each correct choice, -1 point subtracted for each incorrect choice</p>
+            <div className="text-center space-y-1">
+              <h3 className="text-sm font-bold text-gray-950">Who will score? Choose up to 2 players from each team</h3>
+              <p className="text-[11px] text-gray-300">
+                <span className="font-bold text-green-500">+1 pt</span> for each correct choice,{' '}
+                <span className="font-bold text-red-500">-1 pt</span> subtracted for each incorrect choice
+              </p>
             </div>
             {homeRoster && (
               <PlayerPicker
