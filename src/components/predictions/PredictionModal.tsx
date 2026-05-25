@@ -51,7 +51,7 @@ function TeamFaceOff({ match }: { match: Match }) {
 
       {/* Flags + names + coaches */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, padding: '14px 14px 10px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.homeTeam.code} size={36} className="rounded-sm" />
           </div>
@@ -68,7 +68,7 @@ function TeamFaceOff({ match }: { match: Match }) {
           <span style={{ fontSize: 10, fontWeight: 700, color: '#3A4E6E', letterSpacing: '0.06em' }}>VS</span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.awayTeam.code} size={36} className="rounded-sm" />
           </div>
@@ -92,7 +92,7 @@ function TeamFaceOff({ match }: { match: Match }) {
             return (
               <div key={key} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: '#C8D8F0', textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', paddingRight: 8 }}>{hv}</span>
-                <span style={{ fontSize: 9, color: '#5A6E94', textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
+                <span style={{ fontSize: 11, color: '#8AA0C4', textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
                 <span style={{ fontSize: 13, fontWeight: 800, color: '#C8D8F0', textAlign: 'left', fontFamily: 'var(--font-barlow-condensed)', paddingLeft: 8 }}>{av}</span>
               </div>
             );
