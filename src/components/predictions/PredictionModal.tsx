@@ -277,7 +277,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         </button>
       </div>
 
-      <h1 className="mb-3 text-3xl font-black text-center" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Predictions</h1>
+      <h1 className="mb-3 text-2xl font-black text-center" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Predictions</h1>
 
       <div className="space-y-4">
         {/* 1. Face-off: flags, coaches, tournament history */}
