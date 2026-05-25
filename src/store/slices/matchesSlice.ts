@@ -8,6 +8,8 @@ interface MatchUpdate {
   homeScore: number | null;
   awayScore: number | null;
   status: 'upcoming' | 'live' | 'finished';
+  homeScorers?: string[];
+  awayScorers?: string[];
 }
 
 interface MatchesState {
@@ -33,6 +35,8 @@ export const useMatchesStore = create<MatchesState>()((set, get) => ({
       homeScore: update.homeScore,
       awayScore: update.awayScore,
       status: update.status,
+      homeScorers: update.homeScorers,
+      awayScorers: update.awayScorers,
     };
   },
 }));

@@ -40,6 +40,8 @@ export function getMockPredictions(): Prediction[] {
           matchId: match.id,
           homeScore: h,
           awayScore: a,
+          homeScorerPicks: [],
+          awayScorerPicks: [],
           submittedAt: '2026-06-01T00:00:00Z',
           pointsEarned: null,
         });
@@ -53,6 +55,8 @@ export function getMockPredictions(): Prediction[] {
           matchId: match.id,
           homeScore: Math.floor(Math.random() * 4),
           awayScore: Math.floor(Math.random() * 3),
+          homeScorerPicks: [],
+          awayScorerPicks: [],
           submittedAt: '2026-06-01T00:00:00Z',
           pointsEarned: null,
         });

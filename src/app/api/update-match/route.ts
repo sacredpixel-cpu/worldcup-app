@@ -8,12 +8,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { secret, matchId, homeScore, awayScore, status } = body as {
+    const { secret, matchId, homeScore, awayScore, status, homeScorers, awayScorers } = body as {
       secret: string;
       matchId: string;
       homeScore: number;
       awayScore: number;
       status: 'live' | 'finished';
+      homeScorers?: string[];
+      awayScorers?: string[];
     };
 
     if (!secret || secret !== process.env.MATCH_UPDATE_SECRET) {
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 });
     }
 
-    await updateMatchScore(matchId, homeScore, awayScore, status);
+    await updateMatchScore(matchId, homeScore, awayScore, status, homeScorers, awayScorers);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('update-match error:', error);

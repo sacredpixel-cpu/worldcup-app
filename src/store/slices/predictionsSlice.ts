@@ -6,13 +6,20 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Prediction } from '@/types/prediction';
 import { savePredictionToFirestore, saveAllPredictionsToFirestore, getUserPredictions, subscribeToCommunityPredictions } from '@/lib/predictionsService';
 
+interface DraftEntry {
+  homeScore: number;
+  awayScore: number;
+  homeScorerPicks: string[];
+  awayScorerPicks: string[];
+}
+
 interface PredictionsState {
   saved: Record<string, Prediction>;
-  draft: Record<string, { homeScore: number; awayScore: number }>;
+  draft: Record<string, DraftEntry>;
   community: Prediction[];
   syncedToFirestore: boolean;
 
-  setDraft: (matchId: string, home: number, away: number) => void;
+  setDraft: (matchId: string, home: number, away: number, homePicks?: string[], awayPicks?: string[]) => void;
   clearDraft: (matchId: string) => void;
   submitPrediction: (matchId: string, userId: string) => Prediction | null;
   getAllSaved: () => Prediction[];
@@ -33,8 +40,18 @@ export const usePredictionsStore = create<PredictionsState>()(
       community: [],
       syncedToFirestore: false,
 
-      setDraft: (matchId, home, away) =>
-        set((s) => ({ draft: { ...s.draft, [matchId]: { homeScore: home, awayScore: away } } })),
+      setDraft: (matchId, home, away, homePicks?, awayPicks?) =>
+        set((s) => ({
+          draft: {
+            ...s.draft,
+            [matchId]: {
+              homeScore: home,
+              awayScore: away,
+              homeScorerPicks: homePicks ?? s.draft[matchId]?.homeScorerPicks ?? [],
+              awayScorerPicks: awayPicks ?? s.draft[matchId]?.awayScorerPicks ?? [],
+            },
+          },
+        })),
 
       clearDraft: (matchId) =>
         set((s) => {
@@ -53,6 +70,8 @@ export const usePredictionsStore = create<PredictionsState>()(
           matchId,
           homeScore: d.homeScore,
           awayScore: d.awayScore,
+          homeScorerPicks: d.homeScorerPicks ?? [],
+          awayScorerPicks: d.awayScorerPicks ?? [],
           submittedAt: new Date().toISOString(),
           pointsEarned: null,
         };

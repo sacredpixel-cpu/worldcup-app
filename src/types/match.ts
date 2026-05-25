@@ -28,4 +28,6 @@ export interface Match {
   homeScore: number | null;
   awayScore: number | null;
   status: 'upcoming' | 'live' | 'finished';
+  homeScorers?: string[];  // actual goal scorers, set when finished
+  awayScorers?: string[];
 }

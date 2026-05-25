@@ -5,16 +5,23 @@ export interface MatchScoreUpdate {
   homeScore: number;
   awayScore: number;
   status: 'upcoming' | 'live' | 'finished';
+  homeScorers?: string[];
+  awayScorers?: string[];
 }
 
 export async function updateMatchScore(
   matchId: string,
   homeScore: number,
   awayScore: number,
-  status: 'upcoming' | 'live' | 'finished'
+  status: 'upcoming' | 'live' | 'finished',
+  homeScorers?: string[],
+  awayScorers?: string[],
 ): Promise<void> {
   const ref = doc(db, 'matches', matchId);
-  await setDoc(ref, { homeScore, awayScore, status }, { merge: true });
+  const payload: Record<string, unknown> = { homeScore, awayScore, status };
+  if (homeScorers) payload.homeScorers = homeScorers;
+  if (awayScorers) payload.awayScorers = awayScorers;
+  await setDoc(ref, payload, { merge: true });
 }
 
 export function subscribeToMatchUpdates(
@@ -29,6 +36,8 @@ export function subscribeToMatchUpdates(
         homeScore: data.homeScore,
         awayScore: data.awayScore,
         status: data.status,
+        homeScorers: data.homeScorers,
+        awayScorers: data.awayScorers,
       };
     });
     cb(updates);

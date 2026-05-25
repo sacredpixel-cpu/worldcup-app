@@ -6,6 +6,8 @@ export interface Prediction {
   matchId: string;
   homeScore: number;
   awayScore: number;
+  homeScorerPicks: string[];  // up to 2 player names from home team
+  awayScorerPicks: string[];  // up to 2 player names from away team
   submittedAt: string;
   pointsEarned: number | null;
 }
