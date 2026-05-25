@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { usePredictionsStore } from '@/store';
 import { ROSTERS } from '@/data/rosters';
+import type { TeamHistory } from '@/data/rosters';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
@@ -30,77 +31,100 @@ function ScoreStepper({ value, onChange, locked }: { value: number; onChange: (v
   );
 }
 
-// ── Team history stats ───────────────────────────────────────────────────────
+// ── Team face-off panel (flags, coaches, history stats only) ─────────────────
 
-function HistoryBar({ label, value, max }: { label: string; value: number; max: number }) {
-  const pct = max === 0 ? 0 : Math.round((value / max) * 100);
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="w-28 shrink-0" style={{ color: '#7A91BB' }}>{label}</span>
-      <div className="flex-1 rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.08)' }}>
-        <div className="h-1.5 rounded-full bg-brand" style={{ width: `${pct}%` }} />
-      </div>
-      <span className="w-5 text-right font-semibold" style={{ color: '#E8F0FF' }}>{value}</span>
-    </div>
-  );
-}
+const STAT_ROWS: { label: string; key: keyof TeamHistory }[] = [
+  { label: 'World Cup apps',  key: 'appearances' },
+  { label: 'Group stage',     key: 'passed_group_stage' },
+  { label: 'Quarter-finals',  key: 'quarter_finals' },
+  { label: 'Semi-finals',     key: 'semi_finals' },
+  { label: 'Finals',          key: 'finals' },
+  { label: 'Wins',            key: 'wins' },
+];
 
-function TeamInfo({ teamId, teamName }: { teamId: string; teamName: string }) {
-  const roster = ROSTERS[teamId];
-  if (!roster) return null;
-  const h = roster.history;
+function TeamFaceOff({ match }: { match: Match }) {
+  const homeRoster = ROSTERS[match.homeTeam.id];
+  const awayRoster = ROSTERS[match.awayTeam.id];
+
   return (
-    <div className="rounded-xl p-3 space-y-1.5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="text-xs font-bold" style={{ color: '#E8F0FF' }}>{teamName}</span>
-          {roster.nickname && (
-            <span className="ml-1.5 text-[10px] italic" style={{ color: '#7A91BB' }}>"{roster.nickname}"</span>
+    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+
+      {/* Flags + names + coaches */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, padding: '14px 14px 10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+          <FlagImage code={match.homeTeam.code} size={36} />
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#E8F0FF', lineHeight: 1.1 }}>{match.homeTeam.name}</span>
+          {homeRoster?.nickname && (
+            <span style={{ fontSize: 9, color: '#7A91BB', fontStyle: 'italic' }}>"{homeRoster.nickname}"</span>
+          )}
+          {homeRoster?.coach && (
+            <span style={{ fontSize: 9, color: '#5A7099' }}>🧑‍💼 {homeRoster.coach}</span>
           )}
         </div>
-        <span className="text-[10px]" style={{ color: '#7A91BB' }}>Coach: {roster.coach}</span>
+
+        <div style={{ display: 'flex', alignItems: 'center', paddingTop: 6 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#3A4E6E', letterSpacing: '0.06em' }}>VS</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <FlagImage code={match.awayTeam.code} size={36} />
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'right' }}>{match.awayTeam.name}</span>
+          {awayRoster?.nickname && (
+            <span style={{ fontSize: 9, color: '#7A91BB', fontStyle: 'italic' }}>"{awayRoster.nickname}"</span>
+          )}
+          {awayRoster?.coach && (
+            <span style={{ fontSize: 9, color: '#5A7099', textAlign: 'right' }}>{awayRoster.coach} 🧑‍💼</span>
+          )}
+        </div>
       </div>
-      <HistoryBar label="World Cup apps" value={h.appearances} max={23} />
-      <HistoryBar label="Group stage" value={h.passed_group_stage} max={h.appearances || 1} />
-      <HistoryBar label="Quarter-finals" value={h.quarter_finals} max={h.appearances || 1} />
-      <HistoryBar label="Semi-finals" value={h.semi_finals} max={h.appearances || 1} />
-      <HistoryBar label="Finals" value={h.finals} max={h.appearances || 1} />
-      <HistoryBar label="Wins" value={h.wins} max={h.appearances || 1} />
+
+      {/* Stats face-off */}
+      {(homeRoster || awayRoster) && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: 8, fontWeight: 700, color: '#5A6E94', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'center', display: 'block', marginBottom: 2 }}>Tournament History</span>
+          {STAT_ROWS.map(({ label, key }) => {
+            const hv = homeRoster?.history[key] ?? '–';
+            const av = awayRoster?.history[key] ?? '–';
+            return (
+              <div key={key} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#C8D8F0', textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', paddingRight: 8 }}>{hv}</span>
+                <span style={{ fontSize: 9, color: '#5A6E94', textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#C8D8F0', textAlign: 'left', fontFamily: 'var(--font-barlow-condensed)', paddingLeft: 8 }}>{av}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Player picker ────────────────────────────────────────────────────────────
+// ── Side-by-side scorer picker ────────────────────────────────────────────────
 
-type Position = 'goalkeepers' | 'defenders' | 'midfielders' | 'forwards';
-const POSITION_LABELS: Record<Position, string> = {
-  goalkeepers: 'GK',
-  defenders: 'DEF',
+type Position = 'forwards' | 'midfielders' | 'defenders' | 'goalkeepers';
+const POS_LABELS: Record<Position, string> = {
+  forwards:    'FWD',
   midfielders: 'MID',
-  forwards: 'FWD',
+  defenders:   'DEF',
+  goalkeepers: 'GK',
 };
+const POSITIONS: Position[] = ['forwards', 'midfielders', 'defenders', 'goalkeepers'];
 
-function PlayerPicker({
-  teamId,
-  teamName,
-  picks,
-  onChange,
+function SideBySidePicker({
+  match,
+  homePicks, onHomePicks,
+  awayPicks, onAwayPicks,
   locked,
-  side,
 }: {
-  teamId: string;
-  teamName: string;
-  picks: string[];
-  onChange: (picks: string[]) => void;
+  match: Match;
+  homePicks: string[]; onHomePicks: (p: string[]) => void;
+  awayPicks: string[]; onAwayPicks: (p: string[]) => void;
   locked: boolean;
-  side: 'home' | 'away';
 }) {
-  const roster = ROSTERS[teamId];
-  const [openPos, setOpenPos] = useState<Position | null>('forwards');
+  const homeRoster = ROSTERS[match.homeTeam.id];
+  const awayRoster = ROSTERS[match.awayTeam.id];
 
-  if (!roster) return null;
-
-  function toggle(name: string) {
+  function toggle(picks: string[], onChange: (p: string[]) => void, name: string) {
     if (locked) return;
     if (picks.includes(name)) {
       onChange(picks.filter(p => p !== name));
@@ -109,66 +133,94 @@ function PlayerPicker({
     }
   }
 
-  const positions: Position[] = ['forwards', 'midfielders', 'defenders', 'goalkeepers'];
-
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-semibold" style={{ color: '#E8F0FF' }}>{teamName} scorer picks</span>
-        <span className="text-[10px] font-medium" style={{ color: '#7A91BB' }}>{picks.length}/2 selected</span>
-      </div>
-      {picks.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-1">
-          {picks.map(p => (
-            <span key={p} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold text-white ${side === 'home' ? 'bg-green-600' : 'bg-pink-600'}`}>
-              {p}
-            </span>
-          ))}
+    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+      {/* Column headers with pick counts */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#E8F0FF' }}>{match.homeTeam.name}</div>
+          <div style={{ fontSize: 9, color: homePicks.length === 2 ? '#FF4DA8' : '#5A6E94', marginTop: 1 }}>{homePicks.length}/2 selected</div>
         </div>
-      )}
-      {positions.map(pos => {
-        const players = roster.squad[pos];
-        if (!players.length) return null;
-        const isOpen = openPos === pos;
-        return (
-          <div key={pos} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-            <button
-              className="flex w-full items-center justify-between px-3 py-2 text-xs font-bold"
-              style={{ background: 'rgba(255,255,255,0.06)', color: '#E8F0FF' }}
-              onClick={() => setOpenPos(isOpen ? null : pos)}
-            >
-              <span>{POSITION_LABELS[pos]}</span>
-              <span style={{ color: '#7A91BB' }}>{isOpen ? '▲' : '▼'}</span>
-            </button>
-            {isOpen && (
-              <div className="flex flex-wrap gap-1.5 p-2" style={{ background: 'rgba(255,255,255,0.02)' }}>
+        <div style={{ padding: '8px 10px', textAlign: 'right' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#E8F0FF' }}>{match.awayTeam.name}</div>
+          <div style={{ fontSize: 9, color: awayPicks.length === 2 ? '#FF4DA8' : '#5A6E94', marginTop: 1 }}>{awayPicks.length}/2 selected</div>
+        </div>
+      </div>
+
+      {/* Player columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        {/* Home – left */}
+        <div style={{ borderRight: '1px solid rgba(255,255,255,0.06)', padding: '8px 0' }}>
+          {POSITIONS.map(pos => {
+            const players = homeRoster?.squad[pos] ?? [];
+            if (!players.length) return null;
+            return (
+              <div key={pos}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: '#FF4DA8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 3px' }}>{POS_LABELS[pos]}</div>
                 {players.map(name => {
-                  const selected = picks.includes(name);
-                  const maxed = picks.length >= 2 && !selected;
+                  const selected = homePicks.includes(name);
+                  const maxed = homePicks.length >= 2 && !selected;
                   return (
                     <button
                       key={name}
                       disabled={locked || maxed}
-                      onClick={() => toggle(name)}
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold text-white transition-colors active:scale-95 ${
-                        selected
-                          ? side === 'home' ? 'bg-green-700' : 'bg-pink-700'
-                          : maxed
-                          ? 'opacity-30 cursor-not-allowed ' + (side === 'home' ? 'bg-green-600' : 'bg-pink-600')
-                          : side === 'home'
-                          ? 'bg-green-600 hover:bg-green-500'
-                          : 'bg-pink-600 hover:bg-pink-500'
-                      }`}
+                      onClick={() => toggle(homePicks, onHomePicks, name)}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left',
+                        padding: '4px 10px', fontSize: 10, lineHeight: 1.4,
+                        fontWeight: selected ? 700 : 400,
+                        color: selected ? '#00C44F' : maxed ? 'rgba(154,174,212,0.3)' : '#9AAED4',
+                        background: selected ? 'rgba(0,196,79,0.08)' : 'transparent',
+                        borderLeft: selected ? '2px solid #00C44F' : '2px solid transparent',
+                        cursor: locked || maxed ? 'default' : 'pointer',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}
                     >
                       {name}
                     </button>
                   );
                 })}
               </div>
-            )}
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+
+        {/* Away – right */}
+        <div style={{ padding: '8px 0' }}>
+          {POSITIONS.map(pos => {
+            const players = awayRoster?.squad[pos] ?? [];
+            if (!players.length) return null;
+            return (
+              <div key={pos}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: '#FF4DA8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 3px', textAlign: 'right' }}>{POS_LABELS[pos]}</div>
+                {players.map(name => {
+                  const selected = awayPicks.includes(name);
+                  const maxed = awayPicks.length >= 2 && !selected;
+                  return (
+                    <button
+                      key={name}
+                      disabled={locked || maxed}
+                      onClick={() => toggle(awayPicks, onAwayPicks, name)}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'right',
+                        padding: '4px 10px', fontSize: 10, lineHeight: 1.4,
+                        fontWeight: selected ? 700 : 400,
+                        color: selected ? '#FF4DA8' : maxed ? 'rgba(154,174,212,0.3)' : '#9AAED4',
+                        background: selected ? 'rgba(255,77,168,0.08)' : 'transparent',
+                        borderRight: selected ? '2px solid #FF4DA8' : '2px solid transparent',
+                        cursor: locked || maxed ? 'default' : 'pointer',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -194,6 +246,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
   const awayPicks = d?.awayScorerPicks ?? existing?.awayScorerPicks ?? [];
 
   const isDirty = d !== undefined;
+  const hasRosters = !!(ROSTERS[match.homeTeam.id] || ROSTERS[match.awayTeam.id]);
 
   useEffect(() => {
     if (open && existing && !d) {
@@ -206,12 +259,9 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
     onClose();
   }
 
-  const homeRoster = ROSTERS[match.homeTeam.id];
-  const awayRoster = ROSTERS[match.awayTeam.id];
-
   return (
     <Modal open={open} onClose={onClose} className="max-h-[90vh] overflow-y-auto">
-      {/* X close button */}
+      {/* Close button */}
       <div className="flex justify-end mb-2">
         <button
           onClick={onClose}
@@ -223,85 +273,50 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         </button>
       </div>
 
-      {/* H1 headline */}
       <h1 className="mb-3 text-3xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>Predictions</h1>
 
-      {/* Match header */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex flex-1 flex-col items-center gap-0.5">
-          <FlagImage code={match.homeTeam.code} size={44} />
-          <span className="text-xs font-bold text-center leading-tight" style={{ color: '#E8F0FF' }}>{match.homeTeam.name}</span>
-          {ROSTERS[match.homeTeam.id]?.nickname && (
-            <span className="text-[10px] text-center leading-tight" style={{ color: '#7A91BB' }}>{ROSTERS[match.homeTeam.id].nickname}</span>
-          )}
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-xs font-semibold" style={{ color: '#5A6E94' }}>VS</span>
-          {isLocked && existing && (
-            <span className="text-sm font-black" style={{ color: '#E8F0FF', fontFamily: 'var(--font-barlow-condensed)' }}>{existing.homeScore}–{existing.awayScore}</span>
-          )}
-        </div>
-        <div className="flex flex-1 flex-col items-center gap-0.5">
-          <FlagImage code={match.awayTeam.code} size={44} />
-          <span className="text-xs font-bold text-center leading-tight" style={{ color: '#E8F0FF' }}>{match.awayTeam.name}</span>
-          {ROSTERS[match.awayTeam.id]?.nickname && (
-            <span className="text-[10px] text-center leading-tight" style={{ color: '#7A91BB' }}>{ROSTERS[match.awayTeam.id].nickname}</span>
-          )}
-        </div>
-      </div>
-
       <div className="space-y-4">
-        {/* Score prediction */}
+        {/* 1. Face-off: flags, coaches, tournament history */}
+        <TeamFaceOff match={match} />
+
+        {/* 2. Score prediction */}
         {!isLocked && (
           <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <p className="mb-3 text-xs font-semibold text-center" style={{ color: '#7A91BB' }}>Predict the score</p>
             <div className="flex items-center justify-center gap-4">
-              <ScoreStepper
-                value={homeScore}
-                onChange={(v) => setDraft(match.id, v, awayScore, homePicks, awayPicks)}
-                locked={isLocked}
-              />
+              <ScoreStepper value={homeScore} onChange={(v) => setDraft(match.id, v, awayScore, homePicks, awayPicks)} locked={isLocked} />
               <span className="text-xl font-black" style={{ color: '#3A4E6E' }}>–</span>
-              <ScoreStepper
-                value={awayScore}
-                onChange={(v) => setDraft(match.id, homeScore, v, homePicks, awayPicks)}
-                locked={isLocked}
-              />
+              <ScoreStepper value={awayScore} onChange={(v) => setDraft(match.id, homeScore, v, homePicks, awayPicks)} locked={isLocked} />
             </div>
           </div>
         )}
 
-        {/* Scorer picks */}
-        {!isLocked && (homeRoster || awayRoster) && (
-          <div className="space-y-3">
-            <div className="text-center space-y-1">
+        {isLocked && existing && (
+          <div className="text-center">
+            <span className="text-2xl font-black" style={{ color: '#E8F0FF', fontFamily: 'var(--font-barlow-condensed)' }}>
+              {existing.homeScore} – {existing.awayScore}
+            </span>
+            <p className="text-xs mt-0.5" style={{ color: '#7A91BB' }}>Your prediction</p>
+          </div>
+        )}
+
+        {/* 3. Scorer picks — side by side */}
+        {!isLocked && hasRosters && (
+          <>
+            <div className="space-y-1">
               <h3 className="text-sm font-bold" style={{ color: '#E8F0FF' }}>Who will score? Choose up to 2 players from each team</h3>
               <p className="text-[11px]" style={{ color: '#7A91BB' }}>
                 <span className="font-bold" style={{ color: '#00C44F' }}>+1 pt</span> for each correct choice,{' '}
-                <span className="font-bold" style={{ color: '#FF4D4D' }}>-1 pt</span> subtracted for each incorrect choice
+                <span className="font-bold" style={{ color: '#FF4D4D' }}>-1 pt</span> for each incorrect choice
               </p>
             </div>
-            {homeRoster && (
-              <PlayerPicker
-                teamId={match.homeTeam.id}
-                teamName={match.homeTeam.name}
-                picks={homePicks}
-                onChange={(p) => setDraft(match.id, homeScore, awayScore, p, awayPicks)}
-                locked={isLocked}
-                side="home"
-              />
-            )}
-            {awayRoster && (
-              <PlayerPicker
-                teamId={match.awayTeam.id}
-                teamName={match.awayTeam.name}
-                picks={awayPicks}
-                onChange={(p) => setDraft(match.id, homeScore, awayScore, homePicks, p)}
-                locked={isLocked}
-                side="away"
-              />
-            )}
-          </div>
+            <SideBySidePicker
+              match={match}
+              homePicks={homePicks} onHomePicks={(p) => setDraft(match.id, homeScore, awayScore, p, awayPicks)}
+              awayPicks={awayPicks} onAwayPicks={(p) => setDraft(match.id, homeScore, awayScore, homePicks, p)}
+              locked={isLocked}
+            />
+          </>
         )}
 
         {/* Locked scorer display */}
@@ -327,13 +342,6 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
           </div>
         )}
 
-        {/* Team info */}
-        <div className="space-y-2">
-          <p className="text-xs font-semibold" style={{ color: '#E8F0FF' }}>Team info</p>
-          <TeamInfo teamId={match.homeTeam.id} teamName={match.homeTeam.name} />
-          <TeamInfo teamId={match.awayTeam.id} teamName={match.awayTeam.name} />
-        </div>
-
         {/* Submit */}
         {!isLocked && isDirty && (
           <button
@@ -348,7 +356,6 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
           <p className="text-center text-xs" style={{ color: '#7A91BB' }}>Predictions locked — match has started</p>
         )}
 
-        {/* Bottom cancel button */}
         <button
           onClick={onClose}
           className="w-full rounded-xl py-3 text-sm font-semibold active:scale-95 transition-colors"
