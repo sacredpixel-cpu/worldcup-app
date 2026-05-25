@@ -50,34 +50,37 @@ function TeamFaceOff({ match }: { match: Match }) {
     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
 
       {/* Flags + names + coaches */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, padding: '14px 14px 10px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 16, padding: '14px 10px 10px' }}>
+        {/* Home – left */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.homeTeam.code} size={36} className="rounded-sm" />
           </div>
-          <span style={{ fontSize: 16, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.homeTeam.name}</span>
+          <span style={{ fontSize: 19, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.homeTeam.name}</span>
           {homeRoster?.nickname && (
-            <span style={{ fontSize: 12, color: '#7A91BB', fontStyle: 'italic' }}>"{homeRoster.nickname}"</span>
+            <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic' }}>"{homeRoster.nickname}"</span>
           )}
           {homeRoster?.coach && (
-            <span style={{ fontSize: 10, color: '#5A7099' }}>🧑‍💼 {homeRoster.coach}</span>
+            <span style={{ fontSize: 12, color: '#6A82A8' }}>🧑‍💼 {homeRoster.coach}</span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', paddingTop: 6 }}>
+        {/* VS */}
+        <div style={{ display: 'flex', alignItems: 'center', paddingTop: 14, flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: '#3A4E6E', letterSpacing: '0.06em' }}>VS</span>
         </div>
 
+        {/* Away – right */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.awayTeam.code} size={36} className="rounded-sm" />
           </div>
-          <span style={{ fontSize: 16, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.awayTeam.name}</span>
+          <span style={{ fontSize: 19, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.awayTeam.name}</span>
           {awayRoster?.nickname && (
-            <span style={{ fontSize: 12, color: '#7A91BB', fontStyle: 'italic', textAlign: 'right' }}>"{awayRoster.nickname}"</span>
+            <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic', textAlign: 'right' }}>"{awayRoster.nickname}"</span>
           )}
           {awayRoster?.coach && (
-            <span style={{ fontSize: 10, color: '#5A7099', textAlign: 'right' }}>{awayRoster.coach} 🧑‍💼</span>
+            <span style={{ fontSize: 12, color: '#6A82A8', textAlign: 'right' }}>{awayRoster.coach} 🧑‍💼</span>
           )}
         </div>
       </div>
@@ -90,9 +93,9 @@ function TeamFaceOff({ match }: { match: Match }) {
             const hv = homeRoster?.history[key] ?? '–';
             const av = awayRoster?.history[key] ?? '–';
             return (
-              <div key={key} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', alignItems: 'center' }}>
+              <div key={key} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: '#C8D8F0', textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', paddingRight: 8 }}>{hv}</span>
-                <span style={{ fontSize: 11, color: '#8AA0C4', textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
+                <span style={{ fontSize: 13, color: '#C8D8F0', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
                 <span style={{ fontSize: 13, fontWeight: 800, color: '#C8D8F0', textAlign: 'left', fontFamily: 'var(--font-barlow-condensed)', paddingLeft: 8 }}>{av}</span>
               </div>
             );
