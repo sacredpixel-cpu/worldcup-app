@@ -84,12 +84,14 @@ function PlayerPicker({
   picks,
   onChange,
   locked,
+  side,
 }: {
   teamId: string;
   teamName: string;
   picks: string[];
   onChange: (picks: string[]) => void;
   locked: boolean;
+  side: 'home' | 'away';
 }) {
   const roster = ROSTERS[teamId];
   const [openPos, setOpenPos] = useState<Position | null>('forwards');
@@ -145,12 +147,16 @@ function PlayerPicker({
                       key={name}
                       disabled={locked || maxed}
                       onClick={() => toggle(name)}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold text-white transition-colors active:scale-95 ${
                         selected
-                          ? 'border-brand bg-brand text-gray-900'
+                          ? side === 'home'
+                            ? 'bg-green-700 opacity-100'
+                            : 'bg-pink-700 opacity-100'
                           : maxed
-                          ? 'border-white/10 bg-white/5 text-gray-600 cursor-not-allowed'
-                          : 'border-white/30 bg-white/15 text-white hover:border-white/60 hover:bg-white/25 active:scale-95'
+                          ? 'opacity-30 cursor-not-allowed ' + (side === 'home' ? 'bg-green-700' : 'bg-pink-700')
+                          : side === 'home'
+                          ? 'bg-green-600 hover:bg-green-500'
+                          : 'bg-pink-600 hover:bg-pink-500'
                       }`}
                     >
                       {name}
@@ -274,6 +280,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
                 picks={homePicks}
                 onChange={(p) => setDraft(match.id, homeScore, awayScore, p, awayPicks)}
                 locked={isLocked}
+                side="home"
               />
             )}
             {awayRoster && (
@@ -283,6 +290,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
                 picks={awayPicks}
                 onChange={(p) => setDraft(match.id, homeScore, awayScore, homePicks, p)}
                 locked={isLocked}
+                side="away"
               />
             )}
           </div>
