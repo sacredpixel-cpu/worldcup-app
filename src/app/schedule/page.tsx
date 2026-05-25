@@ -8,10 +8,11 @@ import { MatchCard } from '@/components/schedule/MatchCard';
 import { DayFilter } from '@/components/schedule/DayFilter';
 import { GroupStageTable } from '@/components/schedule/GroupStageTable';
 import { ClientOnly } from '@/components/ui/ClientOnly';
+import { BracketView } from '@/components/bracket/BracketView';
 import { subscribeToUserProfiles } from '@/lib/usersService';
 import type { Match } from '@/types/match';
 
-type Tab = 'all' | 'groups' | 'knockout';
+type Tab = 'all' | 'groups' | 'knockout' | 'bracket';
 
 function getDateStr(iso: string) {
   return iso.slice(0, 10);
@@ -86,6 +87,7 @@ function ScheduleContent() {
     { id: 'all', label: 'All Matches' },
     { id: 'groups', label: 'Group Stage' },
     { id: 'knockout', label: 'Knockout' },
+    { id: 'bracket', label: 'Bracket' },
   ];
 
   return (
@@ -227,6 +229,9 @@ function ScheduleContent() {
           })}
         </div>
       )}
+
+      {/* Bracket tab */}
+      {tab === 'bracket' && <BracketView />}
     </div>
   );
 }
