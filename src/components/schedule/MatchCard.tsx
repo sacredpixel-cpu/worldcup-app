@@ -10,6 +10,7 @@ import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 import { formatKickoff } from '@/lib/utils/formatDate';
 import { STAGE_LABELS } from '@/data/matches';
+import { ROSTERS } from '@/data/rosters';
 import { usePredictionsStore } from '@/store/slices/predictionsSlice';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
 
@@ -21,14 +22,14 @@ interface MatchCardProps {
   userId?: string;
 }
 
-function TeamBlock({ team, score, side }: {
+function TeamBlock({ team, score }: {
   team: Match['homeTeam'];
   score: number | null;
-  side: 'home' | 'away';
 }) {
   const isTbd = team.id === 'tbd';
+  const nickname = ROSTERS[team.id]?.nickname;
   return (
-    <div className={`flex flex-1 flex-col items-center gap-1 ${side === 'away' ? '' : ''}`}>
+    <div className="flex flex-1 flex-col items-center gap-0.5">
       {isTbd ? (
         <div className="h-8 w-12 rounded-sm bg-white/5 flex items-center justify-center text-gray-300 text-xs">TBD</div>
       ) : (
@@ -37,6 +38,9 @@ function TeamBlock({ team, score, side }: {
       <span className="text-center text-xs font-semibold text-gray-900 leading-tight max-w-[80px]">
         {isTbd ? 'TBD' : team.name}
       </span>
+      {nickname && (
+        <span className="text-center text-[10px] text-gray-400 leading-tight max-w-[80px]">{nickname}</span>
+      )}
       {score !== null && (
         <span className="text-2xl font-black text-gray-900">{score}</span>
       )}
@@ -89,7 +93,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
 
         {/* Teams vs Score */}
         <div className="flex items-center justify-between gap-2">
-          <TeamBlock team={liveMatch.homeTeam} score={liveMatch.homeScore} side="home" />
+          <TeamBlock team={liveMatch.homeTeam} score={liveMatch.homeScore} />
 
           <div className="flex flex-col items-center gap-0.5">
             {liveMatch.status === 'upcoming' ? (
@@ -104,7 +108,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
             )}
           </div>
 
-          <TeamBlock team={liveMatch.awayTeam} score={liveMatch.awayScore} side="away" />
+          <TeamBlock team={liveMatch.awayTeam} score={liveMatch.awayScore} />
         </div>
 
         {/* Crowd compare bar */}

@@ -17,6 +17,7 @@ export interface TeamSquad {
 }
 
 export interface TeamRoster {
+  nickname: string;
   coach: string;
   history: TeamHistory;
   squad: TeamSquad;
@@ -24,6 +25,7 @@ export interface TeamRoster {
 
 export const ROSTERS: Record<string, TeamRoster> = {
   mex: {
+    nickname: "El Tri",
     coach: "Javier Aguirre",
     history: { appearances: 18, passed_group_stage: 9, quarter_finals: 2, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -34,6 +36,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   zaf: {
+    nickname: "Bafana Bafana",
     coach: "Hugo Broos",
     history: { appearances: 4, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -44,6 +47,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   kor: {
+    nickname: "Taeguk Warriors",
     coach: "Hong Myung-bo",
     history: { appearances: 12, passed_group_stage: 4, quarter_finals: 1, semi_finals: 1, finals: 0, wins: 0 },
     squad: {
@@ -54,6 +58,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   cze: {
+    nickname: "Lokomotiva",
     coach: "Miroslav Koubek",
     history: { appearances: 10, passed_group_stage: 4, quarter_finals: 2, semi_finals: 2, finals: 2, wins: 0 },
     squad: {
@@ -64,6 +69,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   can: {
+    nickname: "Les Rouges",
     coach: "Jesse Marsch",
     history: { appearances: 3, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -74,6 +80,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   bih: {
+    nickname: "Zmajevi",
     coach: "Sergej Barbarez",
     history: { appearances: 2, passed_group_stage: 1, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -84,6 +91,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   qat: {
+    nickname: "The Maroons",
     coach: "Julen Lopetegui",
     history: { appearances: 2, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -94,6 +102,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   che: {
+    nickname: "La Nati",
     coach: "Murat Yakin",
     history: { appearances: 13, passed_group_stage: 8, quarter_finals: 3, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -104,6 +113,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   bra: {
+    nickname: "A Canarinha",
     coach: "Carlo Ancelotti",
     history: { appearances: 23, passed_group_stage: 20, quarter_finals: 14, semi_finals: 9, finals: 7, wins: 5 },
     squad: {
@@ -114,6 +124,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   hai: {
+    nickname: "Les Grenadiers",
     coach: "Sébastien Migné",
     history: { appearances: 2, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -124,6 +135,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   mar: {
+    nickname: "Atlas Lions",
     coach: "Mohamed Ouahbi",
     history: { appearances: 7, passed_group_stage: 2, quarter_finals: 1, semi_finals: 1, finals: 0, wins: 0 },
     squad: {
@@ -134,6 +146,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   sco: {
+    nickname: "The Tartan Terriers",
     coach: "Steve Clarke",
     history: { appearances: 9, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -144,6 +157,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   usa: {
+    nickname: "Stars and Stripes",
     coach: "Mauricio Pochettino",
     history: { appearances: 12, passed_group_stage: 6, quarter_finals: 1, semi_finals: 1, finals: 0, wins: 0 },
     squad: {
@@ -154,6 +168,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   pry: {
+    nickname: "La Albirroja",
     coach: "Gustavo Alfaro",
     history: { appearances: 9, passed_group_stage: 2, quarter_finals: 1, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -164,6 +179,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   aus: {
+    nickname: "Socceroos",
     coach: "Tony Popovic",
     history: { appearances: 7, passed_group_stage: 2, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -174,6 +190,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   tur: {
+    nickname: "Ay-Yıldızlılar",
     coach: "Vincenzo Montella",
     history: { appearances: 3, passed_group_stage: 1, quarter_finals: 1, semi_finals: 1, finals: 0, wins: 0 },
     squad: {
@@ -184,6 +201,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   deu: {
+    nickname: "Die Mannschaft",
     coach: "Julian Nagelsmann",
     history: { appearances: 21, passed_group_stage: 18, quarter_finals: 16, semi_finals: 13, finals: 8, wins: 4 },
     squad: {
@@ -194,6 +212,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   civ: {
+    nickname: "Les Éléphants",
     coach: "Emerse Faé",
     history: { appearances: 4, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -204,6 +223,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   ecu: {
+    nickname: "La Tri",
     coach: "Sebastián Beccacece",
     history: { appearances: 5, passed_group_stage: 1, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -214,6 +234,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   cuw: {
+    nickname: "The Blue Wave",
     coach: "Dick Advocaat",
     history: { appearances: 1, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -224,6 +245,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   nld: {
+    nickname: "Oranje",
     coach: "Ronald Koeman",
     history: { appearances: 12, passed_group_stage: 10, quarter_finals: 7, semi_finals: 4, finals: 3, wins: 0 },
     squad: {
@@ -234,6 +256,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   jpn: {
+    nickname: "Samurai Blue",
     coach: "Hajime Moriyasu",
     history: { appearances: 8, passed_group_stage: 4, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -244,6 +267,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   swe: {
+    nickname: "Blågult",
     coach: "Graham Potter",
     history: { appearances: 13, passed_group_stage: 8, quarter_finals: 6, semi_finals: 4, finals: 1, wins: 0 },
     squad: {
@@ -254,6 +278,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   tun: {
+    nickname: "Eagles of Carthage",
     coach: "Sabri Lamouchi",
     history: { appearances: 7, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -264,6 +289,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   bel: {
+    nickname: "Red Devils",
     coach: "Rudi Garcia",
     history: { appearances: 15, passed_group_stage: 7, quarter_finals: 3, semi_finals: 2, finals: 0, wins: 0 },
     squad: {
@@ -274,6 +300,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   egy: {
+    nickname: "The Pharaohs",
     coach: "Hossam Hassan",
     history: { appearances: 4, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -284,6 +311,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   irn: {
+    nickname: "Team Melli",
     coach: "Amir Ghalenoei",
     history: { appearances: 7, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -294,6 +322,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   nzl: {
+    nickname: "All Whites",
     coach: "Darren Bazeley",
     history: { appearances: 3, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -304,6 +333,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   esp: {
+    nickname: "La Roja",
     coach: "Luis de la Fuente",
     history: { appearances: 17, passed_group_stage: 11, quarter_finals: 6, semi_finals: 2, finals: 1, wins: 1 },
     squad: {
@@ -314,6 +344,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   cpv: {
+    nickname: "Tubarões Azuis",
     coach: "Bubista",
     history: { appearances: 1, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -324,6 +355,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   sau: {
+    nickname: "Green Falcons",
     coach: "Georgios Donis",
     history: { appearances: 7, passed_group_stage: 1, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -334,6 +366,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   uru: {
+    nickname: "La Celeste",
     coach: "Marcelo Bielsa",
     history: { appearances: 15, passed_group_stage: 10, quarter_finals: 8, semi_finals: 5, finals: 2, wins: 2 },
     squad: {
@@ -344,6 +377,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   fra: {
+    nickname: "Les Bleus",
     coach: "Didier Deschamps",
     history: { appearances: 17, passed_group_stage: 9, quarter_finals: 8, semi_finals: 7, finals: 4, wins: 2 },
     squad: {
@@ -354,6 +388,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   sen: {
+    nickname: "Lions of Teranga",
     coach: "Aliou Cissé",
     history: { appearances: 4, passed_group_stage: 2, quarter_finals: 1, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -364,6 +399,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   irq: {
+    nickname: "Mesopotamian Lions",
     coach: "Graham Arnold",
     history: { appearances: 2, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -374,6 +410,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   nor: {
+    nickname: "Røde, Hvite, Blå",
     coach: "Ståle Solbakken",
     history: { appearances: 4, passed_group_stage: 1, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -384,6 +421,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   arg: {
+    nickname: "La Albiceleste",
     coach: "Lionel Scaloni",
     history: { appearances: 19, passed_group_stage: 13, quarter_finals: 9, semi_finals: 6, finals: 6, wins: 3 },
     squad: {
@@ -394,6 +432,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   dza: {
+    nickname: "Les Fennecs",
     coach: "Vladimir Petković",
     history: { appearances: 5, passed_group_stage: 1, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -404,6 +443,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   aut: {
+    nickname: "Das Team",
     coach: "Ralf Rangnick",
     history: { appearances: 8, passed_group_stage: 4, quarter_finals: 2, semi_finals: 2, finals: 0, wins: 0 },
     squad: {
@@ -414,6 +454,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   jor: {
+    nickname: "Al-Nashama",
     coach: "Jamal Sellami",
     history: { appearances: 1, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -424,6 +465,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   prt: {
+    nickname: "A Seleção das Quinas",
     coach: "Roberto Martínez",
     history: { appearances: 9, passed_group_stage: 5, quarter_finals: 2, semi_finals: 2, finals: 0, wins: 0 },
     squad: {
@@ -434,6 +476,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   cod: {
+    nickname: "Les Léopards",
     coach: "Sébastien Desabre",
     history: { appearances: 2, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -444,6 +487,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   col: {
+    nickname: "Los Cafeteros",
     coach: "Néstor Lorenzo",
     history: { appearances: 7, passed_group_stage: 3, quarter_finals: 1, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -454,6 +498,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   uzb: {
+    nickname: "White Wolves",
     coach: "Fabio Cannavaro",
     history: { appearances: 1, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -464,6 +509,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   eng: {
+    nickname: "Three Lions",
     coach: "Thomas Tuchel",
     history: { appearances: 17, passed_group_stage: 11, quarter_finals: 8, semi_finals: 2, finals: 1, wins: 1 },
     squad: {
@@ -474,6 +520,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   hrv: {
+    nickname: "Vatreni",
     coach: "Zlatko Dalić",
     history: { appearances: 7, passed_group_stage: 3, quarter_finals: 3, semi_finals: 3, finals: 1, wins: 0 },
     squad: {
@@ -484,6 +531,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   gha: {
+    nickname: "Black Stars",
     coach: "Otto Addo",
     history: { appearances: 5, passed_group_stage: 2, quarter_finals: 1, semi_finals: 0, finals: 0, wins: 0 },
     squad: {
@@ -494,6 +542,7 @@ export const ROSTERS: Record<string, TeamRoster> = {
     },
   },
   pan: {
+    nickname: "Los Canaleros",
     coach: "Thomas Christiansen",
     history: { appearances: 2, passed_group_stage: 0, quarter_finals: 0, semi_finals: 0, finals: 0, wins: 0 },
     squad: {

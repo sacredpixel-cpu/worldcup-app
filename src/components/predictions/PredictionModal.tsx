@@ -50,7 +50,12 @@ function TeamInfo({ teamId, teamName }: { teamId: string; teamName: string }) {
   return (
     <div className="rounded-xl border border-border bg-card/50 p-3 space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-gray-200">{teamName}</span>
+        <div>
+          <span className="text-xs font-bold text-gray-200">{teamName}</span>
+          {roster.nickname && (
+            <span className="ml-1.5 text-[10px] text-gray-500 italic">"{roster.nickname}"</span>
+          )}
+        </div>
         <span className="text-[10px] text-gray-400">Coach: {roster.coach}</span>
       </div>
       <HistoryBar label="World Cup apps" value={h.appearances} max={23} />
@@ -212,9 +217,12 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
 
       {/* Match header */}
       <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex flex-1 flex-col items-center gap-1">
+        <div className="flex flex-1 flex-col items-center gap-0.5">
           <FlagImage code={match.homeTeam.code} size={44} />
           <span className="text-xs font-bold text-gray-900 text-center leading-tight">{match.homeTeam.name}</span>
+          {ROSTERS[match.homeTeam.id]?.nickname && (
+            <span className="text-[10px] text-gray-400 text-center leading-tight">{ROSTERS[match.homeTeam.id].nickname}</span>
+          )}
         </div>
         <div className="flex flex-col items-center gap-1">
           <span className="text-xs text-gray-400 font-semibold">VS</span>
@@ -222,9 +230,12 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
             <span className="text-sm font-black text-gray-900">{existing.homeScore}–{existing.awayScore}</span>
           )}
         </div>
-        <div className="flex flex-1 flex-col items-center gap-1">
+        <div className="flex flex-1 flex-col items-center gap-0.5">
           <FlagImage code={match.awayTeam.code} size={44} />
           <span className="text-xs font-bold text-gray-900 text-center leading-tight">{match.awayTeam.name}</span>
+          {ROSTERS[match.awayTeam.id]?.nickname && (
+            <span className="text-[10px] text-gray-400 text-center leading-tight">{ROSTERS[match.awayTeam.id].nickname}</span>
+          )}
         </div>
       </div>
 
