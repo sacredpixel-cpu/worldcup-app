@@ -132,13 +132,13 @@ function MatchCardInner({
             {!isTbd && <FlagImage code={team.code} size={14} />}
             <span style={{
               flex: 1, fontSize: isTbd ? 9 : 10, fontWeight: isWin ? 700 : 500,
-              color: isTbd ? '#4A5E7E' : isLoss ? '#4A5E7E' : '#9AAED4',
+              color: isTbd ? '#6A82A8' : isLoss ? '#6A82A8' : '#C8D8F0',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1,
             }}>
               {isTbd ? (label ?? 'TBD') : team.code}
             </span>
             {(isFinished || isLive) && score !== null && (
-              <span style={{ fontSize: 11, fontWeight: 800, color: isWin ? '#FF4DA8' : '#5A6E94', fontFamily: 'var(--font-barlow-condensed)', minWidth: 10, textAlign: 'right' }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: isWin ? '#FF4DA8' : '#8AA0C4', fontFamily: 'var(--font-barlow-condensed)', minWidth: 10, textAlign: 'right' }}>
                 {score}
               </span>
             )}
@@ -147,7 +147,7 @@ function MatchCardInner({
       })}
       {/* Footer: date + city (+ prediction tick for group matches) */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 7px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.18)', overflow: 'hidden' }}>
-        <span style={{ fontSize: 8, color: '#3A4E6E', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
+        <span style={{ fontSize: 8, color: '#6A82A8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
           {fmtDate(match.kickoffAt)} · {match.city.split(',')[0]}
         </span>
         {hasPrediction && (
@@ -209,11 +209,11 @@ export function BracketView() {
         {/* ── Column header labels ── */}
         <div style={{ display: 'flex', gap: COL_GAP, marginBottom: 8 }}>
           <div style={{ width: CARD_W, flexShrink: 0, textAlign: 'center' }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#5A6E94', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Group Stage</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#8AA0C4', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Group Stage</span>
           </div>
           {BRACKET_ROUNDS.map(r => (
             <div key={r.stage} style={{ width: CARD_W, flexShrink: 0, textAlign: 'center' }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: '#5A6E94', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{r.label}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: '#8AA0C4', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{r.label}</span>
             </div>
           ))}
         </div>
@@ -233,7 +233,7 @@ export function BracketView() {
                   borderBottom: 'none',
                   borderRadius: '7px 7px 0 0',
                 }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#9AAED4', letterSpacing: '0.06em' }}>GROUP {letter}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#C8D8F0', letterSpacing: '0.06em' }}>GROUP {letter}</span>
                 </div>
                 {/* Match cards */}
                 {groupMatchData[letter].map((match, j) => (
@@ -278,7 +278,7 @@ export function BracketView() {
       {/* Third-place */}
       {thirdPlace && (
         <div style={{ padding: '16px 16px 0' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#5A6E94', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#8AA0C4', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
             3rd Place
           </span>
           <div style={{ width: CARD_W }}>
