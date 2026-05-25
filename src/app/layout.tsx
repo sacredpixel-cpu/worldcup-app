@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Barlow_Condensed } from 'next/font/google';
+import { Barlow_Condensed, Golos_Text } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 
@@ -7,6 +7,12 @@ const barlowCondensed = Barlow_Condensed({
   subsets: ['latin'],
   weight: ['700', '800', '900'],
   variable: '--font-barlow-condensed',
+});
+
+const golosText = Golos_Text({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-golos-text',
 });
 import { AuthBanner } from '@/components/ui/AuthBanner';
 import { BottomTabBar } from '@/components/ui/BottomTabBar';
@@ -34,7 +40,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={barlowCondensed.variable}>
+    <html lang="en" className={`${barlowCondensed.variable} ${golosText.variable}`}>
       <body className="bg-[#FBFAF7] text-gray-900">
         <Providers>
           {/* Mobile frame wrapper */}
