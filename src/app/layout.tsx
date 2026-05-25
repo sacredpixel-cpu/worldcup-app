@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from 'next';
+import { Barlow_Condensed } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ['latin'],
+  weight: ['700', '800', '900'],
+  variable: '--font-barlow-condensed',
+});
 import { AuthBanner } from '@/components/ui/AuthBanner';
 import { BottomTabBar } from '@/components/ui/BottomTabBar';
 import { FirebaseAuthSync } from '@/components/FirebaseAuthSync';
@@ -27,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={barlowCondensed.variable}>
       <body className="bg-[#FBFAF7] text-gray-900">
         <Providers>
           {/* Mobile frame wrapper */}

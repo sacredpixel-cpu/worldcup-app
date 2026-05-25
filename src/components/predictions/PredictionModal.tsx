@@ -223,7 +223,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
       </div>
 
       {/* H1 headline */}
-      <h1 className="text-2xl font-black text-gray-900 mb-3">Predictions</h1>
+      <h1 className="mb-3 text-3xl font-black text-gray-900" style={{ fontFamily: 'var(--font-barlow-condensed)' }}>Predictions</h1>
 
       {/* Match header */}
       <div className="flex items-center justify-between gap-3 mb-4">
