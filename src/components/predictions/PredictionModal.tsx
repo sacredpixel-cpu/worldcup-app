@@ -200,6 +200,16 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
 
   return (
     <Modal open={open} onClose={onClose} className="max-h-[90vh] overflow-y-auto">
+      {/* Cancel button */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={onClose}
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-white/10 active:scale-95 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+
       {/* Match header */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex flex-1 flex-col items-center gap-1">
@@ -242,7 +252,10 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
         {/* Scorer picks */}
         {!isLocked && (homeRoster || awayRoster) && (
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-gray-400 text-center">Pick up to 2 goal scorers per team</p>
+            <div className="text-center space-y-0.5">
+              <p className="text-xs font-semibold text-gray-300">Who will score? Choose up to 2 players from each team</p>
+              <p className="text-[11px] text-gray-500">+1 pt for each correct choice, -1 point subtracted for each incorrect choice</p>
+            </div>
             {homeRoster && (
               <PlayerPicker
                 teamId={match.homeTeam.id}
