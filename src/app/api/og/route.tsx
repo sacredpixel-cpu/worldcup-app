@@ -4,13 +4,12 @@ import { ALL_MATCHES } from '@/data/matches';
 
 export const runtime = 'nodejs';
 
-function flagUrl(code: string) {
-  return `https://cdn.jsdelivr.net/gh/hampusborgos/country-flags@main/png250px/${code.toLowerCase()}.png`;
-}
-
 async function fetchFlag(url: string): Promise<string> {
+  if (!url) return '';
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    // Use w160 size — swap from the w40 stored on the team object
+    const largeUrl = url.replace('/w40/', '/w160/');
+    const res = await fetch(largeUrl, { cache: 'no-store' });
     if (!res.ok) return '';
     const buf = await res.arrayBuffer();
     return `data:image/png;base64,${Buffer.from(buf).toString('base64')}`;
@@ -37,9 +36,10 @@ export async function GET(request: NextRequest) {
   });
   const matchLocation = `${match.venue} · ${match.city}`;
 
+  // Use the pre-resolved flagUrl from the team object (correct alpha-2 code already applied)
   const [homeFlag, awayFlag] = await Promise.all([
-    fetchFlag(flagUrl(match.homeTeam.code)),
-    fetchFlag(flagUrl(match.awayTeam.code)),
+    fetchFlag(match.homeTeam.flagUrl),
+    fetchFlag(match.awayTeam.flagUrl),
   ]);
 
   return new ImageResponse(

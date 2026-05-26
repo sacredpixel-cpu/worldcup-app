@@ -3,8 +3,7 @@ import { notFound } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 // Force dynamic so searchParams (score) are always read fresh — never cached
-export const dynamicParams = true;
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
 
 // SSR disabled — Firebase must only run in the browser
 const SharePageClient = dynamic(
@@ -12,8 +11,8 @@ const SharePageClient = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex min-h-screen items-center justify-center bg-[#FBFAF7]">
-        <div className="text-gray-400 animate-pulse">Loading…</div>
+      <div className="flex min-h-screen items-center justify-center" style={{ background: '#06091A' }}>
+        <div className="animate-pulse" style={{ color: '#7A91BB' }}>Loading…</div>
       </div>
     ),
   }
@@ -35,17 +34,11 @@ export async function generateMetadata({
   const a = searchParams?.a ?? '?';
   const scoreText = h !== '?' && a !== '?' ? ` ${h}–${a}` : '';
   const title = `${home}${scoreText} ${away} — My World Cup 2026 Prediction`;
-  const description = `Settle the scores at MyWorldCupSchedule.com — Follow the World Cup schedule, predict your own scores, and enjoy leaderboards and group challenges.`;
+  const description = `Can you beat my prediction? Predict scores, follow the schedule, and compete on leaderboards at MyWorldCupSchedule.com`;
 
-  const hasScore = h !== '?' && a !== '?';
-
-  // og:url MUST include the score params — Facebook follows og:url as the
-  // canonical URL, so if we omit ?h=&a= here the scraper loses the score.
-  const pageUrl = hasScore
-    ? `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}?h=${h}&a=${a}`
-    : `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}`;
-
-  // API route handler — unlike opengraph-image.tsx, route handlers CAN read searchParams
+  // Point directly at our API route — it reads ?m=&h=&a= from the request URL.
+  // We intentionally omit og:url so Facebook uses the URL it fetched
+  // (with score params intact) rather than following a canonical that strips them.
   const imageUrl = `https://myworldcupschedule.com/api/og?m=${params.matchId}&h=${h}&a=${a}`;
 
   return {
@@ -54,8 +47,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: `${home} vs ${away} prediction` }],
-      url: pageUrl,
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: `${home} vs ${away} — My World Cup 2026 Prediction` }],
       siteName: 'MyWorldCupSchedule.com',
       type: 'website',
     },
