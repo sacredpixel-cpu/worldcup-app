@@ -221,20 +221,72 @@ function ProfileContent() {
         </div>
       </div>
 
-      {/* Scoring legend */}
-      <div className="mx-4 mb-4 rounded-xl p-4" style={{ background: '#0E1535', border: '1px solid rgba(255,255,255,0.07)' }}>
-        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Scoring Rules</h2>
-        {[
-          { pts: '5 pts', desc: 'Exact score per team (max 10)', color: '#FFB020' },
-          { pts: '3 pts', desc: 'Correct outcome (W/D/L)', color: '#FF4DA8' },
-          { pts: '4 pts', desc: 'Correct finalist', color: '#60A5FA' },
-          { pts: '10 pts', desc: 'Correct champion', color: '#FFB020' },
-        ].map(r => (
-          <div key={r.desc} className="flex items-center justify-between py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <span className="text-sm" style={{ color: '#7A91BB' }}>{r.desc}</span>
-            <span className="text-sm font-bold" style={{ color: r.color }}>{r.pts}</span>
-          </div>
-        ))}
+      {/* Scoring Rules */}
+      <div className="mx-4 mb-4 rounded-xl overflow-hidden" style={{ background: '#0E1535', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="px-4 pt-4 pb-3">
+          <h2 className="text-xs font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>How Points Are Scored</h2>
+        </div>
+
+        {/* Score Predictions */}
+        <div className="px-4 pb-1">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FF4DA8' }}>Score Predictions</p>
+          {[
+            { pts: '+10', desc: 'Both scores exact (perfect)',    note: '5 + 5 pts'         },
+            { pts: '+5',  desc: 'One score exact',               note: 'per correct team'  },
+            { pts: '+3',  desc: 'Correct outcome (W / D / L)',   note: 'if no exact score' },
+          ].map(r => (
+            <div key={r.desc} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm" style={{ color: '#C8D0E0' }}>{r.desc}</span>
+                <span className="ml-1.5 text-[10px]" style={{ color: '#5A6E94' }}>{r.note}</span>
+              </div>
+              <span className="ml-3 text-sm font-black shrink-0" style={{ color: '#FFB020', fontFamily: 'var(--font-barlow-condensed)' }}>{r.pts}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Scorer Picks */}
+        <div className="px-4 pt-3 pb-1">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FF4DA8' }}>Scorer Picks</p>
+          {[
+            { pts: '+1', desc: 'Player you picked scores',      color: '#00C44F' },
+            { pts: '−1', desc: "Player you picked doesn't score", color: '#FF4D4D' },
+          ].map(r => (
+            <div key={r.desc} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span className="text-sm" style={{ color: '#C8D0E0' }}>{r.desc}</span>
+              <span className="ml-3 text-sm font-black shrink-0" style={{ color: r.color, fontFamily: 'var(--font-barlow-condensed)' }}>{r.pts}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Group Stage */}
+        <div className="px-4 pt-3 pb-1">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FF4DA8' }}>Group Stage Standings</p>
+          {[
+            { pts: '+3', desc: 'Group winner correct'    },
+            { pts: '+2', desc: 'Runner-up correct'       },
+            { pts: '+1', desc: '3rd place correct'       },
+          ].map(r => (
+            <div key={r.desc} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span className="text-sm" style={{ color: '#C8D0E0' }}>{r.desc}</span>
+              <span className="ml-3 text-sm font-black shrink-0" style={{ color: '#FFB020', fontFamily: 'var(--font-barlow-condensed)' }}>{r.pts}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Knockouts */}
+        <div className="px-4 pt-3 pb-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FF4DA8' }}>Knockout Stage</p>
+          {[
+            { pts: '+4',  desc: 'Correct finalist'  },
+            { pts: '+10', desc: 'Correct champion'   },
+          ].map(r => (
+            <div key={r.desc} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span className="text-sm" style={{ color: '#C8D0E0' }}>{r.desc}</span>
+              <span className="ml-3 text-sm font-black shrink-0" style={{ color: '#FFB020', fontFamily: 'var(--font-barlow-condensed)' }}>{r.pts}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Sign out */}
