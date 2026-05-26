@@ -1,15 +1,22 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuthStore, usePredictionsStore } from '@/store';
-import { GROUP_STAGE_MATCHES } from '@/data/matches';
+import { ALL_MATCHES, GROUP_STAGE_MATCHES, STAGE_LABELS } from '@/data/matches';
 import { GROUPS } from '@/data/teams';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import Link from 'next/link';
 import Image from 'next/image';
 import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
-import type { Team } from '@/types/match';
+import { calcPoints } from '@/lib/utils/calcPoints';
+import { FlagImage } from '@/components/ui/FlagImage';
+import { PredictionModal } from '@/components/predictions/PredictionModal';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
+import { formatKickoff } from '@/lib/utils/formatDate';
+import type { Match, Team } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
+
+type SubTab = 'groups' | 'by-game';
 
 
 interface Standing {
@@ -258,6 +265,192 @@ function BestThirdSection({ saved }: { saved: Record<string, Prediction> }) {
   );
 }
 
+// ─── By Game tab ─────────────────────────────────────────────────────────────
+
+function PointsPill({ pts }: { pts: number }) {
+  if (pts >= 10) return (
+    <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black"
+      style={{ background: 'rgba(255,176,32,0.15)', color: '#FFB020', border: '1px solid rgba(255,176,32,0.3)' }}>
+      🌟 +{pts} pts
+    </span>
+  );
+  if (pts >= 5) return (
+    <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold"
+      style={{ background: 'rgba(255,176,32,0.10)', color: '#FFB020', border: '1px solid rgba(255,176,32,0.2)' }}>
+      ⭐ +{pts} pts
+    </span>
+  );
+  if (pts > 0) return (
+    <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold"
+      style={{ background: 'rgba(0,196,79,0.10)', color: '#00C44F', border: '1px solid rgba(0,196,79,0.2)' }}>
+      +{pts} pts
+    </span>
+  );
+  return (
+    <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold"
+      style={{ background: 'rgba(255,255,255,0.04)', color: '#5A6E94', border: '1px solid rgba(255,255,255,0.08)' }}>
+      0 pts
+    </span>
+  );
+}
+
+function ResultCard({ match, prediction, userId }: {
+  match: Match;
+  prediction: Prediction;
+  userId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasScore = match.homeScore !== null && match.awayScore !== null;
+
+  const pts = hasScore
+    ? calcPoints(prediction, {
+        homeScore: match.homeScore!,
+        awayScore: match.awayScore!,
+        homeScorers: match.homeScorers,
+        awayScorers: match.awayScorers,
+      })
+    : null;
+
+  return (
+    <>
+      <button
+        className="w-full text-left rounded-2xl overflow-hidden active:scale-[0.99] transition-transform"
+        style={{
+          background: 'linear-gradient(160deg, #0E1535 0%, #0A1128 100%)',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}
+        onClick={() => setOpen(true)}
+      >
+        {/* Stage + date */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-1">
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#5A6E94' }}>
+            {match.homeTeam.group ? `Group ${match.homeTeam.group} · ` : ''}{STAGE_LABELS[match.stage]}
+          </span>
+          <span className="text-[10px]" style={{ color: '#5A6E94' }}>{formatKickoff(match.kickoffAt)}</span>
+        </div>
+
+        {/* Teams + actual score */}
+        <div className="flex items-center justify-between px-4 py-2 gap-2">
+          {/* Home */}
+          <div className="flex flex-1 flex-col items-center gap-1">
+            <FlagImage code={match.homeTeam.code} size={32} className="rounded-sm" />
+            <span className="text-[11px] font-black text-center leading-tight"
+              style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', letterSpacing: '0.03em' }}>
+              {match.homeTeam.name.toUpperCase()}
+            </span>
+          </div>
+
+          {/* Score */}
+          <div className="flex flex-col items-center gap-0.5">
+            {hasScore ? (
+              <div className="flex items-baseline gap-1 rounded-xl px-3 py-1.5"
+                style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 28, fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
+                  {match.homeScore}
+                </span>
+                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 18, fontWeight: 700, color: '#3A4E6E', lineHeight: 1 }}>:</span>
+                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 28, fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
+                  {match.awayScore}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs font-bold" style={{ color: '#3A4E6E' }}>FT</span>
+            )}
+            <span className="text-[9px] uppercase tracking-wide" style={{ color: '#3A4E6E' }}>Final</span>
+          </div>
+
+          {/* Away */}
+          <div className="flex flex-1 flex-col items-center gap-1">
+            <FlagImage code={match.awayTeam.code} size={32} className="rounded-sm" />
+            <span className="text-[11px] font-black text-center leading-tight"
+              style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', letterSpacing: '0.03em' }}>
+              {match.awayTeam.name.toUpperCase()}
+            </span>
+          </div>
+        </div>
+
+        {/* Footer: your pick + points */}
+        <div className="mx-3 mb-3 mt-1 flex items-center justify-between rounded-xl px-3 py-2"
+          style={{ background: 'rgba(0,0,0,0.2)' }}>
+          <span className="text-[11px]" style={{ color: '#7A91BB' }}>
+            Your pick: <span style={{ color: '#E8F0FF', fontWeight: 700 }}>
+              {prediction.homeScore}–{prediction.awayScore}
+            </span>
+          </span>
+          {pts !== null ? <PointsPill pts={pts} /> : (
+            <span className="text-[11px]" style={{ color: '#5A6E94' }}>Pending</span>
+          )}
+        </div>
+      </button>
+
+      <PredictionModal
+        match={match}
+        userId={userId}
+        existing={prediction}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
+function ByGameTab({ saved, userId }: { saved: Record<string, Prediction>; userId: string }) {
+  const { getLiveMatch } = useMatchesStore();
+
+  const finishedMatches = useMemo(() => {
+    return ALL_MATCHES
+      .filter(m => saved[m.id] && getLiveMatch(m).status === 'finished')
+      .map(m => getLiveMatch(m))
+      .sort((a, b) => b.kickoffAt.localeCompare(a.kickoffAt)); // most recent first
+  }, [saved, getLiveMatch]);
+
+  const totalPts = useMemo(() => {
+    return finishedMatches.reduce((sum, m) => {
+      if (m.homeScore === null || m.awayScore === null) return sum;
+      return sum + calcPoints(saved[m.id], {
+        homeScore: m.homeScore,
+        awayScore: m.awayScore,
+        homeScorers: m.homeScorers,
+        awayScorers: m.awayScorers,
+      });
+    }, 0);
+  }, [finishedMatches, saved]);
+
+  if (finishedMatches.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+        <div className="mb-4 text-5xl">🏁</div>
+        <h2 className="mb-2 text-lg font-bold" style={{ color: '#E8F0FF' }}>No Results Yet</h2>
+        <p className="text-sm" style={{ color: '#7A91BB' }}>Finished matches with your predictions will appear here</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-3 px-4 pb-4">
+      {/* Running total */}
+      <div className="flex items-center justify-between rounded-xl px-4 py-2.5"
+        style={{ background: 'rgba(255,176,32,0.08)', border: '1px solid rgba(255,176,32,0.2)' }}>
+        <span className="text-sm" style={{ color: '#7A91BB' }}>
+          {finishedMatches.length} game{finishedMatches.length !== 1 ? 's' : ''} played
+        </span>
+        <span className="text-lg font-black" style={{ color: '#FFB020' }}>+{totalPts} pts total</span>
+      </div>
+
+      {finishedMatches.map(match => (
+        <ResultCard
+          key={match.id}
+          match={match}
+          prediction={saved[match.id]}
+          userId={userId}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Groups tab ───────────────────────────────────────────────────────────────
+
 function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
   const { results, total } = useMemo(() => calcGroupPoints(saved), [saved]);
   const resultsByGroup = Object.fromEntries(results.map(r => [r.groupLetter, r]));
@@ -310,6 +503,7 @@ function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
 function PredictionsContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
+  const [subTab, setSubTab] = useState<SubTab>('groups');
 
   if (!user) {
     return (
@@ -334,7 +528,27 @@ function PredictionsContent() {
         <p className="text-xs" style={{ color: '#7A91BB' }}>{totalPredictions} prediction{totalPredictions !== 1 ? 's' : ''} made</p>
       </div>
 
-      <GroupsTab saved={saved} />
+      {/* Sub-tabs */}
+      <div className="flex gap-1 px-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        {([
+          { id: 'groups'  as SubTab, label: 'Groups'  },
+          { id: 'by-game' as SubTab, label: 'By Game' },
+        ]).map(t => (
+          <button
+            key={t.id}
+            onClick={() => setSubTab(t.id)}
+            className="flex-shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors"
+            style={subTab === t.id
+              ? { borderBottom: '2px solid #FF4DA8', color: '#FF4DA8', marginBottom: -1 }
+              : { borderBottom: '2px solid transparent', color: '#7A91BB' }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === 'groups'  && <GroupsTab saved={saved} />}
+      {subTab === 'by-game' && <ByGameTab saved={saved} userId={user.id} />}
     </div>
   );
 }
