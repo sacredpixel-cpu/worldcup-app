@@ -69,10 +69,14 @@ function buildPredictedStandings(
   return { standings, complete: predictedCount === totalMatches && totalMatches > 0, predictedCount, totalMatches };
 }
 
-function TeamRow({ standing, rank, correct }: { standing: Standing; rank: number; correct?: boolean }) {
+function TeamRow({ standing, rank, advancesThird = false, correct }: {
+  standing: Standing;
+  rank: number;
+  advancesThird?: boolean;
+  correct?: boolean;
+}) {
   const gd = standing.gf - standing.ga;
   const advancesAuto = rank <= 2;
-  const advancesThird = rank === 3;
 
   return (
     <div
@@ -107,10 +111,11 @@ function TeamRow({ standing, rank, correct }: { standing: Standing; rank: number
   );
 }
 
-function GroupCard({ letter, saved, pointsResult }: {
+function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
   letter: string;
   saved: Record<string, Prediction>;
   pointsResult?: { points: number; winnerCorrect: boolean; runnerUpCorrect: boolean; thirdCorrect: boolean };
+  advancingThirdIds: Set<string>;
 }) {
   const { standings, complete, predictedCount, totalMatches } = useMemo(
     () => buildPredictedStandings(letter, saved),
@@ -137,7 +142,9 @@ function GroupCard({ letter, saved, pointsResult }: {
             const correctVal = pointsResult !== undefined
               ? (i === 0 ? pointsResult.winnerCorrect : i === 1 ? pointsResult.runnerUpCorrect : i === 2 ? pointsResult.thirdCorrect : undefined)
               : undefined;
-            return <TeamRow key={s.team.id} standing={s} rank={i + 1} correct={correctVal} />;
+            // Only the rank-3 team advances if they're in the global top-8 third-place list
+            const advancesThird = i === 2 && advancingThirdIds.has(s.team.id);
+            return <TeamRow key={s.team.id} standing={s} rank={i + 1} advancesThird={advancesThird} correct={correctVal} />;
           })}
           <p className="mt-1 text-[10px] text-center" style={{ color: '#7A91BB' }}>
             Based on your score predictions
@@ -255,6 +262,30 @@ function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
   const { results, total } = useMemo(() => calcGroupPoints(saved), [saved]);
   const resultsByGroup = Object.fromEntries(results.map(r => [r.groupLetter, r]));
 
+  // Determine which 3rd-place teams actually advance (best 8 of 12 by pts → GD → GF).
+  // This is computed once here and passed to every GroupCard so the pink highlight
+  // only appears on the groups whose 3rd-place team makes the cut.
+  const advancingThirdIds = useMemo<Set<string>>(() => {
+    const thirds: Array<{ teamId: string; standing: Standing }> = [];
+
+    Object.keys(GROUPS).forEach(letter => {
+      const { standings, complete } = buildPredictedStandings(letter, saved);
+      if (complete && standings[2]) {
+        thirds.push({ teamId: standings[2].team.id, standing: standings[2] });
+      }
+    });
+
+    thirds.sort((a, b) => {
+      const sa = a.standing; const sb = b.standing;
+      if (sb.pts !== sa.pts) return sb.pts - sa.pts;
+      const gdDiff = (sb.gf - sb.ga) - (sa.gf - sa.ga);
+      if (gdDiff !== 0) return gdDiff;
+      return sb.gf - sa.gf;
+    });
+
+    return new Set(thirds.slice(0, 8).map(t => t.teamId));
+  }, [saved]);
+
   return (
     <div className="mt-4 flex flex-col gap-3 px-4">
       {total > 0 && (
@@ -266,10 +297,10 @@ function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
       <p className="text-xs -mb-1" style={{ color: '#7A91BB' }}>
         Your predicted group standings — based on your score picks across all 6 group matches.
         <span className="text-accent font-semibold"> Green = auto-advance</span>,{' '}
-        <span className="text-brand font-semibold">pink = 3rd place</span>.
+        <span className="text-brand font-semibold">pink = best 3rd advances</span>.
       </p>
       {Object.keys(GROUPS).map(letter => (
-        <GroupCard key={letter} letter={letter} saved={saved} pointsResult={resultsByGroup[letter]} />
+        <GroupCard key={letter} letter={letter} saved={saved} pointsResult={resultsByGroup[letter]} advancingThirdIds={advancingThirdIds} />
       ))}
       <BestThirdSection saved={saved} />
     </div>
