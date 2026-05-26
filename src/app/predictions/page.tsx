@@ -16,7 +16,7 @@ import { formatKickoff } from '@/lib/utils/formatDate';
 import type { Match, Team } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
-type SubTab = 'groups' | 'by-game';
+type SubTab = 'groups' | 'by-game' | 'point-rules';
 
 
 interface Standing {
@@ -449,6 +449,61 @@ function ByGameTab({ saved, userId }: { saved: Record<string, Prediction>; userI
   );
 }
 
+// ─── Point Rules tab ─────────────────────────────────────────────────────────
+
+function RuleRow({ desc, note, pts, color = '#FFB020' }: {
+  desc: string; note?: string; pts: string; color?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm" style={{ color: '#C8D0E0' }}>{desc}</span>
+        {note && <span className="ml-1.5 text-[10px]" style={{ color: '#5A6E94' }}>{note}</span>}
+      </div>
+      <span className="ml-3 text-sm font-black shrink-0" style={{ color, fontFamily: 'var(--font-barlow-condensed)' }}>{pts}</span>
+    </div>
+  );
+}
+
+function RuleSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-3 rounded-xl overflow-hidden" style={{ background: '#0E1535', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="px-4 pt-3 pb-1">
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FF4DA8' }}>{title}</p>
+      </div>
+      <div className="px-4 pb-3">{children}</div>
+    </div>
+  );
+}
+
+function PointRulesTab() {
+  return (
+    <div className="mt-3 px-4 pb-4">
+      <RuleSection title="Score Predictions">
+        <RuleRow desc="Both scores exact (perfect)" note="3 + 3 pts" pts="+6" />
+        <RuleRow desc="One score exact"             note="per correct team" pts="+3" />
+        <RuleRow desc="Correct outcome (W / D / L)" note="if no exact score" pts="+3" />
+      </RuleSection>
+
+      <RuleSection title="Scorer Picks">
+        <RuleRow desc="Player you picked scores"        pts="+1" color="#00C44F" />
+        <RuleRow desc="Player you picked doesn't score" pts="−1" color="#FF4D4D" />
+      </RuleSection>
+
+      <RuleSection title="Group Stage Standings">
+        <RuleRow desc="Group winner correct"  pts="+3" />
+        <RuleRow desc="Runner-up correct"     pts="+2" />
+        <RuleRow desc="3rd place correct"     pts="+1" />
+      </RuleSection>
+
+      <RuleSection title="Knockout Stage">
+        <RuleRow desc="Correct finalist" pts="+4" />
+        <RuleRow desc="Correct champion" pts="+10" />
+      </RuleSection>
+    </div>
+  );
+}
+
 // ─── Groups tab ───────────────────────────────────────────────────────────────
 
 function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
@@ -531,8 +586,9 @@ function PredictionsContent() {
       {/* Sub-tabs */}
       <div className="flex gap-1 px-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         {([
-          { id: 'groups'  as SubTab, label: 'Groups'  },
-          { id: 'by-game' as SubTab, label: 'By Game' },
+          { id: 'groups'      as SubTab, label: 'Groups'      },
+          { id: 'by-game'     as SubTab, label: 'By Game'     },
+          { id: 'point-rules' as SubTab, label: 'Point Rules' },
         ]).map(t => (
           <button
             key={t.id}
@@ -547,8 +603,9 @@ function PredictionsContent() {
         ))}
       </div>
 
-      {subTab === 'groups'  && <GroupsTab saved={saved} />}
-      {subTab === 'by-game' && <ByGameTab saved={saved} userId={user.id} />}
+      {subTab === 'groups'      && <GroupsTab saved={saved} />}
+      {subTab === 'by-game'     && <ByGameTab saved={saved} userId={user.id} />}
+      {subTab === 'point-rules' && <PointRulesTab />}
     </div>
   );
 }
