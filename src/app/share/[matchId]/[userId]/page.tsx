@@ -45,8 +45,8 @@ export async function generateMetadata({
     ? `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}?h=${h}&a=${a}`
     : `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}`;
 
-  // OG image also gets the score via the same params
-  const imageUrl = `${pageUrl.split('?')[0]}/opengraph-image${hasScore ? `?h=${h}&a=${a}` : ''}`;
+  // API route handler — unlike opengraph-image.tsx, route handlers CAN read searchParams
+  const imageUrl = `https://myworldcupschedule.com/api/og?m=${params.matchId}&h=${h}&a=${a}`;
 
   return {
     title,
