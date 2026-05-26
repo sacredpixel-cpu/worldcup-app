@@ -27,6 +27,13 @@ export default async function OGImage({
   const homeScore = searchParams?.h ?? '?';
   const awayScore = searchParams?.a ?? '?';
 
+  // Format kickoff date in local-friendly style, e.g. "Jun 11, 2026"
+  const kickoff = new Date(match.kickoffAt);
+  const matchDate = kickoff.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+  });
+  const matchLocation = `${match.venue} · ${match.city}`;
+
   const homeFlagSrc = flagUrl(match.homeTeam.code);
   const awayFlagSrc = flagUrl(match.awayTeam.code);
 
@@ -74,15 +81,15 @@ export default async function OGImage({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          paddingTop: 36,
+          paddingTop: 32,
           paddingBottom: 0,
-          gap: 6,
+          gap: 8,
         }}>
-          <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: 5, textTransform: 'uppercase' }}>
-            FIFA WORLD CUP 2026
-          </span>
           <span style={{ fontSize: 34, color: '#FF1F8E', fontWeight: 900, letterSpacing: 4, textTransform: 'uppercase' }}>
-            My Prediction
+            My Prediction · World Cup 2026
+          </span>
+          <span style={{ fontSize: 20, color: 'rgba(255,255,255,0.4)', fontWeight: 600, letterSpacing: 1 }}>
+            {matchDate} &nbsp;·&nbsp; {matchLocation}
           </span>
         </div>
 
