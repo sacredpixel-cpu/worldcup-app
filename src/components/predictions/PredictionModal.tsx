@@ -51,17 +51,17 @@ function TeamFaceOff({ match }: { match: Match }) {
 
       {/* Flags + names + coaches */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 16, padding: '14px 10px 10px' }}>
-        {/* Home – left */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+        {/* Home – center aligned */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.homeTeam.code} size={36} className="rounded-sm" />
           </div>
-          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.homeTeam.name}</span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'center', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.homeTeam.name}</span>
           {homeRoster?.nickname && (
-            <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic' }}>"{homeRoster.nickname}"</span>
+            <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic', textAlign: 'center' }}>"{homeRoster.nickname}"</span>
           )}
           {homeRoster?.coach && (
-            <span style={{ fontSize: 12, color: '#6A82A8' }}>🧑‍💼 {homeRoster.coach}</span>
+            <span style={{ fontSize: 12, color: '#6A82A8', textAlign: 'center' }}>{homeRoster.coach}</span>
           )}
         </div>
 
@@ -70,17 +70,17 @@ function TeamFaceOff({ match }: { match: Match }) {
           <span style={{ fontSize: 10, fontWeight: 700, color: '#3A4E6E', letterSpacing: '0.06em' }}>VS</span>
         </div>
 
-        {/* Away – right */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+        {/* Away – center aligned */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.awayTeam.code} size={36} className="rounded-sm" />
           </div>
-          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.awayTeam.name}</span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'center', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.awayTeam.name}</span>
           {awayRoster?.nickname && (
-            <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic', textAlign: 'right' }}>"{awayRoster.nickname}"</span>
+            <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic', textAlign: 'center' }}>"{awayRoster.nickname}"</span>
           )}
           {awayRoster?.coach && (
-            <span style={{ fontSize: 12, color: '#6A82A8', textAlign: 'right' }}>{awayRoster.coach} 🧑‍💼</span>
+            <span style={{ fontSize: 12, color: '#6A82A8', textAlign: 'center' }}>{awayRoster.coach}</span>
           )}
         </div>
       </div>
