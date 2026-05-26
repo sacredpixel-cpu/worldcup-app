@@ -2,8 +2,14 @@ import { ImageResponse } from 'next/og';
 import { ALL_MATCHES } from '@/data/matches';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
+
+// Flags via countryflagsapi — more reliable for server-side OG rendering
+function flagUrl(code: string) {
+  return `https://cdn.jsdelivr.net/gh/hampusborgos/country-flags@main/png250px/${code.toLowerCase()}.png`;
+}
 
 // Score is passed as ?h=2&a=1 — no Firebase needed server-side
 export default async function OGImage({
@@ -18,10 +24,29 @@ export default async function OGImage({
 
   const home = match.homeTeam.name;
   const away = match.awayTeam.name;
-  const homeFlag = `https://flagcdn.com/w160/${match.homeTeam.code.toLowerCase()}.png`;
-  const awayFlag = `https://flagcdn.com/w160/${match.awayTeam.code.toLowerCase()}.png`;
   const homeScore = searchParams?.h ?? '?';
   const awayScore = searchParams?.a ?? '?';
+
+  const homeFlagSrc = flagUrl(match.homeTeam.code);
+  const awayFlagSrc = flagUrl(match.awayTeam.code);
+
+  // Fetch flag images as base64 so they always render
+  async function fetchFlag(url: string): Promise<string> {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return '';
+      const buf = await res.arrayBuffer();
+      const b64 = Buffer.from(buf).toString('base64');
+      return `data:image/png;base64,${b64}`;
+    } catch {
+      return '';
+    }
+  }
+
+  const [homeFlag, awayFlag] = await Promise.all([
+    fetchFlag(homeFlagSrc),
+    fetchFlag(awayFlagSrc),
+  ]);
 
   return new ImageResponse(
     (
@@ -29,23 +54,35 @@ export default async function OGImage({
         style={{
           width: '100%',
           height: '100%',
-          background: '#FBFAF7',
+          background: '#06091A',
           display: 'flex',
           flexDirection: 'column',
           fontFamily: 'sans-serif',
           overflow: 'hidden',
         }}
       >
-        {/* Pink header bar */}
+        {/* Top accent bar */}
         <div style={{
-          background: 'linear-gradient(90deg, #E91E8C 0%, #C4157A 100%)',
+          background: 'linear-gradient(90deg, #FF1F8E 0%, #C4157A 100%)',
+          height: 8,
+          width: '100%',
           display: 'flex',
+        }} />
+
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          padding: '22px 60px',
+          paddingTop: 36,
+          paddingBottom: 0,
+          gap: 6,
         }}>
-          <span style={{ fontSize: 28, color: 'white', fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase' }}>
-            ⚽ FIFA World Cup 2026 · My Prediction
+          <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: 5, textTransform: 'uppercase' }}>
+            FIFA WORLD CUP 2026
+          </span>
+          <span style={{ fontSize: 34, color: '#FF1F8E', fontWeight: 900, letterSpacing: 4, textTransform: 'uppercase' }}>
+            My Prediction
           </span>
         </div>
 
@@ -55,17 +92,24 @@ export default async function OGImage({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '30px 80px',
+          padding: '20px 80px',
+          gap: 0,
         }}>
           {/* Home team */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, flex: 1 }}>
-            <img
-              src={homeFlag}
-              width={160}
-              height={107}
-              style={{ objectFit: 'cover', borderRadius: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
-            />
-            <span style={{ fontSize: 30, fontWeight: 800, color: '#1A1A1A', textAlign: 'center' }}>{home}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, flex: 1 }}>
+            {homeFlag ? (
+              <img
+                src={homeFlag}
+                width={200}
+                height={133}
+                style={{ objectFit: 'cover', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+              />
+            ) : (
+              <div style={{ width: 200, height: 133, borderRadius: 10, background: '#0E1535', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 48, color: '#7A91BB' }}>🏴</span>
+              </div>
+            )}
+            <span style={{ fontSize: 32, fontWeight: 800, color: '#E8F0FF', textAlign: 'center' }}>{home}</span>
           </div>
 
           {/* Score */}
@@ -73,52 +117,58 @@ export default async function OGImage({
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 8,
-            padding: '0 40px',
+            gap: 12,
+            padding: '0 48px',
           }}>
             <div style={{
-              background: 'white',
-              border: '3px solid #E2DDD8',
-              borderRadius: 20,
-              padding: '16px 40px',
+              background: 'rgba(255,31,142,0.12)',
+              border: '2px solid rgba(255,31,142,0.4)',
+              borderRadius: 24,
+              padding: '20px 52px',
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
-              boxShadow: '0 4px 24px rgba(233,30,140,0.12)',
+              gap: 16,
             }}>
-              <span style={{ fontSize: 96, fontWeight: 900, color: '#E91E8C', lineHeight: 1 }}>{homeScore}</span>
-              <span style={{ fontSize: 60, fontWeight: 300, color: '#B0A9A3', lineHeight: 1 }}>–</span>
-              <span style={{ fontSize: 96, fontWeight: 900, color: '#E91E8C', lineHeight: 1 }}>{awayScore}</span>
+              <span style={{ fontSize: 120, fontWeight: 900, color: '#FF1F8E', lineHeight: 1 }}>{homeScore}</span>
+              <span style={{ fontSize: 72, fontWeight: 300, color: 'rgba(255,255,255,0.2)', lineHeight: 1 }}>–</span>
+              <span style={{ fontSize: 120, fontWeight: 900, color: '#FF1F8E', lineHeight: 1 }}>{awayScore}</span>
             </div>
-            <span style={{ fontSize: 18, color: '#9CA3AF', fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', marginTop: 6 }}>
+            <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase' }}>
               Predicted Score
             </span>
           </div>
 
           {/* Away team */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, flex: 1 }}>
-            <img
-              src={awayFlag}
-              width={160}
-              height={107}
-              style={{ objectFit: 'cover', borderRadius: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
-            />
-            <span style={{ fontSize: 30, fontWeight: 800, color: '#1A1A1A', textAlign: 'center' }}>{away}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, flex: 1 }}>
+            {awayFlag ? (
+              <img
+                src={awayFlag}
+                width={200}
+                height={133}
+                style={{ objectFit: 'cover', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+              />
+            ) : (
+              <div style={{ width: 200, height: 133, borderRadius: 10, background: '#0E1535', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 48, color: '#7A91BB' }}>🏴</span>
+              </div>
+            )}
+            <span style={{ fontSize: 32, fontWeight: 800, color: '#E8F0FF', textAlign: 'center' }}>{away}</span>
           </div>
         </div>
 
         {/* Footer */}
         <div style={{
-          background: '#1A1A1A',
+          background: 'rgba(255,255,255,0.04)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '18px 60px',
+          padding: '20px 60px',
         }}>
-          <span style={{ fontSize: 20, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
-            Settle the scores — predict your own at
+          <span style={{ fontSize: 20, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>
+            Can you do better? Make your prediction at
           </span>
-          <span style={{ fontSize: 22, color: '#E91E8C', fontWeight: 800, letterSpacing: 0.5 }}>
+          <span style={{ fontSize: 24, color: '#FF1F8E', fontWeight: 800, letterSpacing: 0.5 }}>
             myworldcupschedule.com
           </span>
         </div>

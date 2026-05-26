@@ -2,6 +2,10 @@ import { ALL_MATCHES } from '@/data/matches';
 import { notFound } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
+// Force dynamic so searchParams (score) are always read fresh — never cached
+export const dynamicParams = true;
+export const revalidate = 0;
+
 // SSR disabled — Firebase must only run in the browser
 const SharePageClient = dynamic(
   () => import('./SharePageClient').then(m => m.SharePageClient),
