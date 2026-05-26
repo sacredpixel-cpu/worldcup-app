@@ -2,7 +2,7 @@
 
 export const SCORING = {
   CORRECT_OUTCOME: 3,         // right winner / draw
-  CORRECT_SCORE_PER_TEAM: 5,  // exact score for one team (max 10 if both correct)
+  CORRECT_SCORE_PER_TEAM: 3,  // exact score for one team (max 6 if both correct)
   CORRECT_FINALIST: 4,        // picked a finalist
   CORRECT_CHAMPION: 10,       // picked the champion
   CORRECT_GROUP_WINNER: 3,    // predicted the group winner correctly

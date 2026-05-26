@@ -268,13 +268,13 @@ function BestThirdSection({ saved }: { saved: Record<string, Prediction> }) {
 // ─── By Game tab ─────────────────────────────────────────────────────────────
 
 function PointsPill({ pts }: { pts: number }) {
-  if (pts >= 10) return (
+  if (pts >= 6) return (
     <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-black"
       style={{ background: 'rgba(255,176,32,0.15)', color: '#FFB020', border: '1px solid rgba(255,176,32,0.3)' }}>
       🌟 +{pts} pts
     </span>
   );
-  if (pts >= 5) return (
+  if (pts >= 3) return (
     <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold"
       style={{ background: 'rgba(255,176,32,0.10)', color: '#FFB020', border: '1px solid rgba(255,176,32,0.2)' }}>
       ⭐ +{pts} pts

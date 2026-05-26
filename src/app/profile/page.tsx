@@ -28,7 +28,7 @@ function ProfileContent() {
       if (!p) return;
       const earned = calcPoints(p, { homeScore: m.homeScore!, awayScore: m.awayScore! });
       pts += earned;
-      if (earned === 5) exact++;
+      if (earned === 6) exact++;
       if (earned >= 3) correct++;
     });
     // Add group-advancement prediction points (+3 winner, +2 runner-up, +1 third)
@@ -231,8 +231,8 @@ function ProfileContent() {
         <div className="px-4 pb-1">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FF4DA8' }}>Score Predictions</p>
           {[
-            { pts: '+10', desc: 'Both scores exact (perfect)',    note: '5 + 5 pts'         },
-            { pts: '+5',  desc: 'One score exact',               note: 'per correct team'  },
+            { pts: '+6',  desc: 'Both scores exact (perfect)',    note: '3 + 3 pts'         },
+            { pts: '+3',  desc: 'One score exact',               note: 'per correct team'  },
             { pts: '+3',  desc: 'Correct outcome (W / D / L)',   note: 'if no exact score' },
           ].map(r => (
             <div key={r.desc} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>

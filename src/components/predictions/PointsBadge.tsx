@@ -9,12 +9,12 @@ export function PointsBadge({ prediction, match }: { prediction: Prediction; mat
   const pts = calcPoints(prediction, { homeScore: match.homeScore, awayScore: match.awayScore! });
 
   let badge: React.ReactNode;
-  if (pts === 10) {
-    badge = <Badge variant="gold">🌟 Perfect! +10 pts</Badge>;
-  } else if (pts === 5) {
-    badge = <Badge variant="gold">⭐ +5 pts</Badge>;
+  if (pts === 6) {
+    badge = <Badge variant="gold">🌟 Perfect! +6 pts</Badge>;
   } else if (pts === 3) {
-    badge = <Badge variant="green">✓ +3 pts</Badge>;
+    badge = <Badge variant="gold">⭐ +3 pts</Badge>;
+  } else if (pts > 0) {
+    badge = <Badge variant="green">✓ +{pts} pts</Badge>;
   } else {
     badge = <Badge variant="gray">✗ 0 pts</Badge>;
   }
