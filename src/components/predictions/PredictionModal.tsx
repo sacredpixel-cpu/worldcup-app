@@ -31,6 +31,20 @@ function ScoreStepper({ value, onChange, locked }: { value: number; onChange: (v
   );
 }
 
+// ── Country name abbreviator (display only) ──────────────────────────────────
+
+function abbrevCountry(name: string): string {
+  return name
+    .replace(/^South /, 'S. ')
+    .replace(/^North /, 'N. ')
+    .replace(/^East /, 'E. ')
+    .replace(/^West /, 'W. ')
+    .replace(/^Saudi /, 'S. ')
+    .replace(/^United /, 'U. ')
+    .replace(/^Cape /, 'C. ')
+    .replace('Bosnia & Herzegovina', 'Bosnia');
+}
+
 // ── Team face-off panel (flags, coaches, history stats only) ─────────────────
 
 const STAT_ROWS: { label: string; key: keyof TeamHistory }[] = [
@@ -56,7 +70,7 @@ function TeamFaceOff({ match }: { match: Match }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.homeTeam.code} size={36} className="rounded-sm" />
           </div>
-          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'center', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.homeTeam.name}</span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'center', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{abbrevCountry(match.homeTeam.name)}</span>
           {homeRoster?.nickname && (
             <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic', textAlign: 'center' }}>"{homeRoster.nickname}"</span>
           )}
@@ -75,7 +89,7 @@ function TeamFaceOff({ match }: { match: Match }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.awayTeam.code} size={36} className="rounded-sm" />
           </div>
-          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'center', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.awayTeam.name}</span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'center', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{abbrevCountry(match.awayTeam.name)}</span>
           {awayRoster?.nickname && (
             <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic', textAlign: 'center' }}>"{awayRoster.nickname}"</span>
           )}
