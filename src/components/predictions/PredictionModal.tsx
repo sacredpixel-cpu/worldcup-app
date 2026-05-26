@@ -282,18 +282,6 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
 
   return (
     <Modal open={open} onClose={onClose} className="max-h-[90vh] overflow-y-auto">
-      {/* Close button */}
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-full active:scale-90 transition-colors"
-          style={{ border: '1px solid rgba(255,255,255,0.15)', color: '#7A91BB' }}
-          aria-label="Close"
-        >
-          <span className="text-base font-bold leading-none">✕</span>
-        </button>
-      </div>
-
       <h1 className="mb-3 text-2xl font-black text-center" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Predictions</h1>
 
       <div className="space-y-4">
