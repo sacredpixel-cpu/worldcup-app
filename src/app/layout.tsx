@@ -16,6 +16,7 @@ const golosText = Golos_Text({
 });
 import { AuthBanner } from '@/components/ui/AuthBanner';
 import { BottomTabBar } from '@/components/ui/BottomTabBar';
+import { NotificationPrompt } from '@/components/ui/NotificationPrompt';
 import { FirebaseAuthSync } from '@/components/FirebaseAuthSync';
 import { PredictionsSync } from '@/components/PredictionsSync';
 import { MatchUpdatesSync } from '@/components/MatchUpdatesSync';
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <main className="flex-1 overflow-y-auto pb-[72px]">
               {children}
             </main>
+            <NotificationPrompt />
             <BottomTabBar />
           </div>
         </Providers>

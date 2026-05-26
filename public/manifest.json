@@ -1,17 +1,25 @@
 {
-  "name": "MyWorldCupSchedule",
+  "name": "World Cup 2026",
   "short_name": "WC2026",
   "description": "Predict scores, track matches, compete with friends — FIFA World Cup 2026",
-  "start_url": "/",
+  "start_url": "/schedule",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#FBFAF7",
-  "theme_color": "#E91E8C",
+  "background_color": "#06091A",
+  "theme_color": "#FF1F8E",
   "orientation": "portrait",
   "icons": [
     {
       "src": "/mexillicious-logo.png",
-      "sizes": "any",
-      "type": "image/png"
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/mexillicious-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
