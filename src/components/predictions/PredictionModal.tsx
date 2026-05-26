@@ -56,7 +56,7 @@ function TeamFaceOff({ match }: { match: Match }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.homeTeam.code} size={36} className="rounded-sm" />
           </div>
-          <span style={{ fontSize: 19, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.homeTeam.name}</span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.homeTeam.name}</span>
           {homeRoster?.nickname && (
             <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic' }}>"{homeRoster.nickname}"</span>
           )}
@@ -75,7 +75,7 @@ function TeamFaceOff({ match }: { match: Match }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
             <FlagImage code={match.awayTeam.code} size={36} className="rounded-sm" />
           </div>
-          <span style={{ fontSize: 19, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.awayTeam.name}</span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: '#E8F0FF', lineHeight: 1.1, textAlign: 'right', fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{match.awayTeam.name}</span>
           {awayRoster?.nickname && (
             <span style={{ fontSize: 13, color: '#7A91BB', fontStyle: 'italic', textAlign: 'right' }}>"{awayRoster.nickname}"</span>
           )}
