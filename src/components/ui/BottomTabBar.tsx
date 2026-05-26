@@ -9,11 +9,9 @@ const TABS = [
     href: '/schedule',
     label: 'Predict',
     icon: (active: boolean) => (
+      // Square
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} className="h-6 w-6">
-        <rect x="3" y="4" width="18" height="18" rx="2" />
-        <line x1="16" y1="2" x2="16" y2="6" />
-        <line x1="8" y1="2" x2="8" y2="6" />
-        <line x1="3" y1="10" x2="21" y2="10" />
+        <rect x="4" y="4" width="16" height="16" />
       </svg>
     ),
   },
@@ -21,9 +19,9 @@ const TABS = [
     href: '/predictions',
     label: 'Results',
     icon: (active: boolean) => (
+      // Diamond
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} className="h-6 w-6">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 8v4l3 3" />
+        <polygon points="12,2 22,12 12,22 2,12" />
       </svg>
     ),
   },
@@ -31,9 +29,9 @@ const TABS = [
     href: '/leaderboard',
     label: 'Standings',
     icon: (active: boolean) => (
+      // Star
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} className="h-6 w-6">
-        <path d="M8 21H16M12 17V21M7 17H17L19 7H5L7 17Z" />
-        <path d="M12 3C13.1 3 14 3.9 14 5C14 6.1 13.1 7 12 7C10.9 7 10 6.1 10 5C10 3.9 10.9 3 12 3Z" />
+        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
       </svg>
     ),
   },
@@ -41,10 +39,9 @@ const TABS = [
     href: '/groups',
     label: 'Groups',
     icon: (active: boolean) => (
+      // Triangle
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} className="h-6 w-6">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+        <polygon points="12,3 22,21 2,21" />
       </svg>
     ),
   },
@@ -52,9 +49,9 @@ const TABS = [
     href: '/profile',
     label: 'Profile',
     icon: (active: boolean) => (
+      // Circle
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} className="h-6 w-6">
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
+        <circle cx="12" cy="12" r="10" />
       </svg>
     ),
   },
