@@ -37,9 +37,16 @@ export async function generateMetadata({
   const title = `${home}${scoreText} ${away} — My World Cup 2026 Prediction`;
   const description = `Settle the scores at MyWorldCupSchedule.com — Follow the World Cup schedule, predict your own scores, and enjoy leaderboards and group challenges.`;
 
-  // Pass score into OG image URL so it needs no Firebase
-  const imageUrl = `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}/opengraph-image?h=${h}&a=${a}`;
-  const pageUrl = `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}`;
+  const hasScore = h !== '?' && a !== '?';
+
+  // og:url MUST include the score params — Facebook follows og:url as the
+  // canonical URL, so if we omit ?h=&a= here the scraper loses the score.
+  const pageUrl = hasScore
+    ? `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}?h=${h}&a=${a}`
+    : `https://myworldcupschedule.com/share/${params.matchId}/${params.userId}`;
+
+  // OG image also gets the score via the same params
+  const imageUrl = `${pageUrl.split('?')[0]}/opengraph-image${hasScore ? `?h=${h}&a=${a}` : ''}`;
 
   return {
     title,
@@ -56,6 +63,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title,
       description,
+      images: [imageUrl],
     },
   };
 }
