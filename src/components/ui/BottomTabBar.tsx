@@ -7,7 +7,7 @@ import { ClientOnly } from './ClientOnly';
 const TABS = [
   {
     href: '/schedule',
-    label: 'Schedule',
+    label: 'Predict',
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} className="h-6 w-6">
         <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -19,7 +19,7 @@ const TABS = [
   },
   {
     href: '/predictions',
-    label: 'My Picks',
+    label: 'Results',
     icon: (active: boolean) => (
       <svg viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} className="h-6 w-6">
         <circle cx="12" cy="12" r="10" />
