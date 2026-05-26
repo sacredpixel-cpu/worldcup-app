@@ -92,7 +92,7 @@ function TeamRow({ standing, rank, advancesThird = false, correct }: {
         correct === true ? { background: 'rgba(0,196,79,0.1)', border: '1px solid rgba(0,196,79,0.3)' } :
         correct === false ? { background: 'rgba(255,77,77,0.1)', border: '1px solid rgba(255,77,77,0.2)' } :
         advancesAuto ? { background: 'rgba(0,196,79,0.08)', border: '1px solid rgba(0,196,79,0.15)' } :
-        advancesThird ? { background: 'rgba(255,31,142,0.05)', border: '1px solid rgba(255,31,142,0.1)' } :
+        advancesThird ? { background: 'rgba(255,31,142,0.18)', border: '1px solid rgba(255,31,142,0.4)' } :
         { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }
       }>
       <span className="w-5 text-center text-xs font-bold" style={{
