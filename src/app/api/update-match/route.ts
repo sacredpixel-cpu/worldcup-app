@@ -8,7 +8,11 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { secret, matchId, homeScore, awayScore, status, homeScorers, awayScorers } = body as {
+    const {
+      secret, matchId, homeScore, awayScore, status,
+      homeScorers, awayScorers,
+      regularTimeHomeScore, regularTimeAwayScore,
+    } = body as {
       secret: string;
       matchId: string;
       homeScore: number;
@@ -16,6 +20,9 @@ export async function POST(request: NextRequest) {
       status: 'live' | 'finished';
       homeScorers?: string[];
       awayScorers?: string[];
+      /** 90-minute score for knockout matches that went to ET/penalties */
+      regularTimeHomeScore?: number | null;
+      regularTimeAwayScore?: number | null;
     };
 
     if (!secret || secret !== process.env.MATCH_UPDATE_SECRET) {
@@ -30,7 +37,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 });
     }
 
-    await updateMatchScore(matchId, homeScore, awayScore, status, homeScorers, awayScorers);
+    await updateMatchScore(
+      matchId, homeScore, awayScore, status,
+      homeScorers, awayScorers,
+      regularTimeHomeScore, regularTimeAwayScore,
+    );
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('update-match error:', error);

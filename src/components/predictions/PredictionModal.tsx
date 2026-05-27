@@ -6,6 +6,7 @@ import { FlagImage } from '@/components/ui/FlagImage';
 import { usePredictionsStore } from '@/store';
 import { ROSTERS } from '@/data/rosters';
 import { calcPoints } from '@/lib/utils/calcPoints';
+import { getGradingScore } from '@/lib/utils/getGradingScore';
 import type { TeamHistory } from '@/data/rosters';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
@@ -394,9 +395,11 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
 
         {/* Results card — shown when match is finished */}
         {isLocked && existing && match.status === 'finished' && match.homeScore !== null && (() => {
-          const pts = calcPoints(existing, { homeScore: match.homeScore, awayScore: match.awayScore! });
-          const ptColor = pts >= 3 ? '#FFB020' : pts > 0 ? '#00C44F' : '#7A91BB';
-          const ptLabel = pts >= 6 ? `🌟 +${pts} pts` : pts >= 3 ? `⭐ +${pts} pts` : pts > 0 ? `✓ +${pts} pts` : '✗ 0 pts';
+          const gradingScore = getGradingScore(match);
+          if (!gradingScore) return null;
+          const pts = calcPoints(existing, { homeScore: gradingScore.homeScore, awayScore: gradingScore.awayScore });
+          const ptColor = pts >= 3 ? '#FFB020' : pts > 0 ? '#00C44F' : pts < 0 ? '#FF4D4D' : '#7A91BB';
+          const ptLabel = pts >= 6 ? `🌟 +${pts} pts` : pts >= 3 ? `⭐ +${pts} pts` : pts > 0 ? `✓ +${pts} pts` : pts < 0 ? `✗ ${pts} pts` : '✗ 0 pts';
           return (
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="flex items-center justify-between px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>

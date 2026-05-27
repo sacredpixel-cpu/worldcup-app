@@ -11,11 +11,15 @@ export function calcPoints(
   if (prediction.homeScore === actual.homeScore) pts += SCORING.CORRECT_SCORE_PER_TEAM;
   if (prediction.awayScore === actual.awayScore) pts += SCORING.CORRECT_SCORE_PER_TEAM;
 
-  // If neither score is exact, check for correct outcome (W/D/L)
+  // If neither score is exact, award/deduct for the outcome (W/D/L)
   if (pts === 0) {
     const predictedOutcome = Math.sign(prediction.homeScore - prediction.awayScore);
     const actualOutcome = Math.sign(actual.homeScore - actual.awayScore);
-    if (predictedOutcome === actualOutcome) pts = SCORING.CORRECT_OUTCOME;
+    if (predictedOutcome === actualOutcome) {
+      pts = SCORING.CORRECT_OUTCOME;   // +3 for correct outcome
+    } else {
+      pts = SCORING.WRONG_OUTCOME;     // -2 for wrong outcome
+    }
   }
 
   // +1 per correct scorer pick, -1 per incorrect pick (only when actual scorers are known)

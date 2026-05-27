@@ -27,6 +27,10 @@ export interface Match {
   city: string;
   homeScore: number | null;
   awayScore: number | null;
+  /** Score at 90 minutes — set only for knockout matches that went to extra time / penalties.
+   *  When present, this is the score used to grade predictions (not the final ET/shootout result). */
+  regularTimeHomeScore?: number | null;
+  regularTimeAwayScore?: number | null;
   status: 'upcoming' | 'live' | 'finished';
   homeScorers?: string[];  // actual goal scorers, set when finished
   awayScorers?: string[];

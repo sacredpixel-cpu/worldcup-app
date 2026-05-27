@@ -1,23 +1,26 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore, usePredictionsStore } from '@/store';
 import { ALL_MATCHES, GROUP_STAGE_MATCHES, STAGE_LABELS } from '@/data/matches';
-import { GROUPS } from '@/data/teams';
+import { GROUPS, ALL_TEAMS } from '@/data/teams';
+import { ROSTERS } from '@/data/rosters';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import Link from 'next/link';
 import Image from 'next/image';
 import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
 import { calcPoints } from '@/lib/utils/calcPoints';
+import { getGradingScore } from '@/lib/utils/getGradingScore';
 import { SCORING } from '@/lib/constants/scoring';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { PredictionModal } from '@/components/predictions/PredictionModal';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
 import { formatKickoff } from '@/lib/utils/formatDate';
+import { saveTournamentPick, getTournamentPick, subscribeToTournamentSettings } from '@/lib/tournamentService';
 import type { Match, Team } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
-type SubTab = 'groups' | 'by-game' | 'point-rules';
+type SubTab = 'groups' | 'by-game' | 'picks' | 'point-rules';
 
 
 interface Standing {
@@ -300,10 +303,10 @@ function PointsPill({ pts }: { pts: number }) {
 interface BreakdownItem { label: string; pts: number; hit: boolean }
 
 function buildBreakdown(prediction: Prediction, match: Match): BreakdownItem[] {
-  if (match.homeScore === null || match.awayScore === null) return [];
+  const gradingScore = getGradingScore(match);
+  if (!gradingScore) return [];
   const items: BreakdownItem[] = [];
-  const ah = match.homeScore;
-  const aa = match.awayScore;
+  const { homeScore: ah, awayScore: aa } = gradingScore;
   const homeExact = prediction.homeScore === ah;
   const awayExact = prediction.awayScore === aa;
 
@@ -313,7 +316,8 @@ function buildBreakdown(prediction: Prediction, match: Match): BreakdownItem[] {
   if (!homeExact && !awayExact) {
     const outcomeHit = Math.sign(prediction.homeScore - prediction.awayScore) === Math.sign(ah - aa);
     const outcomeLabel = ah > aa ? 'Home win' : ah < aa ? 'Away win' : 'Draw';
-    items.push({ label: `Outcome (${outcomeLabel})`, pts: outcomeHit ? SCORING.CORRECT_OUTCOME : 0, hit: outcomeHit });
+    // +3 for correct outcome, -2 for wrong outcome
+    items.push({ label: `Outcome (${outcomeLabel})`, pts: outcomeHit ? SCORING.CORRECT_OUTCOME : SCORING.WRONG_OUTCOME, hit: outcomeHit });
   }
 
   if (match.homeScorers !== undefined) {
@@ -340,18 +344,19 @@ function ResultCard({ match, prediction, userId }: {
   const [open, setOpen] = useState(false);
   const hasScore = match.homeScore !== null && match.awayScore !== null;
 
-  const pts = hasScore
+  const gradingScore = hasScore ? getGradingScore(match) : null;
+  const pts = gradingScore
     ? calcPoints(prediction, {
-        homeScore: match.homeScore!,
-        awayScore: match.awayScore!,
+        homeScore: gradingScore.homeScore,
+        awayScore: gradingScore.awayScore,
         homeScorers: match.homeScorers,
         awayScorers: match.awayScorers,
       })
     : null;
 
   const breakdown = hasScore ? buildBreakdown(prediction, match) : [];
-  const ptColor = pts === null ? '#7A91BB' : pts >= 3 ? '#FFB020' : pts > 0 ? '#00C44F' : '#7A91BB';
-  const ptLabel = pts === null ? '–' : pts >= 6 ? `🌟 +${pts} pts` : pts >= 3 ? `⭐ +${pts} pts` : pts > 0 ? `✓ +${pts} pts` : '✗ 0 pts';
+  const ptColor = pts === null ? '#7A91BB' : pts >= 3 ? '#FFB020' : pts > 0 ? '#00C44F' : pts < 0 ? '#FF4D4D' : '#7A91BB';
+  const ptLabel = pts === null ? '–' : pts >= 6 ? `🌟 +${pts} pts` : pts >= 3 ? `⭐ +${pts} pts` : pts > 0 ? `✓ +${pts} pts` : pts < 0 ? `✗ ${pts} pts` : '✗ 0 pts';
 
   return (
     <>
@@ -506,10 +511,11 @@ function ByGameTab({ saved, userId }: { saved: Record<string, Prediction>; userI
 
   const totalPts = useMemo(() => {
     return finishedMatches.reduce((sum, m) => {
-      if (m.homeScore === null || m.awayScore === null) return sum;
+      const gradingScore = getGradingScore(m);
+      if (!gradingScore) return sum;
       return sum + calcPoints(saved[m.id], {
-        homeScore: m.homeScore,
-        awayScore: m.awayScore,
+        homeScore: gradingScore.homeScore,
+        awayScore: gradingScore.awayScore,
         homeScorers: m.homeScorers,
         awayScorers: m.awayScorers,
       });
@@ -549,6 +555,204 @@ function ByGameTab({ saved, userId }: { saved: Record<string, Prediction>; userI
   );
 }
 
+// ─── Picks tab (Golden Boot etc.) ────────────────────────────────────────────
+
+const TOURNAMENT_STARTS = '2026-06-11T00:00:00Z';
+
+function PicksTab({ userId }: { userId: string }) {
+  const [goldenBootPick, setGoldenBootPick] = useState<string | null>(null);
+  const [goldenBootWinner, setGoldenBootWinner] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  const isLocked = typeof window !== 'undefined' && new Date() >= new Date(TOURNAMENT_STARTS);
+
+  useEffect(() => {
+    let cancelled = false;
+    getTournamentPick(userId).then(data => {
+      if (!cancelled) {
+        setGoldenBootPick(data?.goldenBootPick ?? null);
+        setLoading(false);
+      }
+    });
+    const unsub = subscribeToTournamentSettings((settings) => {
+      if (!cancelled) setGoldenBootWinner(settings.goldenBootWinner ?? null);
+    });
+    return () => { cancelled = true; unsub(); };
+  }, [userId]);
+
+  // Flat sorted player list from all team rosters
+  const allPlayers = useMemo(() => {
+    return ALL_TEAMS
+      .filter(t => ROSTERS[t.id])
+      .flatMap(team =>
+        (['forwards', 'midfielders', 'defenders', 'goalkeepers'] as const).flatMap(pos =>
+          (ROSTERS[team.id].squad[pos] ?? []).map(name => ({
+            name,
+            teamName: team.name,
+            teamCode: team.code,
+          }))
+        )
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
+
+  const filteredPlayers = search.length >= 2
+    ? allPlayers.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.teamName.toLowerCase().includes(search.toLowerCase())
+      ).slice(0, 60) // cap results for performance
+    : [];
+
+  async function selectPlayer(name: string) {
+    setGoldenBootPick(name);  // optimistic
+    setShowSearch(false);
+    setSearch('');
+    await saveTournamentPick(userId, { goldenBootPick: name });
+  }
+
+  const goldenBootPts = goldenBootWinner !== null
+    ? (goldenBootPick === goldenBootWinner ? SCORING.CORRECT_GOLDEN_BOOT : 0)
+    : null;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="h-5 w-24 animate-pulse rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 px-4 pb-4 flex flex-col gap-3">
+
+      {/* ── Golden Boot card ──────────────────────────────────────────── */}
+      <div className="rounded-xl overflow-hidden" style={{ background: '#0A1128', border: '1px solid rgba(255,255,255,0.07)' }}>
+
+        {/* Header row */}
+        <div className="flex items-start justify-between px-4 pt-3 pb-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div>
+            <h3 className="text-sm font-black" style={{ color: '#E8F0FF' }}>🥇 Golden Boot</h3>
+            <p className="text-[10px] mt-0.5" style={{ color: '#7A91BB' }}>Who will be the tournament's top scorer?</p>
+          </div>
+          {isLocked
+            ? <span className="text-[10px] font-semibold rounded-full px-2.5 py-1 shrink-0" style={{ background: 'rgba(255,255,255,0.05)', color: '#5A6E94', border: '1px solid rgba(255,255,255,0.08)' }}>🔒 Locked</span>
+            : <span className="text-[10px] font-semibold rounded-full px-2.5 py-1 shrink-0" style={{ background: 'rgba(0,196,79,0.1)', color: '#00C44F', border: '1px solid rgba(0,196,79,0.2)' }}>Open</span>
+          }
+        </div>
+
+        {/* Points badge */}
+        <div className="flex items-center gap-2 px-4 py-2" style={{ background: 'rgba(255,176,32,0.05)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+          <span className="text-[11px] font-bold" style={{ color: '#FFB020' }}>+{SCORING.CORRECT_GOLDEN_BOOT} pts</span>
+          <span className="text-[11px]" style={{ color: '#5A6E94' }}>for the correct pick · penalty shootout goals don't count</span>
+        </div>
+
+        {/* Pick area */}
+        <div className="px-4 py-3">
+          {/* Golden boot winner banner */}
+          {goldenBootWinner && (
+            <div className="mb-3 rounded-lg px-3 py-2" style={{ background: 'rgba(255,176,32,0.1)', border: '1px solid rgba(255,176,32,0.25)' }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: '#FFB020' }}>🏆 Tournament Golden Boot</p>
+              <p className="text-sm font-bold" style={{ color: '#E8F0FF' }}>{goldenBootWinner}</p>
+            </div>
+          )}
+
+          {goldenBootPick ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: '#7A91BB' }}>Your Pick</p>
+                <p className="text-sm font-bold truncate" style={{ color: '#E8F0FF' }}>{goldenBootPick}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {goldenBootPts !== null && (
+                  <span className="text-sm font-black" style={{
+                    fontFamily: 'var(--font-barlow-condensed)',
+                    color: goldenBootPts > 0 ? '#FFB020' : '#5A6E94',
+                  }}>
+                    {goldenBootPts > 0 ? `🌟 +${goldenBootPts} pts` : '✗ 0 pts'}
+                  </span>
+                )}
+                {!isLocked && (
+                  <button
+                    onClick={() => setShowSearch(true)}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.1)' }}
+                  >
+                    Change
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : isLocked ? (
+            <p className="text-sm text-center py-2" style={{ color: '#5A6E94' }}>No pick was made before the tournament started</p>
+          ) : (
+            <button
+              onClick={() => setShowSearch(true)}
+              className="w-full rounded-xl py-2.5 text-sm font-semibold active:scale-98"
+              style={{ background: 'rgba(255,31,142,0.1)', border: '1px solid rgba(255,31,142,0.3)', color: '#FF4DA8' }}
+            >
+              + Pick a player
+            </button>
+          )}
+
+          {/* Search panel */}
+          {showSearch && (
+            <div className="mt-3">
+              <input
+                type="text"
+                placeholder="Search by name or country…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                autoFocus
+                className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', color: '#E8F0FF' }}
+              />
+              {search.length >= 2 ? (
+                <div className="mt-1.5 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', maxHeight: 220, overflowY: 'auto' }}>
+                  {filteredPlayers.length === 0 ? (
+                    <p className="px-3 py-3 text-xs text-center" style={{ color: '#5A6E94' }}>No players found</p>
+                  ) : filteredPlayers.map(p => (
+                    <button
+                      key={`${p.name}-${p.teamCode}`}
+                      onClick={() => selectPlayer(p.name)}
+                      className="w-full flex items-center justify-between px-3 py-2 text-left"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: goldenBootPick === p.name ? 'rgba(255,176,32,0.08)' : 'transparent' }}
+                    >
+                      <span className="text-sm font-semibold" style={{ color: goldenBootPick === p.name ? '#FFB020' : '#E8F0FF' }}>{p.name}</span>
+                      <span className="text-[10px] shrink-0 ml-2" style={{ color: '#5A6E94' }}>{p.teamName}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-center" style={{ color: '#5A6E94' }}>Type 2+ characters to search</p>
+              )}
+              <button
+                onClick={() => { setShowSearch(false); setSearch(''); }}
+                className="w-full mt-2 py-1.5 text-xs rounded-lg"
+                style={{ color: '#5A6E94' }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Info note ─────────────────────────────────────────────────── */}
+      <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <p className="text-xs font-semibold mb-1" style={{ color: '#7A91BB' }}>How the Golden Boot works</p>
+        <p className="text-[11px] leading-relaxed" style={{ color: '#5A6E94' }}>
+          The player with the most goals across all tournament matches wins the Golden Boot.
+          Goals scored in penalty shootouts are not counted — only goals in regular and extra time.
+          Picks lock when the tournament begins on June 11.
+        </p>
+      </div>
+
+    </div>
+  );
+}
+
 // ─── Point Rules tab ─────────────────────────────────────────────────────────
 
 function RuleRow({ desc, note, pts, color = '#FFB020' }: {
@@ -583,11 +787,18 @@ function PointRulesTab() {
         <RuleRow desc="Both scores exact (perfect)" note="3 + 3 pts" pts="+6" />
         <RuleRow desc="One score exact"             note="per correct team" pts="+3" />
         <RuleRow desc="Correct outcome (W / D / L)" note="if no exact score" pts="+3" />
+        <RuleRow desc="Wrong outcome (W / D / L)"   note="if no exact score" pts="−2" color="#FF4D4D" />
       </RuleSection>
 
       <RuleSection title="Scorer Picks">
         <RuleRow desc="Player you picked scores"        pts="+1" color="#00C44F" />
         <RuleRow desc="Player you picked doesn't score" pts="−1" color="#FF4D4D" />
+      </RuleSection>
+
+      <RuleSection title="Knockout Stage Scoring">
+        <RuleRow desc="Score graded on 90-min result" note="not ET / shootout" pts="" color="#7A91BB" />
+        <RuleRow desc="Correct finalist" pts="+4" />
+        <RuleRow desc="Correct champion" pts="+10" />
       </RuleSection>
 
       <RuleSection title="Group Stage Standings">
@@ -596,9 +807,8 @@ function PointRulesTab() {
         <RuleRow desc="3rd place correct"     pts="+1" />
       </RuleSection>
 
-      <RuleSection title="Knockout Stage">
-        <RuleRow desc="Correct finalist" pts="+4" />
-        <RuleRow desc="Correct champion" pts="+10" />
+      <RuleSection title="Tournament Picks">
+        <RuleRow desc="Golden Boot (top scorer)" note="shootout goals don't count" pts="+10" />
       </RuleSection>
     </div>
   );
@@ -684,16 +894,17 @@ function PredictionsContent() {
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex gap-1 px-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="flex gap-1 px-4 overflow-x-auto" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', scrollbarWidth: 'none' }}>
         {([
-          { id: 'groups'      as SubTab, label: 'Groups'      },
-          { id: 'by-game'     as SubTab, label: 'By Game'     },
-          { id: 'point-rules' as SubTab, label: 'Point Rules' },
+          { id: 'groups'      as SubTab, label: 'Groups'  },
+          { id: 'by-game'     as SubTab, label: 'By Game' },
+          { id: 'picks'       as SubTab, label: 'Picks'   },
+          { id: 'point-rules' as SubTab, label: 'Rules'   },
         ]).map(t => (
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className="flex-shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors"
+            className="flex-shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors whitespace-nowrap"
             style={subTab === t.id
               ? { borderBottom: '2px solid #FF4DA8', color: '#FF4DA8', marginBottom: -1 }
               : { borderBottom: '2px solid transparent', color: '#7A91BB' }}
@@ -705,6 +916,7 @@ function PredictionsContent() {
 
       {subTab === 'groups'      && <GroupsTab saved={saved} />}
       {subTab === 'by-game'     && <ByGameTab saved={saved} userId={user.id} />}
+      {subTab === 'picks'       && <PicksTab userId={user.id} />}
       {subTab === 'point-rules' && <PointRulesTab />}
     </div>
   );

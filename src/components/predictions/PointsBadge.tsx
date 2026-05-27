@@ -2,19 +2,24 @@ import { Badge } from '@/components/ui/Badge';
 import type { Prediction } from '@/types/prediction';
 import type { Match } from '@/types/match';
 import { calcPoints } from '@/lib/utils/calcPoints';
+import { getGradingScore } from '@/lib/utils/getGradingScore';
 
 export function PointsBadge({ prediction, match }: { prediction: Prediction; match: Match }) {
-  if (match.status !== 'finished' || match.homeScore === null) return null;
+  if (match.status !== 'finished') return null;
+  const gradingScore = getGradingScore(match);
+  if (!gradingScore) return null;
 
-  const pts = calcPoints(prediction, { homeScore: match.homeScore, awayScore: match.awayScore! });
+  const pts = calcPoints(prediction, { homeScore: gradingScore.homeScore, awayScore: gradingScore.awayScore });
 
   let badge: React.ReactNode;
-  if (pts === 6) {
-    badge = <Badge variant="gold">🌟 Perfect! +6 pts</Badge>;
-  } else if (pts === 3) {
-    badge = <Badge variant="gold">⭐ +3 pts</Badge>;
+  if (pts >= 6) {
+    badge = <Badge variant="gold">🌟 Perfect! +{pts} pts</Badge>;
+  } else if (pts >= 3) {
+    badge = <Badge variant="gold">⭐ +{pts} pts</Badge>;
   } else if (pts > 0) {
     badge = <Badge variant="green">✓ +{pts} pts</Badge>;
+  } else if (pts < 0) {
+    badge = <Badge variant="red">✗ {pts} pts</Badge>;
   } else {
     badge = <Badge variant="gray">✗ 0 pts</Badge>;
   }
