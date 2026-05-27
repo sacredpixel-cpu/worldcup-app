@@ -1,12 +1,12 @@
 import { ALL_MATCHES } from '@/data/matches';
 import { notFound } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 
 // Force dynamic so searchParams (score) are always read fresh — never cached
 export const dynamic = 'force-dynamic';
 
 // SSR disabled — Firebase must only run in the browser
-const SharePageClient = dynamic(
+const SharePageClient = nextDynamic(
   () => import('./SharePageClient').then(m => m.SharePageClient),
   {
     ssr: false,
