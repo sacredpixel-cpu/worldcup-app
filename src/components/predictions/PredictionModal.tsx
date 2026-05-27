@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { usePredictionsStore } from '@/store';
 import { ROSTERS } from '@/data/rosters';
+import { calcPoints } from '@/lib/utils/calcPoints';
 import type { TeamHistory } from '@/data/rosters';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
@@ -391,7 +392,37 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
           </div>
         )}
 
-        {isLocked && existing && (
+        {/* Results card — shown when match is finished */}
+        {isLocked && existing && match.status === 'finished' && match.homeScore !== null && (() => {
+          const pts = calcPoints(existing, { homeScore: match.homeScore, awayScore: match.awayScore! });
+          const ptColor = pts >= 3 ? '#FFB020' : pts > 0 ? '#00C44F' : '#7A91BB';
+          const ptLabel = pts >= 6 ? `🌟 +${pts} pts` : pts >= 3 ? `⭐ +${pts} pts` : pts > 0 ? `✓ +${pts} pts` : '✗ 0 pts';
+          return (
+            <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center justify-between px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7A91BB' }}>Final Score</span>
+                <span className="text-2xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>
+                  {match.homeScore} – {match.awayScore}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7A91BB' }}>Your Prediction</span>
+                <span className="text-2xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>
+                  {existing.homeScore} – {existing.awayScore}
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7A91BB' }}>Points Earned</span>
+                <span className="text-2xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: ptColor }}>
+                  {ptLabel}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* For in-progress (locked but not finished) — just show prediction */}
+        {isLocked && existing && match.status !== 'finished' && (
           <div className="text-center">
             <span className="text-2xl font-black" style={{ color: '#E8F0FF', fontFamily: 'var(--font-barlow-condensed)' }}>
               {existing.homeScore} – {existing.awayScore}
