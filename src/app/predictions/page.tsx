@@ -9,6 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
 import { calcPoints } from '@/lib/utils/calcPoints';
+import { SCORING } from '@/lib/constants/scoring';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { PredictionModal } from '@/components/predictions/PredictionModal';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
@@ -294,6 +295,43 @@ function PointsPill({ pts }: { pts: number }) {
   );
 }
 
+// ─── Point breakdown helper ───────────────────────────────────────────────────
+
+interface BreakdownItem { label: string; pts: number; hit: boolean }
+
+function buildBreakdown(prediction: Prediction, match: Match): BreakdownItem[] {
+  if (match.homeScore === null || match.awayScore === null) return [];
+  const items: BreakdownItem[] = [];
+  const ah = match.homeScore;
+  const aa = match.awayScore;
+  const homeExact = prediction.homeScore === ah;
+  const awayExact = prediction.awayScore === aa;
+
+  items.push({ label: `${match.homeTeam.name} score`, pts: homeExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0, hit: homeExact });
+  items.push({ label: `${match.awayTeam.name} score`, pts: awayExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0, hit: awayExact });
+
+  if (!homeExact && !awayExact) {
+    const outcomeHit = Math.sign(prediction.homeScore - prediction.awayScore) === Math.sign(ah - aa);
+    const outcomeLabel = ah > aa ? 'Home win' : ah < aa ? 'Away win' : 'Draw';
+    items.push({ label: `Outcome (${outcomeLabel})`, pts: outcomeHit ? SCORING.CORRECT_OUTCOME : 0, hit: outcomeHit });
+  }
+
+  if (match.homeScorers !== undefined) {
+    const actualSet = new Set(match.homeScorers);
+    for (const pick of (prediction.homeScorerPicks ?? []))
+      items.push({ label: pick, pts: actualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, hit: actualSet.has(pick) });
+  }
+  if (match.awayScorers !== undefined) {
+    const actualSet = new Set(match.awayScorers);
+    for (const pick of (prediction.awayScorerPicks ?? []))
+      items.push({ label: pick, pts: actualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, hit: actualSet.has(pick) });
+  }
+
+  return items;
+}
+
+// ─── Result card ──────────────────────────────────────────────────────────────
+
 function ResultCard({ match, prediction, userId }: {
   match: Match;
   prediction: Prediction;
@@ -310,6 +348,10 @@ function ResultCard({ match, prediction, userId }: {
         awayScorers: match.awayScorers,
       })
     : null;
+
+  const breakdown = hasScore ? buildBreakdown(prediction, match) : [];
+  const ptColor = pts === null ? '#7A91BB' : pts >= 3 ? '#FFB020' : pts > 0 ? '#00C44F' : '#7A91BB';
+  const ptLabel = pts === null ? '–' : pts >= 6 ? `🌟 +${pts} pts` : pts >= 3 ? `⭐ +${pts} pts` : pts > 0 ? `✓ +${pts} pts` : '✗ 0 pts';
 
   return (
     <>
@@ -369,18 +411,76 @@ function ResultCard({ match, prediction, userId }: {
           </div>
         </div>
 
-        {/* Footer: your pick + points */}
-        <div className="mx-3 mb-3 mt-1 flex items-center justify-between rounded-xl px-3 py-2"
-          style={{ background: 'rgba(0,0,0,0.2)' }}>
-          <span className="text-[11px]" style={{ color: '#7A91BB' }}>
-            Your pick: <span style={{ color: '#E8F0FF', fontWeight: 700 }}>
-              {prediction.homeScore}–{prediction.awayScore}
+        {/* Results card + point breakdown */}
+        {hasScore ? (
+          <div className="mx-3 mb-3 mt-1 rounded-xl overflow-hidden"
+            style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+
+            {/* Row 1: Final Score */}
+            <div className="flex items-center justify-between px-4 py-2.5"
+              style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7A91BB' }}>Final Score</span>
+              <span className="text-xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>
+                {match.homeScore} – {match.awayScore}
+              </span>
+            </div>
+
+            {/* Row 2: Your Prediction */}
+            <div className="flex items-center justify-between px-4 py-2.5"
+              style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7A91BB' }}>Your Prediction</span>
+              <span className="text-xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>
+                {prediction.homeScore} – {prediction.awayScore}
+              </span>
+            </div>
+
+            {/* Row 3: Points Earned */}
+            <div className="flex items-center justify-between px-4 py-2.5"
+              style={{ background: 'rgba(255,255,255,0.03)', borderBottom: breakdown.length > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7A91BB' }}>Points Earned</span>
+              <span className="text-xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: ptColor }}>
+                {ptLabel}
+              </span>
+            </div>
+
+            {/* Breakdown rows */}
+            {breakdown.length > 0 && (
+              <div style={{ background: 'rgba(0,0,0,0.18)' }}>
+                <div className="px-4 pt-2.5 pb-1">
+                  <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: '#3A4E6E' }}>Breakdown</span>
+                </div>
+                {breakdown.map((item, i) => (
+                  <div key={i}
+                    className="flex items-center justify-between px-4 py-1.5"
+                    style={i < breakdown.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,0.04)' } : undefined}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[11px] shrink-0" style={{ color: item.hit ? '#00C44F' : '#FF4D4D' }}>
+                        {item.hit ? '✓' : '✗'}
+                      </span>
+                      <span className="text-[11px] truncate" style={{ color: '#C8D0E0' }}>{item.label}</span>
+                    </div>
+                    <span className="text-[11px] font-bold ml-3 shrink-0"
+                      style={{ color: item.pts > 0 ? '#00C44F' : item.pts < 0 ? '#FF4D4D' : '#5A6E94' }}>
+                      {item.pts > 0 ? `+${item.pts}` : item.pts === 0 ? '–' : `${item.pts}`}
+                    </span>
+                  </div>
+                ))}
+                <div className="h-2.5" />
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Pending state — no score yet */
+          <div className="mx-3 mb-3 mt-1 flex items-center justify-between rounded-xl px-3 py-2"
+            style={{ background: 'rgba(0,0,0,0.2)' }}>
+            <span className="text-[11px]" style={{ color: '#7A91BB' }}>
+              Your pick: <span style={{ color: '#E8F0FF', fontWeight: 700 }}>
+                {prediction.homeScore}–{prediction.awayScore}
+              </span>
             </span>
-          </span>
-          {pts !== null ? <PointsPill pts={pts} /> : (
             <span className="text-[11px]" style={{ color: '#5A6E94' }}>Pending</span>
-          )}
-        </div>
+          </div>
+        )}
       </button>
 
       <PredictionModal
