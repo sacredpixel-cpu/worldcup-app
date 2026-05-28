@@ -2,9 +2,8 @@ import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc,
   query, where, arrayUnion, onSnapshot, type Unsubscribe,
 } from 'firebase/firestore';
-import type { Group } from '@/types/group';
-import { db } from './firebase';
 import type { Group, GroupMember } from '@/types/group';
+import { db } from './firebase';
 
 const GROUPS = 'groups';
 
@@ -23,6 +22,11 @@ export async function addMemberToGroup(groupId: string, member: GroupMember): Pr
   await updateDoc(doc(db, GROUPS, groupId), {
     members: arrayUnion(member),
   });
+}
+
+export async function getAllGroups(): Promise<Group[]> {
+  const snap = await getDocs(collection(db, GROUPS));
+  return snap.docs.map(d => d.data() as Group);
 }
 
 export async function getUserGroups(userId: string): Promise<Group[]> {

@@ -3,6 +3,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useAuthStore, usePredictionsStore, useGroupsStore } from '@/store';
 import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
+import { getAllGroups } from '@/lib/groupsService';
+import type { Group, GroupMember } from '@/types/group';
 import { ALL_MATCHES } from '@/data/matches';
 import { calcPoints } from '@/lib/utils/calcPoints';
 import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
@@ -81,17 +83,90 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
   );
 }
 
+// ─── Group leaderboard helpers ────────────────────────────────────────────────
+
+interface GroupEntry {
+  group: Group;
+  score: number;
+  /** Up to 3 members whose points make up the score, sorted desc */
+  topMembers: GroupMember[];
+  isMine: boolean;
+}
+
+/** Top-3 members aggregate; current user's live points substituted if present */
+function calcGroupScore(
+  members: GroupMember[],
+  currentUserId?: string,
+  currentUserPts?: number,
+): number {
+  return [...members]
+    .map(m => ({ ...m, totalPoints: m.userId === currentUserId ? (currentUserPts ?? m.totalPoints) : m.totalPoints }))
+    .sort((a, b) => b.totalPoints - a.totalPoints)
+    .slice(0, 3)
+    .reduce((sum, m) => sum + m.totalPoints, 0);
+}
+
+function GroupLeaderboardRow({ entry, rank }: { entry: GroupEntry; rank: number }) {
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-xl px-4 py-3 ${entry.isMine ? 'border border-brand/40 bg-brand/10' : 'bg-card'}`}
+    >
+      <RankBadge rank={rank} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className={`truncate text-sm font-semibold ${entry.isMine ? 'text-brand-light' : 'text-white'}`}>
+            {entry.group.name}
+          </p>
+          {entry.isMine && (
+            <span
+              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+              style={{ background: 'rgba(255,31,142,0.15)', color: '#FF4DA8' }}
+            >
+              You
+            </span>
+          )}
+        </div>
+        <p className="text-xs mt-0.5" style={{ color: '#7A91BB' }}>
+          {entry.group.members.length} member{entry.group.members.length !== 1 ? 's' : ''}
+          {entry.group.members.length > 3 ? ' · top 3 scoring' : ''}
+        </p>
+        <p className="text-[10px] truncate mt-0.5" style={{ color: '#5A6E94' }}>
+          {entry.topMembers.map(m => m.displayName).join(' · ')}
+        </p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-lg font-black text-gold">{entry.score}</p>
+        <p className="text-[10px]" style={{ color: '#7A91BB' }}>pts</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main content ─────────────────────────────────────────────────────────────
+
 function LeaderboardContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
   const { groups } = useGroupsStore();
-  const [tab, setTab] = useState<'global' | string>('global');
+  const [tab, setTab] = useState<'global' | 'groups' | string>('global');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+  const [allGroups, setAllGroups] = useState<Group[]>([]);
+  const [allGroupsLoading, setAllGroupsLoading] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToUserProfiles(setUserProfiles);
     return () => unsub();
   }, []);
+
+  // Fetch all groups when the groups tab is first opened
+  useEffect(() => {
+    if (tab !== 'groups') return;
+    setAllGroupsLoading(true);
+    getAllGroups().then(gs => {
+      setAllGroups(gs);
+      setAllGroupsLoading(false);
+    });
+  }, [tab]);
 
   const userEntry = useMemo<LeaderboardEntry | null>(() => {
     if (!user) return null;
@@ -119,6 +194,31 @@ function LeaderboardContent() {
     return all.sort((a, b) => b.totalPoints - a.totalPoints);
   }, [userEntry]);
 
+  const rankedGroups = useMemo<GroupEntry[]>(() => {
+    if (!allGroups.length) return [];
+    const userId = user?.id;
+    const userPts = userEntry?.totalPoints;
+    return [...allGroups]
+      .map(g => {
+        const adjusted = g.members.map(m => ({
+          ...m,
+          totalPoints: m.userId === userId ? (userPts ?? m.totalPoints) : m.totalPoints,
+        }));
+        const sorted = [...adjusted].sort((a, b) => b.totalPoints - a.totalPoints);
+        const top3 = sorted.slice(0, 3);
+        return {
+          group: g,
+          score: top3.reduce((sum, m) => sum + m.totalPoints, 0),
+          topMembers: top3,
+          isMine: userId ? g.members.some(m => m.userId === userId) : false,
+        };
+      })
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.group.name.localeCompare(b.group.name); // alphabetical on tie
+      });
+  }, [allGroups, user, userEntry]);
+
   const myGroups = groups.filter(g => user && g.members.some(m => m.userId === user.id));
 
   const groupBoard = useMemo(() => {
@@ -134,8 +234,8 @@ function LeaderboardContent() {
       .sort((a, b) => b.totalPoints - a.totalPoints);
   }, [tab, myGroups, user, userEntry]);
 
-  const board = tab === 'global' ? globalBoard : (groupBoard ?? globalBoard);
-  const userRank = user ? board.findIndex(e => e.userId === user.id) + 1 : -1;
+  const board = (tab === 'global' || tab === 'groups') ? globalBoard : (groupBoard ?? globalBoard);
+  const userRank = (tab !== 'groups' && user) ? board.findIndex(e => e.userId === user.id) + 1 : -1;
 
   return (
     <div className="flex flex-col">
@@ -153,6 +253,15 @@ function LeaderboardContent() {
             : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
         >
           Global
+        </button>
+        <button
+          onClick={() => setTab('groups')}
+          className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
+          style={tab === 'groups'
+            ? { background: '#FF1F8E', color: '#06091A' }
+            : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          Groups
         </button>
         {myGroups.map(g => (
           <button
@@ -185,17 +294,39 @@ function LeaderboardContent() {
       )}
 
       {/* Board */}
-      <div className="flex flex-col gap-2 px-4 pb-4">
-        {board.slice(0, 50).map((entry, i) => (
-          <LeaderboardRow
-            key={entry.userId}
-            entry={entry}
-            rank={i + 1}
-            isMe={entry.userId === user?.id}
-            profile={userProfiles[entry.userId]}
-          />
-        ))}
-      </div>
+      {tab === 'groups' ? (
+        <div className="flex flex-col gap-2 px-4 pb-4">
+          {allGroupsLoading ? (
+            [...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-card" />
+            ))
+          ) : rankedGroups.length === 0 ? (
+            <div className="flex flex-col items-center py-14 text-center">
+              <div className="mb-3 text-4xl">👥</div>
+              <p className="text-sm font-semibold" style={{ color: '#E8F0FF' }}>No groups yet</p>
+              <p className="text-xs mt-1" style={{ color: '#7A91BB' }}>
+                Groups will appear here once members start predicting
+              </p>
+            </div>
+          ) : (
+            rankedGroups.map((entry, i) => (
+              <GroupLeaderboardRow key={entry.group.id} entry={entry} rank={i + 1} />
+            ))
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 px-4 pb-4">
+          {board.slice(0, 50).map((entry, i) => (
+            <LeaderboardRow
+              key={entry.userId}
+              entry={entry}
+              rank={i + 1}
+              isMe={entry.userId === user?.id}
+              profile={userProfiles[entry.userId]}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
