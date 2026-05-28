@@ -27,7 +27,7 @@ const TABS = [
   },
   {
     href: '/leaderboard',
-    label: 'Standings',
+    label: 'Leaderboard',
     icon: (active: boolean) => (
       // Star
       <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" className="h-4 w-4">
