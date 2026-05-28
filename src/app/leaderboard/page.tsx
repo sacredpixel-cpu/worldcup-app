@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useAuthStore, usePredictionsStore, useGroupsStore } from '@/store';
+import { useAuthStore, usePredictionsStore } from '@/store';
 import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
 import { getAllGroups } from '@/lib/groupsService';
 import type { Group, GroupMember } from '@/types/group';
@@ -147,8 +147,7 @@ function GroupLeaderboardRow({ entry, rank }: { entry: GroupEntry; rank: number 
 function LeaderboardContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
-  const { groups } = useGroupsStore();
-  const [tab, setTab] = useState<'global' | 'groups' | string>('global');
+  const [tab, setTab] = useState<'global' | 'groups'>('global');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [allGroupsLoading, setAllGroupsLoading] = useState(false);
@@ -219,22 +218,7 @@ function LeaderboardContent() {
       });
   }, [allGroups, user, userEntry]);
 
-  const myGroups = groups.filter(g => user && g.members.some(m => m.userId === user.id));
-
-  const groupBoard = useMemo(() => {
-    if (tab === 'global') return null;
-    const g = myGroups.find(g => g.id === tab);
-    if (!g) return null;
-    return g.members
-      .map(m => ({
-        userId: m.userId, displayName: m.displayName, avatarUrl: m.avatarUrl,
-        totalPoints: m.userId === user?.id ? (userEntry?.totalPoints ?? 0) : m.totalPoints,
-        correctScores: 0, correctOutcomes: 0,
-      }))
-      .sort((a, b) => b.totalPoints - a.totalPoints);
-  }, [tab, myGroups, user, userEntry]);
-
-  const board = (tab === 'global' || tab === 'groups') ? globalBoard : (groupBoard ?? globalBoard);
+  const board = globalBoard;
   const userRank = (tab !== 'groups' && user) ? board.findIndex(e => e.userId === user.id) + 1 : -1;
 
   return (
@@ -263,18 +247,6 @@ function LeaderboardContent() {
         >
           Groups
         </button>
-        {myGroups.map(g => (
-          <button
-            key={g.id}
-            onClick={() => setTab(g.id)}
-            className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
-            style={tab === g.id
-              ? { background: '#FF1F8E', color: '#06091A' }
-              : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
-          >
-            {g.name}
-          </button>
-        ))}
       </div>
 
       {/* Your rank summary */}
