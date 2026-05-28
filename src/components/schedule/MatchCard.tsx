@@ -92,7 +92,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   return (
     <>
       <div
-        className="overflow-hidden rounded-2xl cursor-pointer active:scale-[0.99] transition-transform"
+        className="press-ring overflow-hidden rounded-2xl cursor-pointer active:scale-[0.99] transition-transform"
         style={{
           background: 'linear-gradient(160deg, #0E1535 0%, #0A1128 100%)',
           border: isLive

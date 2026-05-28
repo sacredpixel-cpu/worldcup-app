@@ -42,9 +42,11 @@ h1, h2, h3, h4 {
    Soft pink stroke that appears the instant a button or link is tapped/clicked.
    box-shadow follows border-radius so it works on pills, cards, and squares.
    The outer glow keeps it feeling warm rather than clinical.
+   .press-ring extends this to non-button interactive elements (e.g. match cards).
    ─────────────────────────────────────────────────────────────────────────── */
 button:active:not(:disabled),
-a:active {
+a:active,
+.press-ring:active {
   box-shadow:
     0 0 0 2px rgba(255, 90, 168, 0.45),
     0 0 18px rgba(255, 31, 142, 0.16);
