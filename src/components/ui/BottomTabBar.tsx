@@ -72,7 +72,7 @@ function TabBarInner() {
             <Link
               key={tab.href}
               href={tab.href}
-              className="flex flex-1 flex-col items-center gap-0.5 pb-2 pt-1 transition-colors"
+              className="no-press-ring flex flex-1 flex-col items-center gap-0.5 pb-2 pt-1 transition-colors"
               style={{ color: active ? '#FF1F8E' : '#7A91BB' }}
             >
               <div

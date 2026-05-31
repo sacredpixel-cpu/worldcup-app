@@ -231,7 +231,7 @@ function LeaderboardContent() {
       <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3">
         <button
           onClick={() => setTab('global')}
-          className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
+          className="no-press-ring flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
           style={tab === 'global'
             ? { background: '#FF1F8E', color: '#06091A' }
             : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
@@ -240,7 +240,7 @@ function LeaderboardContent() {
         </button>
         <button
           onClick={() => setTab('groups')}
-          className="flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
+          className="no-press-ring flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
           style={tab === 'groups'
             ? { background: '#FF1F8E', color: '#06091A' }
             : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}

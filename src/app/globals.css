@@ -54,6 +54,12 @@ a:active,
   outline: none;
 }
 
+/* Opt-out for tab elements and nav links where the ring looks wrong */
+.no-press-ring:active {
+  box-shadow: none !important;
+  outline: none;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 4px;

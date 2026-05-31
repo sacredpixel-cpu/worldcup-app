@@ -904,7 +904,7 @@ function PredictionsContent() {
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className="flex-shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors whitespace-nowrap"
+            className="no-press-ring flex-shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors whitespace-nowrap"
             style={subTab === t.id
               ? { borderBottom: '2px solid #FF4DA8', color: '#FF4DA8', marginBottom: -1 }
               : { borderBottom: '2px solid transparent', color: '#7A91BB' }}
