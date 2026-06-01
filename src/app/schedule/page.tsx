@@ -94,9 +94,21 @@ function ScheduleContent() {
     <div className="flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
-        <h1 className="text-4xl font-black leading-tight" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', letterSpacing: '0.02em' }}>
-          <span style={{ color: '#FF1F8E' }}>FIFA</span> WORLD CUP 2026
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', fontSize: '44px', fontWeight: 900, letterSpacing: '0.02em', lineHeight: 1 }}>
+            2026 WORLD CUP
+          </h1>
+          <div className="flex flex-col" style={{ gap: '3px' }}>
+            {['SCHEDULE', 'BRACKETS', 'PREDICTIONS'].map(word => (
+              <span
+                key={word}
+                style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', lineHeight: 1 }}
+              >
+                {word}
+              </span>
+            ))}
+          </div>
+        </div>
         <div className="mt-1 flex items-center gap-2">
           <span className="text-xs" style={{ color: '#7A91BB' }}>Jun 11 – Jul 19 · USA · Canada · Mexico</span>
           {fanCount !== null && (
