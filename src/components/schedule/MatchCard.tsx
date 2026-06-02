@@ -53,7 +53,7 @@ function TeamBlock({ team, role }: { team: Match['homeTeam']; role: string }) {
       {nickname && (
         <span className="text-center text-[10px]" style={{ color: '#7A91BB' }}>{nickname}</span>
       )}
-      <span className="text-[10px]" style={{ color: '#5A6E94' }}>{role}</span>
+      <span className="text-[10px] font-semibold" style={{ color: role === 'Home' ? '#00C44F' : role === 'Away' ? '#FF1F8E' : '#5A6E94' }}>{role}</span>
     </div>
   );
 }
