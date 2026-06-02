@@ -164,14 +164,14 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
         {liveMatch.status === 'upcoming' && crowd && (
           <div className="px-4 pb-1">
             <div className="flex overflow-hidden rounded-full" style={{ height: '3px', background: 'rgba(255,255,255,0.05)' }}>
-              <div style={{ width: `${crowd.homePct}%`, background: '#FF1F8E' }} />
+              <div style={{ width: `${crowd.homePct}%`, background: '#00C44F' }} />
               <div style={{ width: `${crowd.drawPct}%`, background: '#1A2A42' }} />
-              <div style={{ width: `${crowd.awayPct}%`, background: '#00C44F' }} />
+              <div style={{ width: `${crowd.awayPct}%`, background: '#FF1F8E' }} />
             </div>
             <div className="mt-1.5 flex items-center justify-between">
-              <span className="text-[10px] font-semibold" style={{ color: '#FF1F8E' }}>{crowd.homePct}%</span>
+              <span className="text-[10px] font-semibold" style={{ color: '#00C44F' }}>{crowd.homePct}%</span>
               <span className="text-[10px]" style={{ color: '#5A6E94' }}>{crowd.count.toLocaleString()} predictions</span>
-              <span className="text-[10px] font-semibold" style={{ color: '#00C44F' }}>{crowd.awayPct}%</span>
+              <span className="text-[10px] font-semibold" style={{ color: '#FF1F8E' }}>{crowd.awayPct}%</span>
             </div>
           </div>
         )}
@@ -181,8 +181,9 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
           className="mx-3 mb-3 mt-2 flex items-center justify-between gap-2 rounded-xl px-3 py-2"
           style={{ background: 'rgba(0,0,0,0.2)' }}
         >
-          <span className="truncate text-[11px]" style={{ color: '#5A6E94' }}>
-            {formatKickoff(liveMatch.kickoffAt)} · {liveMatch.city}
+          <span className="truncate text-[11px]">
+            <span style={{ color: '#7A91BB' }}>{formatKickoff(liveMatch.kickoffAt)}</span>
+            <span style={{ color: '#5A6E94' }}> · {liveMatch.city}</span>
           </span>
           <div className="shrink-0">
             {userPrediction && isFinished ? (
