@@ -189,9 +189,15 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
             {userPrediction && isFinished ? (
               <PointsBadge prediction={userPrediction} match={liveMatch} />
             ) : isAuthenticated && !isLocked && hasPrediction ? (
-              <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: 'rgba(255,31,142,0.1)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.2)' }}>
-                ✓ {userPrediction!.homeScore}–{userPrediction!.awayScore}
-              </span>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#FF1F8E' }}>Predicted</span>
+                <span className="flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: 'rgba(255,31,142,0.1)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.2)', marginLeft: '-1.5px', marginRight: '-1.5px' }}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-2.5 w-2.5 shrink-0">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                  </svg>
+                  {userPrediction!.homeScore}–{userPrediction!.awayScore}
+                </span>
+              </div>
             ) : isAuthenticated && !isLocked ? (
               <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.15)' }}>
                 + Predict
