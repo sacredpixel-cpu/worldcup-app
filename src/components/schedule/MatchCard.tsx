@@ -113,41 +113,51 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   const countdown = (!isLocked && !isTbd) ? formatCountdown(liveMatch.kickoffAt) : null;
   const hasPrediction = !!userPrediction;
 
-  // Points breakdown for finished matches
+  // Points breakdown — every rule always shown; na=true means rule didn't apply
   const breakdownItems = (() => {
     if (!isFinished || !hasPrediction || !hasScore) return [];
-    const items: { label: string; pts: number }[] = [];
+    const items: { label: string; pts: number; na?: boolean }[] = [];
     const actual = { homeScore: liveMatch.homeScore!, awayScore: liveMatch.awayScore! };
     const pred = userPrediction!;
-    let scorePts = 0;
-    if (pred.homeScore === actual.homeScore) {
-      items.push({ label: `Exact home score (${pred.homeScore})`, pts: SCORING.CORRECT_SCORE_PER_TEAM });
-      scorePts += SCORING.CORRECT_SCORE_PER_TEAM;
-    }
-    if (pred.awayScore === actual.awayScore) {
-      items.push({ label: `Exact away score (${pred.awayScore})`, pts: SCORING.CORRECT_SCORE_PER_TEAM });
-      scorePts += SCORING.CORRECT_SCORE_PER_TEAM;
-    }
-    if (scorePts === 0) {
+
+    const homeExact = pred.homeScore === actual.homeScore;
+    const awayExact = pred.awayScore === actual.awayScore;
+
+    items.push({
+      label: `Home score — you: ${pred.homeScore} · result: ${actual.homeScore}`,
+      pts: homeExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0,
+    });
+    items.push({
+      label: `Away score — you: ${pred.awayScore} · result: ${actual.awayScore}`,
+      pts: awayExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0,
+    });
+
+    // Result rule — always shown; only fires when neither score was exact
+    if (!homeExact && !awayExact) {
       const predOut = Math.sign(pred.homeScore - pred.awayScore);
       const actOut  = Math.sign(actual.homeScore - actual.awayScore);
       items.push(predOut === actOut
         ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
         : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
+    } else {
+      items.push({ label: 'Result (W/D/L) — covered by exact score', pts: 0, na: true });
     }
+
+    // Scorer picks (+1 correct, −1 wrong)
     if (liveMatch.homeScorers) {
       const set = new Set(liveMatch.homeScorers);
       for (const pick of (pred.homeScorerPicks ?? []))
-        items.push({ label: pick, pts: set.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+        items.push({ label: `Scorer pick: ${pick}`, pts: set.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
     }
     if (liveMatch.awayScorers) {
       const set = new Set(liveMatch.awayScorers);
       for (const pick of (pred.awayScorerPicks ?? []))
-        items.push({ label: pick, pts: set.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+        items.push({ label: `Scorer pick: ${pick}`, pts: set.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
     }
+
     return items;
   })();
-  const totalPts = breakdownItems.reduce((s, i) => s + i.pts, 0);
+  const totalPts = breakdownItems.filter(i => !i.na).reduce((s, i) => s + i.pts, 0);
 
   // Community crowd data
   const matchPredictions = community.filter(p => p.matchId === liveMatch.id);
@@ -348,12 +358,12 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
               <div className="px-3 pb-2.5 flex flex-col gap-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 {breakdownItems.map((item, i) => (
                   <div key={i} className="flex items-center justify-between py-1" style={{ borderBottom: i < breakdownItems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
-                    <span className="text-[11px]" style={{ color: '#7A91BB' }}>{item.label}</span>
+                    <span className="text-[11px]" style={{ color: item.na ? '#3A4E6E' : '#7A91BB', fontStyle: item.na ? 'italic' : undefined }}>{item.label}</span>
                     <span
                       className="text-[11px] font-bold"
-                      style={{ color: item.pts > 0 ? '#00C44F' : item.pts < 0 ? '#FF4DA8' : '#7A91BB' }}
+                      style={{ color: item.na ? '#3A4E6E' : item.pts > 0 ? '#00C44F' : item.pts < 0 ? '#FF4DA8' : '#5A6E94' }}
                     >
-                      {item.pts > 0 ? '+' : ''}{item.pts}
+                      {item.na ? '—' : item.pts > 0 ? `+${item.pts}` : item.pts}
                     </span>
                   </div>
                 ))}
