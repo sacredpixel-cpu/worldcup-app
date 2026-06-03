@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { PredictionModal } from '@/components/predictions/PredictionModal';
-import { PointsBadge } from '@/components/predictions/PointsBadge';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 import { formatKickoff } from '@/lib/utils/formatDate';
 import { STAGE_LABELS } from '@/data/matches';
 import { ROSTERS } from '@/data/rosters';
+import { SCORING } from '@/lib/constants/scoring';
 import { usePredictionsStore } from '@/store/slices/predictionsSlice';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
 
@@ -103,6 +103,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   const liveMatch = getLiveMatch(match);
   const { community } = usePredictionsStore();
   const [modalOpen, setModalOpen] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
 
   const isTbd = liveMatch.homeTeam.id === 'tbd';
   const isLive = liveMatch.status === 'live';
@@ -111,6 +112,42 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   const hasScore = liveMatch.homeScore !== null;
   const countdown = (!isLocked && !isTbd) ? formatCountdown(liveMatch.kickoffAt) : null;
   const hasPrediction = !!userPrediction;
+
+  // Points breakdown for finished matches
+  const breakdownItems = (() => {
+    if (!isFinished || !hasPrediction || !hasScore) return [];
+    const items: { label: string; pts: number }[] = [];
+    const actual = { homeScore: liveMatch.homeScore!, awayScore: liveMatch.awayScore! };
+    const pred = userPrediction!;
+    let scorePts = 0;
+    if (pred.homeScore === actual.homeScore) {
+      items.push({ label: `Exact home score (${pred.homeScore})`, pts: SCORING.CORRECT_SCORE_PER_TEAM });
+      scorePts += SCORING.CORRECT_SCORE_PER_TEAM;
+    }
+    if (pred.awayScore === actual.awayScore) {
+      items.push({ label: `Exact away score (${pred.awayScore})`, pts: SCORING.CORRECT_SCORE_PER_TEAM });
+      scorePts += SCORING.CORRECT_SCORE_PER_TEAM;
+    }
+    if (scorePts === 0) {
+      const predOut = Math.sign(pred.homeScore - pred.awayScore);
+      const actOut  = Math.sign(actual.homeScore - actual.awayScore);
+      items.push(predOut === actOut
+        ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
+        : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
+    }
+    if (liveMatch.homeScorers) {
+      const set = new Set(liveMatch.homeScorers);
+      for (const pick of (pred.homeScorerPicks ?? []))
+        items.push({ label: pick, pts: set.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+    }
+    if (liveMatch.awayScorers) {
+      const set = new Set(liveMatch.awayScorers);
+      for (const pick of (pred.awayScorerPicks ?? []))
+        items.push({ label: pick, pts: set.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+    }
+    return items;
+  })();
+  const totalPts = breakdownItems.reduce((s, i) => s + i.pts, 0);
 
   // Community crowd data
   const matchPredictions = community.filter(p => p.matchId === liveMatch.id);
@@ -172,16 +209,26 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
           <div className="flex flex-col items-center justify-center px-1">
             {hasScore ? (
               <div
-                className="flex items-baseline gap-1 rounded-2xl px-4 py-2"
+                className="flex flex-col items-center gap-1 rounded-2xl px-4 py-2"
                 style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}
               >
-                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '40px', fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
-                  {liveMatch.homeScore}
-                </span>
-                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '26px', fontWeight: 700, color: '#3A4E6E', lineHeight: 1, margin: '0 2px' }}>:</span>
-                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '40px', fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
-                  {liveMatch.awayScore}
-                </span>
+                <div className="flex items-baseline gap-1">
+                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '40px', fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
+                    {liveMatch.homeScore}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '26px', fontWeight: 700, color: '#3A4E6E', lineHeight: 1, margin: '0 2px' }}>:</span>
+                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '40px', fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
+                    {liveMatch.awayScore}
+                  </span>
+                </div>
+                {isFinished && hasPrediction && (
+                  <div className="flex flex-col items-center" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px', width: '100%' }}>
+                    <span style={{ fontSize: '8px', fontWeight: 700, color: '#5A6E94', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1 }}>Your pick</span>
+                    <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '14px', fontWeight: 900, color: '#7A91BB', lineHeight: 1.2 }}>
+                      {userPrediction!.homeScore}–{userPrediction!.awayScore}
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               <div
@@ -247,7 +294,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
 
         {/* Footer */}
         <div
-          className="mx-3 mb-3 mt-2 flex items-center justify-between gap-2 rounded-xl px-3 py-2"
+          className={`mx-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${isFinished && hasPrediction ? 'mt-2 mb-0' : 'mt-2 mb-3'}`}
           style={{ background: 'rgba(0,0,0,0.2)' }}
         >
           <span className="truncate text-[11px]">
@@ -255,16 +302,14 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
             <span style={{ color: '#5A6E94' }}> · {liveMatch.city}</span>
           </span>
           <div className="shrink-0">
-            {userPrediction && isFinished ? (
-              <PointsBadge prediction={userPrediction} match={liveMatch} />
-            ) : isAuthenticated && !isLocked && hasPrediction && crowd ? (
+            {isAuthenticated && !isLocked && hasPrediction && crowd ? (
               <div className="flex flex-col items-end gap-0.5">
                 <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#FFB020' }}>Average</span>
                 <span className="whitespace-nowrap text-[12px] font-bold" style={{ color: '#FFB020' }}>
                   {crowd.homeAvg}–{crowd.awayAvg}
                 </span>
               </div>
-            ) : isAuthenticated && isLocked && hasPrediction ? (
+            ) : isAuthenticated && isLocked && hasPrediction && !isFinished ? (
               <span className="whitespace-nowrap text-[11px]" style={{ color: '#5A6E94' }}>
                 {userPrediction!.homeScore}–{userPrediction!.awayScore} · locked
               </span>
@@ -273,6 +318,49 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
             ) : null}
           </div>
         </div>
+
+        {/* Points breakdown — finished matches with a prediction only */}
+        {isFinished && hasPrediction && (
+          <div className="mx-3 mb-3 mt-1.5 overflow-hidden rounded-xl" style={{ background: 'rgba(0,0,0,0.2)' }}>
+            <button
+              className="no-press-ring flex w-full items-center justify-between px-3 py-2.5"
+              onClick={(e) => { e.stopPropagation(); setBreakdownOpen(o => !o); }}
+            >
+              <div className="flex items-center gap-1.5">
+                <svg
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}
+                  className="h-3 w-3 shrink-0 transition-transform"
+                  style={{ color: '#7A91BB', transform: breakdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+                <span className="text-[11px] font-semibold" style={{ color: '#7A91BB' }}>Points breakdown</span>
+              </div>
+              <span
+                className="text-[12px] font-black"
+                style={{ color: totalPts > 0 ? '#FFB020' : totalPts < 0 ? '#FF4DA8' : '#7A91BB' }}
+              >
+                {totalPts > 0 ? '+' : ''}{totalPts} pts
+              </span>
+            </button>
+
+            {breakdownOpen && (
+              <div className="px-3 pb-2.5 flex flex-col gap-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                {breakdownItems.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between py-1" style={{ borderBottom: i < breakdownItems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
+                    <span className="text-[11px]" style={{ color: '#7A91BB' }}>{item.label}</span>
+                    <span
+                      className="text-[11px] font-bold"
+                      style={{ color: item.pts > 0 ? '#00C44F' : item.pts < 0 ? '#FF4DA8' : '#7A91BB' }}
+                    >
+                      {item.pts > 0 ? '+' : ''}{item.pts}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {!isTbd && isAuthenticated && userId && (
