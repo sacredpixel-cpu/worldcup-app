@@ -120,9 +120,9 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
     const actual = { homeScore: liveMatch.homeScore!, awayScore: liveMatch.awayScore! };
     const pred = userPrediction!;
 
+    // ── 1. Score accuracy (always shown) ────────────────────────────────────
     const homeExact = pred.homeScore === actual.homeScore;
     const awayExact = pred.awayScore === actual.awayScore;
-
     items.push({
       label: `Home score — you: ${pred.homeScore} · result: ${actual.homeScore}`,
       pts: homeExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0,
@@ -132,7 +132,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
       pts: awayExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0,
     });
 
-    // Result rule — always shown; only fires when neither score was exact
+    // ── 2. Result (W/D/L) — always shown ────────────────────────────────────
     if (!homeExact && !awayExact) {
       const predOut = Math.sign(pred.homeScore - pred.awayScore);
       const actOut  = Math.sign(actual.homeScore - actual.awayScore);
@@ -143,16 +143,40 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
       items.push({ label: 'Result (W/D/L) — covered by exact score', pts: 0, na: true });
     }
 
-    // Scorer picks (+1 correct, −1 wrong)
-    if (liveMatch.homeScorers) {
-      const set = new Set(liveMatch.homeScorers);
-      for (const pick of (pred.homeScorerPicks ?? []))
-        items.push({ label: `Scorer pick: ${pick}`, pts: set.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+    // ── 3. Home scorer picks — always shown (0 if no pick made) ─────────────
+    const homePicks = pred.homeScorerPicks ?? [];
+    const homeActualSet = liveMatch.homeScorers ? new Set(liveMatch.homeScorers) : null;
+    if (homePicks.length === 0) {
+      items.push({ label: 'Home scorer — no pick', pts: 0 });
+    } else {
+      for (const pick of homePicks) {
+        if (homeActualSet) {
+          items.push({
+            label: `Home scorer: ${pick}`,
+            pts: homeActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER,
+          });
+        } else {
+          items.push({ label: `Home scorer: ${pick} — pending`, pts: 0, na: true });
+        }
+      }
     }
-    if (liveMatch.awayScorers) {
-      const set = new Set(liveMatch.awayScorers);
-      for (const pick of (pred.awayScorerPicks ?? []))
-        items.push({ label: `Scorer pick: ${pick}`, pts: set.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+
+    // ── 4. Away scorer picks — always shown (0 if no pick made) ─────────────
+    const awayPicks = pred.awayScorerPicks ?? [];
+    const awayActualSet = liveMatch.awayScorers ? new Set(liveMatch.awayScorers) : null;
+    if (awayPicks.length === 0) {
+      items.push({ label: 'Away scorer — no pick', pts: 0 });
+    } else {
+      for (const pick of awayPicks) {
+        if (awayActualSet) {
+          items.push({
+            label: `Away scorer: ${pick}`,
+            pts: awayActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER,
+          });
+        } else {
+          items.push({ label: `Away scorer: ${pick} — pending`, pts: 0, na: true });
+        }
+      }
     }
 
     return items;
