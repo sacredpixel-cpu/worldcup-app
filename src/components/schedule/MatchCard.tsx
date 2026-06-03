@@ -144,15 +144,25 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
               </div>
             ) : (
               <div
-                className="flex flex-col items-center gap-0.5 rounded-2xl px-5 py-2"
+                className="flex flex-col items-center gap-1 rounded-2xl px-5 py-2"
                 style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)', minWidth: '80px' }}
               >
                 <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '18px', fontWeight: 900, color: '#3A4E6E', letterSpacing: '0.15em' }}>VS</span>
-                {crowd && (
+                {isAuthenticated && !isLocked && hasPrediction ? (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#FF1F8E' }}>Predicted</span>
+                    <span className="flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[15px] font-bold" style={{ background: 'rgba(255,31,142,0.1)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.2)', marginLeft: '-1.5px', marginRight: '-1.5px' }}>
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                      </svg>
+                      {userPrediction!.homeScore}–{userPrediction!.awayScore}
+                    </span>
+                  </div>
+                ) : crowd ? (
                   <span className="text-[12px] font-bold" style={{ color: '#FFB020' }}>
                     {crowd.homeAvg}–{crowd.awayAvg}
                   </span>
-                )}
+                ) : null}
               </div>
             )}
           </div>
@@ -188,17 +198,14 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
           <div className="shrink-0">
             {userPrediction && isFinished ? (
               <PointsBadge prediction={userPrediction} match={liveMatch} />
-            ) : isAuthenticated && !isLocked && hasPrediction ? (
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#FF1F8E' }}>Predicted</span>
-                <span className="flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: 'rgba(255,31,142,0.1)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.2)', marginLeft: '-1.5px', marginRight: '-1.5px' }}>
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-2.5 w-2.5 shrink-0">
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                  </svg>
-                  {userPrediction!.homeScore}–{userPrediction!.awayScore}
+            ) : isAuthenticated && !isLocked && hasPrediction && crowd ? (
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#FFB020' }}>Average</span>
+                <span className="whitespace-nowrap text-[12px] font-bold" style={{ color: '#FFB020' }}>
+                  {crowd.homeAvg}–{crowd.awayAvg}
                 </span>
               </div>
-            ) : isAuthenticated && !isLocked ? (
+            ) : isAuthenticated && !isLocked && !hasPrediction ? (
               <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.15)' }}>
                 + Predict
               </span>
