@@ -87,6 +87,17 @@ const PREDICT_OPENS: Record<string, string> = {
   'FINAL': 'Jul 20',
 };
 
+function formatCountdown(kickoffAt: string): string | null {
+  const diff = new Date(kickoffAt).getTime() - Date.now();
+  if (diff <= 0) return null;
+  const totalHours = Math.floor(diff / (1000 * 60 * 60));
+  const days  = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days > 0) return `${days} day${days !== 1 ? 's' : ''}, ${hours} hr${hours !== 1 ? 's' : ''} to predict`;
+  if (hours > 0) return `${hours} hr${hours !== 1 ? 's' : ''} to predict`;
+  return '< 1 hr to predict';
+}
+
 export function MatchCard({ match, userPrediction, allUserPredictions, isAuthenticated, userId }: MatchCardProps) {
   const { getLiveMatch } = useMatchesStore();
   const liveMatch = getLiveMatch(match);
@@ -98,6 +109,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   const isFinished = liveMatch.status === 'finished';
   const isLocked = new Date(liveMatch.kickoffAt) <= new Date() || liveMatch.status !== 'upcoming';
   const hasScore = liveMatch.homeScore !== null;
+  const countdown = (!isLocked && !isTbd) ? formatCountdown(liveMatch.kickoffAt) : null;
   const hasPrediction = !!userPrediction;
 
   // Community crowd data
@@ -192,10 +204,19 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
                     <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Predict on</span>
                     <span className="text-[12px] font-bold" style={{ color: '#7A91BB' }}>{PREDICT_OPENS[liveMatch.id]}</span>
                   </div>
-                ) : isAuthenticated && !isLocked && !isTbd ? (
-                  <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.15)' }}>
-                    + Predict
-                  </span>
+                ) : !isLocked && !isTbd && !hasPrediction ? (
+                  <>
+                    {countdown && (
+                      <span className="text-center text-[9px] font-semibold leading-tight" style={{ color: '#7A91BB' }}>
+                        {countdown}
+                      </span>
+                    )}
+                    {isAuthenticated && (
+                      <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.15)' }}>
+                        + Predict
+                      </span>
+                    )}
+                  </>
                 ) : crowd ? (
                   <span className="text-[12px] font-bold" style={{ color: '#FFB020' }}>
                     {crowd.homeAvg}–{crowd.awayAvg}
