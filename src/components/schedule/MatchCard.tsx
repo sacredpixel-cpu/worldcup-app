@@ -58,6 +58,35 @@ function TeamBlock({ team, role }: { team: Match['homeTeam']; role: string }) {
   );
 }
 
+// When each knockout match opens for predictions (day teams become known)
+const PREDICT_OPENS: Record<string, string> = {
+  // Round of 32 — all teams determined June 28 after group stage wraps
+  'R32-01': 'Jun 28', 'R32-02': 'Jun 28', 'R32-03': 'Jun 28', 'R32-04': 'Jun 28',
+  'R32-05': 'Jun 28', 'R32-06': 'Jun 28', 'R32-07': 'Jun 28', 'R32-08': 'Jun 28',
+  'R32-09': 'Jun 28', 'R32-10': 'Jun 28', 'R32-11': 'Jun 28', 'R32-12': 'Jun 28',
+  'R32-13': 'Jun 28', 'R32-14': 'Jun 28', 'R32-15': 'Jun 28', 'R32-16': 'Jun 28',
+  // Round of 16 — each pair determined day after its two R32 matches play
+  'R16-01': 'Jun 30', // R32-01 & R32-02 play Jun 29
+  'R16-02': 'Jul 1',  // R32-03 & R32-04 play Jun 30
+  'R16-03': 'Jul 2',  // R32-05 & R32-06 play Jul 1
+  'R16-04': 'Jul 3',  // R32-07 & R32-08 play Jul 2
+  'R16-05': 'Jul 4',  // R32-09 & R32-10 play Jul 3
+  'R16-06': 'Jul 5',  // R32-11 & R32-12 play Jul 4
+  'R16-07': 'Jul 6',  // R32-13 & R32-14 play Jul 5
+  'R16-08': 'Jul 7',  // R32-15 & R32-16 play Jul 6
+  // Quarter-finals — each pair determined day after its two R16 matches play
+  'QF-01': 'Jul 9',   // R16-01 & R16-02 play Jul 8
+  'QF-02': 'Jul 10',  // R16-03 & R16-04 play Jul 9
+  'QF-03': 'Jul 11',  // R16-05 & R16-06 play Jul 10
+  'QF-04': 'Jul 12',  // R16-07 & R16-08 play Jul 11
+  // Semi-finals — each pair determined after its two QF matches play
+  'SF-01': 'Jul 16',  // QF-01 (Jul 14) & QF-02 (Jul 15)
+  'SF-02': 'Jul 17',  // QF-03 (Jul 15) & QF-04 (Jul 16)
+  // 3rd place + Final — both SFs play Jul 18-19
+  '3RD':   'Jul 20',
+  'FINAL': 'Jul 20',
+};
+
 export function MatchCard({ match, userPrediction, allUserPredictions, isAuthenticated, userId }: MatchCardProps) {
   const { getLiveMatch } = useMatchesStore();
   const liveMatch = getLiveMatch(match);
@@ -158,6 +187,15 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
                       {userPrediction!.homeScore}–{userPrediction!.awayScore}
                     </span>
                   </div>
+                ) : isTbd && PREDICT_OPENS[liveMatch.id] ? (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Predict on</span>
+                    <span className="text-[12px] font-bold" style={{ color: '#7A91BB' }}>{PREDICT_OPENS[liveMatch.id]}</span>
+                  </div>
+                ) : isAuthenticated && !isLocked && !isTbd ? (
+                  <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.15)' }}>
+                    + Predict
+                  </span>
                 ) : crowd ? (
                   <span className="text-[12px] font-bold" style={{ color: '#FFB020' }}>
                     {crowd.homeAvg}–{crowd.awayAvg}
@@ -205,10 +243,6 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
                   {crowd.homeAvg}–{crowd.awayAvg}
                 </span>
               </div>
-            ) : isAuthenticated && !isLocked && !hasPrediction ? (
-              <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.15)' }}>
-                + Predict
-              </span>
             ) : isAuthenticated && isLocked && hasPrediction ? (
               <span className="whitespace-nowrap text-[11px]" style={{ color: '#5A6E94' }}>
                 {userPrediction!.homeScore}–{userPrediction!.awayScore} · locked
