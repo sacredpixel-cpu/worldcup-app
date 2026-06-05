@@ -8,8 +8,10 @@ interface DayFilterProps {
 
 export function DayFilter({ dates, selected, onChange }: DayFilterProps) {
   const fmt = (d: string) => {
-    const dt = new Date(d + 'T12:00:00Z');
-    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    // d is already a local-date string (YYYY-MM-DD), parse as local noon to avoid any rollover
+    const [y, mo, dy] = d.split('-').map(Number);
+    const dt = new Date(y, mo - 1, dy, 12, 0, 0);
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   return (

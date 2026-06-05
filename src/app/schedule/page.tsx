@@ -14,7 +14,11 @@ import type { Match } from '@/types/match';
 type Tab = 'groups' | 'knockout' | 'bracket';
 
 function getDateStr(iso: string) {
-  return iso.slice(0, 10);
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const dy = String(d.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${dy}`;
 }
 
 function uniqueDates(matches: Match[]) {
