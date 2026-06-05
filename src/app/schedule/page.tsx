@@ -57,7 +57,7 @@ function ScheduleContent() {
 
   const [tab, setTab] = useState<Tab>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<string>('A');
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [groupView, setGroupView] = useState<'matches' | 'table'>('matches');
   const [fanCount, setFanCount] = useState<number | null>(null);
 
@@ -76,7 +76,7 @@ function ScheduleContent() {
 
   const groupMatches = useMemo(() =>
     [...GROUP_STAGE_MATCHES]
-      .filter(m => m.homeTeam.group === selectedGroup)
+      .filter(m => selectedGroup === 'all' || m.homeTeam.group === selectedGroup)
       .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt)),
     [selectedGroup]
   );
@@ -165,11 +165,21 @@ function ScheduleContent() {
         <div className="flex flex-col gap-3">
           {/* Group selector */}
           <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pt-3">
+            {/* All Matches pill */}
+            <button
+              onClick={() => setSelectedGroup('all')}
+              className="no-press-ring flex-shrink-0 h-9 rounded-full px-3 text-sm font-bold transition-colors"
+              style={selectedGroup === 'all'
+                ? { background: '#FF1F8E', color: '#06091A' }
+                : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              All
+            </button>
             {Object.keys(GROUPS).map(g => (
               <button
                 key={g}
                 onClick={() => setSelectedGroup(g)}
-                className="flex-shrink-0 h-9 w-9 rounded-full text-sm font-bold transition-colors"
+                className="no-press-ring flex-shrink-0 h-9 w-9 rounded-full text-sm font-bold transition-colors"
                 style={selectedGroup === g
                   ? { background: '#FF1F8E', color: '#06091A' }
                   : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
@@ -179,24 +189,26 @@ function ScheduleContent() {
             ))}
           </div>
 
-          {/* Matches / Table toggle */}
-          <div className="flex gap-2 px-4">
-            {(['matches', 'table'] as const).map(v => (
-              <button
-                key={v}
-                onClick={() => setGroupView(v)}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors"
-                style={groupView === v
-                  ? { background: '#FF1F8E', color: '#06091A' }
-                  : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB' }}
-              >
-                {v === 'matches' ? 'Matches' : 'Standings'}
-              </button>
-            ))}
-          </div>
+          {/* Matches / Table toggle — hidden on "All" since standings require a single group */}
+          {selectedGroup !== 'all' && (
+            <div className="flex gap-2 px-4">
+              {(['matches', 'table'] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setGroupView(v)}
+                  className="no-press-ring rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors"
+                  style={groupView === v
+                    ? { background: '#FF1F8E', color: '#06091A' }
+                    : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB' }}
+                >
+                  {v === 'matches' ? 'Matches' : 'Standings'}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="px-4 pb-4">
-            {groupView === 'matches' ? (
+            {(selectedGroup === 'all' || groupView === 'matches') ? (
               <div className="flex flex-col gap-3">
                 {groupMatches.map(match => (
                   <MatchCard
