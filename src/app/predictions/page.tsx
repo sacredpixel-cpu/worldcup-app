@@ -937,7 +937,7 @@ function PredictionsContent() {
       {/* Sub-tabs */}
       <div className="flex gap-1 px-4 overflow-x-auto" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', scrollbarWidth: 'none' }}>
         {([
-          { id: 'groups'      as SubTab, label: 'Groups'  },
+          { id: 'groups'      as SubTab, label: 'My Predictions'  },
           { id: 'point-rules' as SubTab, label: 'Rules'   },
         ]).map(t => (
           <button
