@@ -59,32 +59,33 @@ function TeamBlock({ team, role }: { team: Match['homeTeam']; role: string }) {
 }
 
 // When each knockout match opens for predictions (day teams become known)
+// Based on the official 2026 FIFA World Cup schedule
 const PREDICT_OPENS: Record<string, string> = {
-  // Round of 32 — all teams determined June 28 after group stage wraps
+  // Round of 32 (Jun 28–Jul 3) — all group stage teams known Jun 28
   'R32-01': 'Jun 28', 'R32-02': 'Jun 28', 'R32-03': 'Jun 28', 'R32-04': 'Jun 28',
   'R32-05': 'Jun 28', 'R32-06': 'Jun 28', 'R32-07': 'Jun 28', 'R32-08': 'Jun 28',
   'R32-09': 'Jun 28', 'R32-10': 'Jun 28', 'R32-11': 'Jun 28', 'R32-12': 'Jun 28',
   'R32-13': 'Jun 28', 'R32-14': 'Jun 28', 'R32-15': 'Jun 28', 'R32-16': 'Jun 28',
-  // Round of 16 — each pair determined day after its two R32 matches play
-  'R16-01': 'Jun 30', // R32-01 & R32-02 play Jun 29
-  'R16-02': 'Jul 1',  // R32-03 & R32-04 play Jun 30
-  'R16-03': 'Jul 2',  // R32-05 & R32-06 play Jul 1
-  'R16-04': 'Jul 3',  // R32-07 & R32-08 play Jul 2
-  'R16-05': 'Jul 4',  // R32-09 & R32-10 play Jul 3
-  'R16-06': 'Jul 5',  // R32-11 & R32-12 play Jul 4
-  'R16-07': 'Jul 6',  // R32-13 & R32-14 play Jul 5
-  'R16-08': 'Jul 7',  // R32-15 & R32-16 play Jul 6
-  // Quarter-finals — each pair determined day after its two R16 matches play
-  'QF-01': 'Jul 9',   // R16-01 & R16-02 play Jul 8
-  'QF-02': 'Jul 10',  // R16-03 & R16-04 play Jul 9
-  'QF-03': 'Jul 11',  // R16-05 & R16-06 play Jul 10
-  'QF-04': 'Jul 12',  // R16-07 & R16-08 play Jul 11
-  // Semi-finals — each pair determined after its two QF matches play
-  'SF-01': 'Jul 16',  // QF-01 (Jul 14) & QF-02 (Jul 15)
-  'SF-02': 'Jul 17',  // QF-03 (Jul 15) & QF-04 (Jul 16)
-  // 3rd place + Final — both SFs play Jul 18-19
-  '3RD':   'Jul 20',
-  'FINAL': 'Jul 20',
+  // Round of 16 — opens after both feeder R32 matches finish
+  'R16-01': 'Jul 1',  // R32-02 (Jun 29) & R32-05 (Jun 30)
+  'R16-02': 'Jun 30', // R32-01 (Jun 28) & R32-03 (Jun 29)
+  'R16-03': 'Jul 1',  // R32-04 (Jun 29) & R32-06 (Jun 30)
+  'R16-04': 'Jul 2',  // R32-07 (Jun 30) & R32-08 (Jul 1)
+  'R16-05': 'Jul 3',  // R32-11 (Jul 2) & R32-12 (Jul 2)
+  'R16-06': 'Jul 2',  // R32-09 (Jul 1) & R32-10 (Jul 1)
+  'R16-07': 'Jul 4',  // R32-14 (Jul 3) & R32-16 (Jul 3)
+  'R16-08': 'Jul 4',  // R32-13 (Jul 2) & R32-15 (Jul 3)
+  // Quarter-finals — opens after both feeder R16 matches finish
+  'QF-01': 'Jul 5',   // R16-01 (Jul 4) & R16-02 (Jul 4)
+  'QF-02': 'Jul 7',   // R16-05 (Jul 6) & R16-06 (Jul 6)
+  'QF-03': 'Jul 6',   // R16-03 (Jul 5) & R16-04 (Jul 5)
+  'QF-04': 'Jul 8',   // R16-07 (Jul 7) & R16-08 (Jul 7)
+  // Semi-finals — opens after both feeder QF matches finish
+  'SF-01': 'Jul 11',  // QF-01 (Jul 9) & QF-02 (Jul 10)
+  'SF-02': 'Jul 12',  // QF-03 (Jul 11) & QF-04 (Jul 11)
+  // 3rd place + Final — both SFs play Jul 14–15
+  '3RD':   'Jul 16',
+  'FINAL': 'Jul 16',
 };
 
 function formatCountdown(kickoffAt: string): string | null {

@@ -140,49 +140,49 @@ function tbd(id: string, stage: Match['stage'], kickoffUTC: string, venue: strin
 }
 
 export const KNOCKOUT_MATCHES: Match[] = [
-  // Round of 32  (Jun 29 – Jul 4)
-  tbd('R32-01', 'round-of-32', '2026-06-29T19:00:00Z', 'AT&T Stadium',            'Arlington, TX'),
-  tbd('R32-02', 'round-of-32', '2026-06-29T23:00:00Z', 'Lumen Field',             'Seattle, WA'),
-  tbd('R32-03', 'round-of-32', '2026-06-30T19:00:00Z', 'Mercedes-Benz Stadium',   'Atlanta, GA'),
-  tbd('R32-04', 'round-of-32', '2026-06-30T23:00:00Z', 'Hard Rock Stadium',       'Miami Gardens, FL'),
-  tbd('R32-05', 'round-of-32', '2026-07-01T19:00:00Z', 'NRG Stadium',             'Houston, TX'),
-  tbd('R32-06', 'round-of-32', '2026-07-01T23:00:00Z', 'MetLife Stadium',         'East Rutherford, NJ'),
-  tbd('R32-07', 'round-of-32', '2026-07-02T19:00:00Z', 'Estadio Azteca',          'Mexico City, Mexico'),
-  tbd('R32-08', 'round-of-32', '2026-07-02T23:00:00Z', 'BC Place',                'Vancouver, Canada'),
-  tbd('R32-09', 'round-of-32', '2026-07-03T19:00:00Z', "Levi's Stadium",          'Santa Clara, CA'),
-  tbd('R32-10', 'round-of-32', '2026-07-03T23:00:00Z', 'Gillette Stadium',        'Foxborough, MA'),
-  tbd('R32-11', 'round-of-32', '2026-07-04T19:00:00Z', 'SoFi Stadium',            'Inglewood, CA'),
-  tbd('R32-12', 'round-of-32', '2026-07-04T23:00:00Z', 'Lincoln Financial Field', 'Philadelphia, PA'),
-  tbd('R32-13', 'round-of-32', '2026-07-05T19:00:00Z', 'Arrowhead Stadium',       'Kansas City, MO'),
-  tbd('R32-14', 'round-of-32', '2026-07-05T23:00:00Z', 'Estadio Akron',           'Guadalajara, Mexico'),
-  tbd('R32-15', 'round-of-32', '2026-07-06T19:00:00Z', 'BMO Field',               'Toronto, Canada'),
-  tbd('R32-16', 'round-of-32', '2026-07-06T23:00:00Z', 'AT&T Stadium',            'Arlington, TX'),
+  // Round of 32  (Jun 28 – Jul 3) — official 2026 FIFA World Cup schedule
+  tbd('R32-01', 'round-of-32', '2026-06-28T22:00:00Z', 'SoFi Stadium',            'Inglewood, CA'),       // R/U A vs R/U B
+  tbd('R32-02', 'round-of-32', '2026-06-29T19:00:00Z', 'Gillette Stadium',        'Foxborough, MA'),      // W E vs Best 3rd
+  tbd('R32-03', 'round-of-32', '2026-06-29T21:00:00Z', 'Estadio BBVA',            'Guadalupe, Mexico'),   // W F vs R/U C
+  tbd('R32-04', 'round-of-32', '2026-06-29T23:00:00Z', 'NRG Stadium',             'Houston, TX'),         // W C vs R/U F
+  tbd('R32-05', 'round-of-32', '2026-06-30T19:00:00Z', 'MetLife Stadium',         'East Rutherford, NJ'), // W I vs Best 3rd
+  tbd('R32-06', 'round-of-32', '2026-06-30T21:00:00Z', 'AT&T Stadium',            'Arlington, TX'),       // R/U E vs R/U I
+  tbd('R32-07', 'round-of-32', '2026-06-30T23:00:00Z', 'Estadio Azteca',          'Mexico City, Mexico'), // W A vs Best 3rd
+  tbd('R32-08', 'round-of-32', '2026-07-01T19:00:00Z', 'Mercedes-Benz Stadium',   'Atlanta, GA'),         // W L vs Best 3rd
+  tbd('R32-09', 'round-of-32', '2026-07-01T21:00:00Z', "Levi's Stadium",          'Santa Clara, CA'),     // W D vs Best 3rd
+  tbd('R32-10', 'round-of-32', '2026-07-01T23:00:00Z', 'Lumen Field',             'Seattle, WA'),         // W G vs Best 3rd
+  tbd('R32-11', 'round-of-32', '2026-07-02T19:00:00Z', 'BMO Field',               'Toronto, Canada'),     // R/U K vs R/U L
+  tbd('R32-12', 'round-of-32', '2026-07-02T21:00:00Z', 'SoFi Stadium',            'Inglewood, CA'),       // W H vs R/U J
+  tbd('R32-13', 'round-of-32', '2026-07-02T23:00:00Z', 'BC Place',                'Vancouver, Canada'),   // W B vs Best 3rd
+  tbd('R32-14', 'round-of-32', '2026-07-03T19:00:00Z', 'Hard Rock Stadium',       'Miami Gardens, FL'),   // W J vs R/U H
+  tbd('R32-15', 'round-of-32', '2026-07-03T21:00:00Z', 'Arrowhead Stadium',       'Kansas City, MO'),     // W K vs Best 3rd
+  tbd('R32-16', 'round-of-32', '2026-07-03T23:00:00Z', 'AT&T Stadium',            'Arlington, TX'),       // R/U D vs R/U G
 
-  // Round of 16  (Jul 8–11)
-  tbd('R16-01', 'round-of-16', '2026-07-08T19:00:00Z', 'MetLife Stadium',         'East Rutherford, NJ'),
-  tbd('R16-02', 'round-of-16', '2026-07-08T23:00:00Z', 'NRG Stadium',             'Houston, TX'),
-  tbd('R16-03', 'round-of-16', '2026-07-09T19:00:00Z', 'AT&T Stadium',            'Arlington, TX'),
-  tbd('R16-04', 'round-of-16', '2026-07-09T23:00:00Z', 'SoFi Stadium',            'Inglewood, CA'),
-  tbd('R16-05', 'round-of-16', '2026-07-10T19:00:00Z', 'Hard Rock Stadium',       'Miami Gardens, FL'),
-  tbd('R16-06', 'round-of-16', '2026-07-10T23:00:00Z', 'Mercedes-Benz Stadium',   'Atlanta, GA'),
-  tbd('R16-07', 'round-of-16', '2026-07-11T19:00:00Z', 'Lumen Field',             'Seattle, WA'),
-  tbd('R16-08', 'round-of-16', '2026-07-11T23:00:00Z', 'Estadio Azteca',          'Mexico City, Mexico'),
+  // Round of 16  (Jul 4–7)
+  tbd('R16-01', 'round-of-16', '2026-07-04T19:00:00Z', 'Lincoln Financial Field', 'Philadelphia, PA'),    // W R32-02 vs W R32-05
+  tbd('R16-02', 'round-of-16', '2026-07-04T23:00:00Z', 'NRG Stadium',             'Houston, TX'),         // W R32-01 vs W R32-03
+  tbd('R16-03', 'round-of-16', '2026-07-05T19:00:00Z', 'MetLife Stadium',         'East Rutherford, NJ'), // W R32-04 vs W R32-06
+  tbd('R16-04', 'round-of-16', '2026-07-05T23:00:00Z', 'Estadio Azteca',          'Mexico City, Mexico'), // W R32-07 vs W R32-08
+  tbd('R16-05', 'round-of-16', '2026-07-06T19:00:00Z', 'AT&T Stadium',            'Arlington, TX'),       // W R32-11 vs W R32-12
+  tbd('R16-06', 'round-of-16', '2026-07-06T23:00:00Z', 'Lumen Field',             'Seattle, WA'),         // W R32-09 vs W R32-10
+  tbd('R16-07', 'round-of-16', '2026-07-07T19:00:00Z', 'Mercedes-Benz Stadium',   'Atlanta, GA'),         // W R32-14 vs W R32-16
+  tbd('R16-08', 'round-of-16', '2026-07-07T23:00:00Z', 'BC Place',                'Vancouver, Canada'),   // W R32-13 vs W R32-15
 
-  // Quarter-Finals  (Jul 14–15)
-  tbd('QF-01', 'quarter-final', '2026-07-14T20:00:00Z', 'MetLife Stadium',        'East Rutherford, NJ'),
-  tbd('QF-02', 'quarter-final', '2026-07-15T00:00:00Z', 'AT&T Stadium',           'Arlington, TX'),
-  tbd('QF-03', 'quarter-final', '2026-07-15T20:00:00Z', 'NRG Stadium',            'Houston, TX'),
-  tbd('QF-04', 'quarter-final', '2026-07-16T00:00:00Z', 'SoFi Stadium',           'Inglewood, CA'),
+  // Quarter-Finals  (Jul 9–11)
+  tbd('QF-01', 'quarter-final', '2026-07-09T19:00:00Z', 'Gillette Stadium',       'Foxborough, MA'),      // W R16-01 vs W R16-02
+  tbd('QF-02', 'quarter-final', '2026-07-10T22:00:00Z', 'SoFi Stadium',           'Inglewood, CA'),       // W R16-05 vs W R16-06
+  tbd('QF-03', 'quarter-final', '2026-07-11T19:00:00Z', 'Hard Rock Stadium',      'Miami Gardens, FL'),   // W R16-03 vs W R16-04
+  tbd('QF-04', 'quarter-final', '2026-07-11T23:00:00Z', 'Arrowhead Stadium',      'Kansas City, MO'),     // W R16-07 vs W R16-08
 
-  // Semi-Finals  (Jul 18–19)
-  tbd('SF-01', 'semi-final', '2026-07-18T23:00:00Z', 'AT&T Stadium',              'Arlington, TX'),
-  tbd('SF-02', 'semi-final', '2026-07-19T23:00:00Z', 'MetLife Stadium',           'East Rutherford, NJ'),
+  // Semi-Finals  (Jul 14–15)
+  tbd('SF-01', 'semi-final', '2026-07-14T23:00:00Z', 'AT&T Stadium',              'Arlington, TX'),       // W QF-01 vs W QF-02
+  tbd('SF-02', 'semi-final', '2026-07-15T23:00:00Z', 'Mercedes-Benz Stadium',     'Atlanta, GA'),         // W QF-03 vs W QF-04
 
-  // Third Place  (Jul 22)
-  tbd('3RD', 'third-place', '2026-07-22T20:00:00Z', 'Hard Rock Stadium',          'Miami Gardens, FL'),
+  // Third Place  (Jul 18)
+  tbd('3RD', 'third-place', '2026-07-18T20:00:00Z', 'Hard Rock Stadium',          'Miami Gardens, FL'),
 
-  // Final  (Jul 26)
-  tbd('FINAL', 'final', '2026-07-26T23:00:00Z', 'MetLife Stadium',                'East Rutherford, NJ'),
+  // Final  (Jul 19)
+  tbd('FINAL', 'final', '2026-07-19T22:00:00Z', 'MetLife Stadium',                'East Rutherford, NJ'),
 ];
 
 export const ALL_MATCHES: Match[] = [...GROUP_STAGE_MATCHES, ...KNOCKOUT_MATCHES];
