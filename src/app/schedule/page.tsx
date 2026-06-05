@@ -8,10 +8,11 @@ import { MatchCard } from '@/components/schedule/MatchCard';
 import { DayFilter } from '@/components/schedule/DayFilter';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import { BracketView } from '@/components/bracket/BracketView';
+import { GoldenBootTab } from '@/components/predictions/GoldenBootTab';
 import { subscribeToUserProfiles } from '@/lib/usersService';
 import type { Match } from '@/types/match';
 
-type Tab = 'groups' | 'knockout' | 'bracket';
+type Tab = 'groups' | 'knockout' | 'bracket' | 'golden-boot';
 
 function getDateStr(iso: string) {
   const d = new Date(iso);
@@ -67,6 +68,7 @@ function ScheduleContent() {
     { id: 'groups', label: 'Group Stage' },
     { id: 'knockout', label: 'Knockout' },
     { id: 'bracket', label: 'Bracket' },
+    { id: 'golden-boot', label: 'Golden Boot' },
   ];
 
   return (
@@ -212,6 +214,20 @@ function ScheduleContent() {
 
       {/* Bracket tab */}
       {tab === 'bracket' && <BracketView />}
+
+      {/* Golden Boot tab */}
+      {tab === 'golden-boot' && (
+        user
+          ? <GoldenBootTab userId={user.id} />
+          : (
+            <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+              <div className="mb-3 text-4xl">🥇</div>
+              <p className="text-sm font-semibold mb-1" style={{ color: '#E8F0FF' }}>Pick the Golden Boot winner</p>
+              <p className="text-xs mb-4" style={{ color: '#7A91BB' }}>Sign in to make your tournament pick</p>
+              <a href="/auth/register" className="rounded-xl px-6 py-3 text-sm font-semibold" style={{ background: '#FF1F8E', color: '#06091A' }}>Create Account</a>
+            </div>
+          )
+      )}
     </div>
   );
 }
