@@ -6,7 +6,6 @@ import { ALL_MATCHES, GROUP_STAGE_MATCHES, KNOCKOUT_MATCHES, STAGE_LABELS } from
 import { GROUPS } from '@/data/teams';
 import { MatchCard } from '@/components/schedule/MatchCard';
 import { DayFilter } from '@/components/schedule/DayFilter';
-import { GroupStageTable } from '@/components/schedule/GroupStageTable';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import { BracketView } from '@/components/bracket/BracketView';
 import { subscribeToUserProfiles } from '@/lib/usersService';
@@ -26,27 +25,6 @@ function uniqueDates(matches: Match[]) {
     .filter(d => { if (seen.has(d)) return false; seen.add(d); return true; });
 }
 
-function buildStandings(groupLetter: string, matches: Match[]) {
-  const teams = GROUPS[groupLetter] ?? [];
-  const standings = teams.map(team => ({ team, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }));
-  const byId = Object.fromEntries(standings.map(s => [s.team.id, s]));
-
-  matches
-    .filter(m => m.stage === 'group' && m.status === 'finished' && m.homeScore !== null)
-    .forEach(m => {
-      const home = byId[m.homeTeam.id];
-      const away = byId[m.awayTeam.id];
-      if (!home || !away) return;
-      home.played++; away.played++;
-      home.gf += m.homeScore!; home.ga += m.awayScore!;
-      away.gf += m.awayScore!; away.ga += m.homeScore!;
-      if (m.homeScore! > m.awayScore!) { home.won++; home.pts += 3; away.lost++; }
-      else if (m.homeScore! < m.awayScore!) { away.won++; away.pts += 3; home.lost++; }
-      else { home.drawn++; home.pts++; away.drawn++; away.pts++; }
-    });
-
-  return standings;
-}
 
 const KNOCKOUT_STAGES: Match['stage'][] = ['round-of-32', 'round-of-16', 'quarter-final', 'semi-final', 'third-place', 'final'];
 
@@ -58,7 +36,6 @@ function ScheduleContent() {
   const [tab, setTab] = useState<Tab>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
-  const [groupView, setGroupView] = useState<'matches' | 'table'>('matches');
   const [fanCount, setFanCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -81,7 +58,6 @@ function ScheduleContent() {
     [selectedGroup]
   );
 
-  const groupStandings = useMemo(() => buildStandings(selectedGroup, groupMatches), [selectedGroup, groupMatches]);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'all', label: 'All Matches' },
@@ -189,41 +165,20 @@ function ScheduleContent() {
             ))}
           </div>
 
-          {/* Matches / Table toggle — hidden on "All" since standings require a single group */}
-          {selectedGroup !== 'all' && (
-            <div className="flex gap-2 px-4">
-              {(['matches', 'table'] as const).map(v => (
-                <button
-                  key={v}
-                  onClick={() => setGroupView(v)}
-                  className="no-press-ring rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors"
-                  style={groupView === v
-                    ? { background: '#FF1F8E', color: '#06091A' }
-                    : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB' }}
-                >
-                  {v === 'matches' ? 'Matches' : 'Standings'}
-                </button>
-              ))}
-            </div>
-          )}
 
           <div className="px-4 pb-4">
-            {(selectedGroup === 'all' || groupView === 'matches') ? (
-              <div className="flex flex-col gap-3">
-                {groupMatches.map(match => (
-                  <MatchCard
-                    key={match.id}
-                    match={match}
-                    userPrediction={saved[match.id]}
-                    allUserPredictions={allSaved}
-                    isAuthenticated={!!user}
-                    userId={user?.id}
-                  />
-                ))}
-              </div>
-            ) : (
-              <GroupStageTable standings={groupStandings} />
-            )}
+            <div className="flex flex-col gap-3">
+              {groupMatches.map(match => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  userPrediction={saved[match.id]}
+                  allUserPredictions={allSaved}
+                  isAuthenticated={!!user}
+                  userId={user?.id}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
