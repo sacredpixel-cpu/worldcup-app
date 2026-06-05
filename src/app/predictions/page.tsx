@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore, usePredictionsStore } from '@/store';
-import { ALL_MATCHES, GROUP_STAGE_MATCHES, STAGE_LABELS } from '@/data/matches';
+import { ALL_MATCHES, GROUP_STAGE_MATCHES, KNOCKOUT_MATCHES, STAGE_LABELS } from '@/data/matches';
 import { GROUPS, ALL_TEAMS } from '@/data/teams';
 import { ROSTERS } from '@/data/rosters';
 import { ClientOnly } from '@/components/ui/ClientOnly';
@@ -20,7 +20,7 @@ import { saveTournamentPick, getTournamentPick, subscribeToTournamentSettings } 
 import type { Match, Team } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
-type SubTab = 'groups' | 'point-rules';
+type SubTab = 'groups' | 'standings' | 'point-rules';
 
 
 interface Standing {
@@ -906,6 +906,189 @@ function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
   );
 }
 
+// ─── Standings Tab ────────────────────────────────────────────────────────────
+
+function buildActualStandings(groupLetter: string) {
+  const teams = GROUPS[groupLetter] ?? [];
+  const standings: Standing[] = teams.map(team => ({ team, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }));
+  const byId = Object.fromEntries(standings.map(s => [s.team.id, s]));
+
+  GROUP_STAGE_MATCHES
+    .filter(m => m.homeTeam.group === groupLetter && m.status === 'finished' && m.homeScore !== null)
+    .forEach(m => {
+      const home = byId[m.homeTeam.id];
+      const away = byId[m.awayTeam.id];
+      if (!home || !away) return;
+      home.played++; away.played++;
+      home.gf += m.homeScore!; home.ga += m.awayScore!;
+      away.gf += m.awayScore!; away.ga += m.homeScore!;
+      if (m.homeScore! > m.awayScore!) { home.won++; home.pts += 3; away.lost++; }
+      else if (m.homeScore! < m.awayScore!) { away.won++; away.pts += 3; home.lost++; }
+      else { home.drawn++; home.pts++; away.drawn++; away.pts++; }
+    });
+
+  standings.sort((a, b) => {
+    if (b.pts !== a.pts) return b.pts - a.pts;
+    const gdDiff = (b.gf - b.ga) - (a.gf - a.ga);
+    if (gdDiff !== 0) return gdDiff;
+    return b.gf - a.gf;
+  });
+
+  return standings;
+}
+
+const KNOCKOUT_ROUND_ORDER: Match['stage'][] = ['round-of-32', 'round-of-16', 'quarter-final', 'semi-final', 'third-place', 'final'];
+
+function StandingsTab() {
+  // Determine which 3rd-place teams advance globally (best 8 of 12)
+  const advancingThirdIds = useMemo<Set<string>>(() => {
+    const thirds: { teamId: string; pts: number; gd: number; gf: number }[] = [];
+    Object.keys(GROUPS).forEach(letter => {
+      const s = buildActualStandings(letter);
+      if (s[2] && s[2].played > 0) {
+        thirds.push({ teamId: s[2].team.id, pts: s[2].pts, gd: s[2].gf - s[2].ga, gf: s[2].gf });
+      }
+    });
+    thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    return new Set(thirds.slice(0, 8).map(t => t.teamId));
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-4 px-4 pb-6 mt-4">
+
+      {/* ── Group Stage ── */}
+      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Group Stage</p>
+
+      {Object.keys(GROUPS).map(letter => {
+        const standings = buildActualStandings(letter);
+        const played = standings.reduce((s, r) => s + r.played, 0) / 2;
+        const total = GROUP_STAGE_MATCHES.filter(m => m.homeTeam.group === letter).length;
+
+        return (
+          <div key={letter} className="rounded-xl overflow-hidden" style={{ background: '#0A1128', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {/* Group header */}
+            <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <span className="text-sm font-black" style={{ color: '#E8F0FF' }}>Group {letter}</span>
+              <span className="text-[10px]" style={{ color: '#5A6E94' }}>{played}/{total} played</span>
+            </div>
+            {/* Column headers */}
+            <div className="flex items-center gap-2 px-3 py-1" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span className="w-4" />
+              <span className="flex-1 text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#3A4E6E' }}>Team</span>
+              <div className="flex items-center gap-3 text-[9px] font-semibold uppercase tracking-widest shrink-0" style={{ color: '#3A4E6E' }}>
+                <span className="w-4 text-center">P</span>
+                <span className="w-4 text-center">W</span>
+                <span className="w-4 text-center">D</span>
+                <span className="w-4 text-center">L</span>
+                <span className="w-5 text-center">GD</span>
+                <span className="w-5 text-center">Pts</span>
+              </div>
+            </div>
+            {/* Rows */}
+            {standings.map((s, i) => {
+              const advancesAuto = i < 2;
+              const advancesThird = i === 2 && advancingThirdIds.has(s.team.id);
+              const gd = s.gf - s.ga;
+              const dim = s.played === 0;
+              return (
+                <div key={s.team.id} className="flex items-center gap-2 px-3 py-1.5"
+                  style={{
+                    background: advancesAuto ? 'rgba(0,196,79,0.05)' : advancesThird ? 'rgba(255,31,142,0.06)' : 'transparent',
+                    borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : undefined,
+                    opacity: dim ? 0.4 : 1,
+                  }}>
+                  <span className="w-4 text-center text-[10px] font-bold shrink-0"
+                    style={{ color: advancesAuto ? '#00C44F' : advancesThird ? '#FF4DA8' : '#5A6E94' }}>{i + 1}</span>
+                  {s.team.flagUrl
+                    ? <Image src={s.team.flagUrl} alt="" width={16} height={11} className="rounded-sm object-cover shrink-0" unoptimized />
+                    : <span className="w-4 shrink-0" />}
+                  <span className="flex-1 text-[11px] font-semibold truncate" style={{ color: '#E8F0FF' }}>{s.team.name}</span>
+                  <div className="flex items-center gap-3 text-[10px] font-mono shrink-0" style={{ color: '#7A91BB' }}>
+                    <span className="w-4 text-center">{s.played}</span>
+                    <span className="w-4 text-center">{s.won}</span>
+                    <span className="w-4 text-center">{s.drawn}</span>
+                    <span className="w-4 text-center">{s.lost}</span>
+                    <span className="w-5 text-center" style={{ color: gd > 0 ? '#00C44F' : gd < 0 ? '#FF4D4D' : '#7A91BB' }}>{gd > 0 ? `+${gd}` : gd}</span>
+                    <span className="w-5 text-center font-bold" style={{ color: '#E8F0FF' }}>{s.pts}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+
+      {/* ── Knockout Rounds ── */}
+      {KNOCKOUT_ROUND_ORDER.map(stage => {
+        const matches = KNOCKOUT_MATCHES
+          .filter(m => m.stage === stage)
+          .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
+        const anyPlayed = matches.some(m => m.status !== 'upcoming');
+        return (
+          <div key={stage}>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>{STAGE_LABELS[stage]}</p>
+            <div className="flex flex-col gap-2">
+              {matches.map(m => {
+                const isTbd = m.homeTeam.id === 'tbd';
+                const isFinished = m.status === 'finished' && m.homeScore !== null;
+                const isLive = m.status === 'live';
+                const hasScore = m.homeScore !== null;
+                const winner = isFinished ? (m.homeScore! > m.awayScore! ? 'home' : m.homeScore! < m.awayScore! ? 'away' : null) : null;
+                return (
+                  <div key={m.id} className="rounded-xl overflow-hidden" style={{ background: '#0A1128', border: `1px solid ${isLive ? 'rgba(255,176,32,0.25)' : 'rgba(255,255,255,0.07)'}` }}>
+                    <div className="flex items-center px-3 py-2.5 gap-2">
+                      {/* Home */}
+                      <div className="flex flex-1 items-center gap-1.5 justify-end min-w-0">
+                        <span className="text-[11px] font-semibold truncate"
+                          style={{ color: winner === 'away' ? '#4A6090' : '#E8F0FF' }}>
+                          {isTbd ? '—' : m.homeTeam.name}
+                        </span>
+                        {!isTbd && m.homeTeam.flagUrl && (
+                          <Image src={m.homeTeam.flagUrl} alt="" width={18} height={13} className="rounded-sm object-cover shrink-0" unoptimized />
+                        )}
+                      </div>
+                      {/* Score / VS */}
+                      <div className="flex items-center justify-center shrink-0 rounded-lg px-2.5 py-1 min-w-[52px]"
+                        style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        {hasScore ? (
+                          <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 16, fontWeight: 900, color: '#E8F0FF', letterSpacing: '0.05em' }}>
+                            {m.homeScore} – {m.awayScore}
+                          </span>
+                        ) : isLive ? (
+                          <span className="text-[11px] font-bold" style={{ color: '#FFB020' }}>LIVE</span>
+                        ) : (
+                          <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 13, fontWeight: 900, color: '#3A4E6E', letterSpacing: '0.1em' }}>VS</span>
+                        )}
+                      </div>
+                      {/* Away */}
+                      <div className="flex flex-1 items-center gap-1.5 min-w-0">
+                        {!isTbd && m.awayTeam.flagUrl && (
+                          <Image src={m.awayTeam.flagUrl} alt="" width={18} height={13} className="rounded-sm object-cover shrink-0" unoptimized />
+                        )}
+                        <span className="text-[11px] font-semibold truncate"
+                          style={{ color: winner === 'home' ? '#4A6090' : '#E8F0FF' }}>
+                          {isTbd ? '—' : m.awayTeam.name}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Footer */}
+                    <div className="px-3 pb-2 flex items-center gap-1.5">
+                      <span className="text-[10px]" style={{ color: '#5A6E94' }}>
+                        {new Date(m.kickoffAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {m.city.split(',')[0]}
+                      </span>
+                      {isFinished && <span className="text-[10px] font-bold rounded-full px-1.5" style={{ background: 'rgba(255,255,255,0.05)', color: '#7A91BB' }}>FT</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function PredictionsContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
@@ -937,8 +1120,9 @@ function PredictionsContent() {
       {/* Sub-tabs */}
       <div className="flex gap-1 px-4 overflow-x-auto" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', scrollbarWidth: 'none' }}>
         {([
-          { id: 'groups'      as SubTab, label: 'My Predictions'  },
-          { id: 'point-rules' as SubTab, label: 'Rules'   },
+          { id: 'groups'      as SubTab, label: 'My Predictions' },
+          { id: 'standings'   as SubTab, label: 'Standings'      },
+          { id: 'point-rules' as SubTab, label: 'Rules'          },
         ]).map(t => (
           <button
             key={t.id}
@@ -954,6 +1138,7 @@ function PredictionsContent() {
       </div>
 
       {subTab === 'groups'      && <GroupsTab saved={saved} />}
+      {subTab === 'standings'   && <StandingsTab />}
       {subTab === 'point-rules' && <PointRulesTab />}
     </div>
   );
