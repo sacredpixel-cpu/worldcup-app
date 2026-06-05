@@ -39,7 +39,13 @@ function ScheduleContent() {
   const allSaved = Object.values(saved);
 
   const [tab, setTab] = useState<Tab>('groups');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  // Default to today's date pill (or the next upcoming match day if no matches today)
+  const [selectedDate, setSelectedDate] = useState<string | null>(() => {
+    const dates = uniqueDates(ALL_MATCHES);
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return dates.find(d => d >= todayStr) ?? null;
+  });
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [fanCount, setFanCount] = useState<number | null>(null);
 
