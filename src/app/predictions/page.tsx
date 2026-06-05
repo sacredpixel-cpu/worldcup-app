@@ -34,6 +34,7 @@ interface Standing {
   pts: number;
 }
 
+
 function buildPredictedStandings(
   groupLetter: string,
   saved: Record<string, Prediction>
@@ -133,9 +134,19 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
     [letter, saved]
   );
 
+  const groupMatches = useMemo(
+    () => GROUP_STAGE_MATCHES
+      .filter(m => m.homeTeam.group === letter)
+      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt)),
+    [letter]
+  );
+
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
   return (
-    <div className="rounded-xl p-3" style={{ background: '#0A1128', border: '1px solid rgba(255,255,255,0.07)' }}>
-      <div className="mb-2 flex items-center justify-between">
+    <div className="rounded-xl overflow-hidden" style={{ background: '#0A1128', border: '1px solid rgba(255,255,255,0.07)' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <h3 className="text-sm font-black" style={{ color: '#E8F0FF' }}>Group {letter}</h3>
         <div className="flex items-center gap-2">
           {pointsResult !== undefined && (
@@ -148,22 +159,54 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
       </div>
 
       {complete ? (
-        <div className="flex flex-col gap-1.5">
-          {standings.map((s, i) => {
-            const correctVal = pointsResult !== undefined
-              ? (i === 0 ? pointsResult.winnerCorrect : i === 1 ? pointsResult.runnerUpCorrect : i === 2 ? pointsResult.thirdCorrect : undefined)
-              : undefined;
-            // Only the rank-3 team advances if they're in the global top-8 third-place list
-            const advancesThird = i === 2 && advancingThirdIds.has(s.team.id);
-            return <TeamRow key={s.team.id} standing={s} rank={i + 1} advancesThird={advancesThird} correct={correctVal} />;
-          })}
-          <p className="mt-1 text-[10px] text-center" style={{ color: '#7A91BB' }}>
-            Based on your score predictions
-          </p>
-        </div>
+        <>
+          {/* ── Predicted Standings ── */}
+          <div className="px-3 pb-2 flex flex-col gap-1.5">
+            {standings.map((s, i) => {
+              const correctVal = pointsResult !== undefined
+                ? (i === 0 ? pointsResult.winnerCorrect : i === 1 ? pointsResult.runnerUpCorrect : i === 2 ? pointsResult.thirdCorrect : undefined)
+                : undefined;
+              const advancesThird = i === 2 && advancingThirdIds.has(s.team.id);
+              return <TeamRow key={s.team.id} standing={s} rank={i + 1} advancesThird={advancesThird} correct={correctVal} />;
+            })}
+          </div>
+
+          {/* ── Your Match Predictions ── */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+            <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Your Predictions</p>
+            {groupMatches.map(m => {
+              const pred = saved[m.id];
+              const isFinished = m.status === 'finished' && m.homeScore !== null;
+              return (
+                <div key={m.id} className="flex items-center gap-1.5 px-3 py-1.5" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <span className="w-11 shrink-0 text-[10px]" style={{ color: '#5A6E94' }}>{fmtDate(m.kickoffAt)}</span>
+                  <div className="flex flex-1 items-center gap-1 justify-end min-w-0">
+                    {m.homeTeam.flagUrl && <Image src={m.homeTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
+                    <span className="text-[10px] font-semibold truncate" style={{ color: '#C8D8F0' }}>{m.homeTeam.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {isFinished && (
+                      <span className="text-[10px] font-bold" style={{ color: '#4A6090' }}>{m.homeScore}–{m.awayScore}</span>
+                    )}
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded"
+                      style={{ background: pred ? 'rgba(255,31,142,0.1)' : 'rgba(255,255,255,0.04)',
+                               color: pred ? '#FF4DA8' : '#3A4E6E',
+                               border: pred ? '1px solid rgba(255,31,142,0.2)' : '1px solid rgba(255,255,255,0.06)' }}>
+                      {pred ? `${pred.homeScore}–${pred.awayScore}` : '–'}
+                    </span>
+                  </div>
+                  <div className="flex flex-1 items-center gap-1 min-w-0">
+                    {m.awayTeam.flagUrl && <Image src={m.awayTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
+                    <span className="text-[10px] font-semibold truncate" style={{ color: '#C8D8F0' }}>{m.awayTeam.name}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       ) : (
-        <div className="flex flex-col gap-1.5">
-          {standings.map((s, i) => (
+        <div className="px-3 pb-3 flex flex-col gap-1.5">
+          {predictedStandings.map((s, i) => (
             <div key={s.team.id} className="flex items-center gap-2 rounded-lg border border-border/50 bg-card/40 px-3 py-2 opacity-50">
               <span className="w-5 text-center text-xs font-bold" style={{ color: '#5A6E94' }}>{i + 1}</span>
               {s.team.flagUrl && (
@@ -173,9 +216,7 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
             </div>
           ))}
           <div className="mt-1 rounded-lg px-3 py-2 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-            <p className="text-[11px]" style={{ color: '#7A91BB' }}>
-              Predict more scores for this group to display its winners
-            </p>
+            <p className="text-[11px]" style={{ color: '#7A91BB' }}>Predict more scores for this group to display its winners</p>
             <p className="text-[10px] mt-0.5" style={{ color: '#5A6E94' }}>{totalMatches - predictedCount} match{totalMatches - predictedCount !== 1 ? 'es' : ''} remaining</p>
           </div>
         </div>
