@@ -149,8 +149,8 @@ function ScheduleContent() {
                 ? { background: '#FF1F8E', color: '#06091A' }
                 : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
             >
-              All
-            </button>
+              All matches
+</button>
             {Object.keys(GROUPS).map(g => (
               <button
                 key={g}
