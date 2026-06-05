@@ -25,7 +25,20 @@ const GROUP_GAP        = 12;
 
 const GROUP_LETTERS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
-// ─── Bracket slot labels ──────────────────────────────────────────────────────
+// ─── FIFA official game numbers (M73–M104) ───────────────────────────────────
+const FIFA_GAME: Record<string, number> = {
+  'R32-01': 73,  'R32-02': 74,  'R32-03': 75,  'R32-04': 76,
+  'R32-05': 77,  'R32-06': 78,  'R32-07': 79,  'R32-08': 80,
+  'R32-09': 81,  'R32-10': 82,  'R32-11': 83,  'R32-12': 84,
+  'R32-13': 85,  'R32-14': 86,  'R32-15': 87,  'R32-16': 88,
+  'R16-01': 89,  'R16-02': 90,  'R16-03': 91,  'R16-04': 92,
+  'R16-05': 93,  'R16-06': 94,  'R16-07': 95,  'R16-08': 96,
+  'QF-01':  97,  'QF-02':  98,  'QF-03':  99,  'QF-04': 100,
+  'SF-01': 101,  'SF-02': 102,
+  '3RD':   103,  'FINAL': 104,
+};
+
+// ─── Bracket slot labels (using FIFA game numbers for feeder references) ──────
 // Official 2026 FIFA World Cup bracket structure
 const SLOTS: Record<string, [string, string]> = {
   // Round of 32 — group winners, runners-up and best 3rd-place teams
@@ -45,25 +58,25 @@ const SLOTS: Record<string, [string, string]> = {
   'R32-14': ['W Group J',    'R/U Group H'],
   'R32-15': ['W Group K',    'Best 3rd'],
   'R32-16': ['R/U Group D',  'R/U Group G'],
-  // Round of 16 — winners of each R32 pair
-  'R16-01': ['W R32-02',    'W R32-05'],
-  'R16-02': ['W R32-01',    'W R32-03'],
-  'R16-03': ['W R32-04',    'W R32-06'],
-  'R16-04': ['W R32-07',    'W R32-08'],
-  'R16-05': ['W R32-11',    'W R32-12'],
-  'R16-06': ['W R32-09',    'W R32-10'],
-  'R16-07': ['W R32-14',    'W R32-16'],
-  'R16-08': ['W R32-13',    'W R32-15'],
+  // Round of 16 — W M## refers to the FIFA game number of each feeder match
+  'R16-01': ['W M74',  'W M77'],
+  'R16-02': ['W M73',  'W M75'],
+  'R16-03': ['W M76',  'W M78'],
+  'R16-04': ['W M79',  'W M80'],
+  'R16-05': ['W M83',  'W M84'],
+  'R16-06': ['W M81',  'W M82'],
+  'R16-07': ['W M86',  'W M88'],
+  'R16-08': ['W M85',  'W M87'],
   // Quarter-finals
-  'QF-01':  ['W R16-01',    'W R16-02'],
-  'QF-02':  ['W R16-05',    'W R16-06'],
-  'QF-03':  ['W R16-03',    'W R16-04'],
-  'QF-04':  ['W R16-07',    'W R16-08'],
+  'QF-01':  ['W M89',  'W M90'],
+  'QF-02':  ['W M93',  'W M94'],
+  'QF-03':  ['W M91',  'W M92'],
+  'QF-04':  ['W M95',  'W M96'],
   // Semi-finals
-  'SF-01':  ['W QF-01',     'W QF-02'],
-  'SF-02':  ['W QF-03',     'W QF-04'],
-  '3RD':    ['L SF-01',     'L SF-02'],
-  'FINAL':  ['W SF-01',     'W SF-02'],
+  'SF-01':  ['W M97',  'W M98'],
+  'SF-02':  ['W M99',  'W M100'],
+  '3RD':    ['L M101', 'L M102'],
+  'FINAL':  ['W M101', 'W M102'],
 };
 
 // ─── Knockout bracket position helper ────────────────────────────────────────
@@ -166,11 +179,13 @@ function KnockoutCardInner({
   match,
   prediction,
   slotLabels,
+  gameNumber,
   onClick,
 }: {
   match: Match;
   prediction?: Prediction;
   slotLabels?: [string, string];
+  gameNumber?: number;
   onClick?: () => void;
 }) {
   const isTbd      = match.homeTeam.id === 'tbd';
@@ -301,7 +316,7 @@ function KnockoutCardInner({
 
       {/* Footer */}
       <div style={{
-        height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.05)',
         padding: '0 6px', overflow: 'hidden',
       }}>
@@ -309,6 +324,11 @@ function KnockoutCardInner({
           <span style={{ color: '#7A91BB' }}>{fmtDate(match.kickoffAt)}</span>
           {' · '}{match.city.split(',')[0]}
         </span>
+        {gameNumber && (
+          <span style={{ fontSize: 7, fontWeight: 700, color: '#FFB020', letterSpacing: '0.04em', flexShrink: 0, marginLeft: 4, lineHeight: 1 }}>
+            M{gameNumber}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -422,6 +442,7 @@ export function BracketView() {
                     match={match}
                     slotLabels={SLOTS[match.id]}
                     prediction={saved[match.id]}
+                    gameNumber={FIFA_GAME[match.id]}
                     onClick={() => handleMatchTap(match)}
                   />
                 </div>
@@ -441,6 +462,7 @@ export function BracketView() {
             match={thirdPlace}
             slotLabels={SLOTS['3RD']}
             prediction={saved[thirdPlace.id]}
+            gameNumber={FIFA_GAME['3RD']}
             onClick={() => handleMatchTap(thirdPlace)}
           />
         </div>
