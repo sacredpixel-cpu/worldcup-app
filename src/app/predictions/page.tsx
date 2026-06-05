@@ -173,17 +173,26 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
 
           {/* ── Your Match Predictions ── */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-            <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Your Predictions</p>
+            <div className="flex items-center justify-between px-3 pt-2 pb-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Your Predictions</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Pts</p>
+            </div>
             {groupMatches.map(m => {
               const pred = saved[m.id];
               const isFinished = m.status === 'finished' && m.homeScore !== null;
+              const matchPts = isFinished && pred
+                ? calcPoints(pred, { homeScore: m.homeScore!, awayScore: m.awayScore! })
+                : null;
               return (
                 <div key={m.id} className="flex items-center gap-1.5 px-3 py-1.5" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                  <span className="w-11 shrink-0 text-[10px]" style={{ color: '#5A6E94' }}>{fmtDate(m.kickoffAt)}</span>
+                  {/* Date */}
+                  <span className="w-10 shrink-0 text-[10px]" style={{ color: '#5A6E94' }}>{fmtDate(m.kickoffAt)}</span>
+                  {/* Home team — flag + 3-letter code */}
                   <div className="flex flex-1 items-center gap-1 justify-end min-w-0">
                     {m.homeTeam.flagUrl && <Image src={m.homeTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
-                    <span className="text-[10px] font-semibold truncate" style={{ color: '#C8D8F0' }}>{m.homeTeam.name}</span>
+                    <span className="text-[10px] font-semibold shrink-0" style={{ color: '#C8D8F0' }}>{m.homeTeam.code}</span>
                   </div>
+                  {/* Score */}
                   <div className="flex items-center gap-1 shrink-0">
                     {isFinished && (
                       <span className="text-[10px] font-bold" style={{ color: '#4A6090' }}>{m.homeScore}–{m.awayScore}</span>
@@ -195,10 +204,16 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
                       {pred ? `${pred.homeScore}–${pred.awayScore}` : '–'}
                     </span>
                   </div>
+                  {/* Away team — 3-letter code + flag */}
                   <div className="flex flex-1 items-center gap-1 min-w-0">
+                    <span className="text-[10px] font-semibold shrink-0" style={{ color: '#C8D8F0' }}>{m.awayTeam.code}</span>
                     {m.awayTeam.flagUrl && <Image src={m.awayTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
-                    <span className="text-[10px] font-semibold truncate" style={{ color: '#C8D8F0' }}>{m.awayTeam.name}</span>
                   </div>
+                  {/* Points */}
+                  <span className="w-8 text-right text-[11px] font-black shrink-0"
+                    style={{ color: matchPts === null ? '#3A4E6E' : matchPts > 0 ? '#FFB020' : matchPts < 0 ? '#FF4D4D' : '#5A6E94' }}>
+                    {matchPts === null ? '—' : matchPts > 0 ? `+${matchPts}` : matchPts}
+                  </span>
                 </div>
               );
             })}
