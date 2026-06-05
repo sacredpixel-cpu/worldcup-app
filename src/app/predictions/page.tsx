@@ -20,7 +20,7 @@ import { saveTournamentPick, getTournamentPick, subscribeToTournamentSettings } 
 import type { Match, Team } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
-type SubTab = 'groups' | 'by-game' | 'point-rules';
+type SubTab = 'groups' | 'point-rules';
 
 
 interface Standing {
@@ -938,7 +938,6 @@ function PredictionsContent() {
       <div className="flex gap-1 px-4 overflow-x-auto" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', scrollbarWidth: 'none' }}>
         {([
           { id: 'groups'      as SubTab, label: 'Groups'  },
-          { id: 'by-game'     as SubTab, label: 'By Game' },
           { id: 'point-rules' as SubTab, label: 'Rules'   },
         ]).map(t => (
           <button
@@ -955,7 +954,6 @@ function PredictionsContent() {
       </div>
 
       {subTab === 'groups'      && <GroupsTab saved={saved} />}
-      {subTab === 'by-game'     && <ByGameTab saved={saved} userId={user.id} />}
       {subTab === 'point-rules' && <PointRulesTab />}
     </div>
   );
