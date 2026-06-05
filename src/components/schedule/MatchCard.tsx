@@ -147,12 +147,12 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
     const homePicks = pred.homeScorerPicks ?? [];
     const homeActualSet = liveMatch.homeScorers ? new Set(liveMatch.homeScorers) : null;
     if (homePicks.length === 0) {
-      items.push({ label: 'Home scorer — no pick', pts: 0 });
+      items.push({ label: 'Home scorer(s) — no pick', pts: 0 });
     } else {
       for (const pick of homePicks) {
         if (homeActualSet) {
           items.push({
-            label: `Home scorer: ${pick}`,
+            label: `Home scorer(s): ${pick}`,
             pts: homeActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER,
           });
         } else {
@@ -165,12 +165,12 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
     const awayPicks = pred.awayScorerPicks ?? [];
     const awayActualSet = liveMatch.awayScorers ? new Set(liveMatch.awayScorers) : null;
     if (awayPicks.length === 0) {
-      items.push({ label: 'Away scorer — no pick', pts: 0 });
+      items.push({ label: 'Away scorer(s) — no pick', pts: 0 });
     } else {
       for (const pick of awayPicks) {
         if (awayActualSet) {
           items.push({
-            label: `Away scorer: ${pick}`,
+            label: `Away scorer(s): ${pick}`,
             pts: awayActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER,
           });
         } else {

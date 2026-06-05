@@ -154,21 +154,21 @@ function matchBreakdown(pred: Prediction, m: Match): { label: string; pts: numbe
   const homePicks = pred.homeScorerPicks ?? [];
   const homeActualSet = m.homeScorers ? new Set(m.homeScorers) : null;
   if (homePicks.length === 0) {
-    items.push({ label: 'Home scorer — no pick', pts: 0 });
+    items.push({ label: 'Home scorer(s) — no pick', pts: 0 });
   } else {
     for (const pick of homePicks) {
-      if (homeActualSet) items.push({ label: `Home scorer: ${pick}`, pts: homeActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
-      else items.push({ label: `Home scorer: ${pick}`, pts: 0, na: true });
+      if (homeActualSet) items.push({ label: `Home scorer(s): ${pick}`, pts: homeActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+      else items.push({ label: `Home scorer(s): ${pick}`, pts: 0, na: true });
     }
   }
   const awayPicks = pred.awayScorerPicks ?? [];
   const awayActualSet = m.awayScorers ? new Set(m.awayScorers) : null;
   if (awayPicks.length === 0) {
-    items.push({ label: 'Away scorer — no pick', pts: 0 });
+    items.push({ label: 'Away scorer(s) — no pick', pts: 0 });
   } else {
     for (const pick of awayPicks) {
-      if (awayActualSet) items.push({ label: `Away scorer: ${pick}`, pts: awayActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
-      else items.push({ label: `Away scorer: ${pick}`, pts: 0, na: true });
+      if (awayActualSet) items.push({ label: `Away scorer(s): ${pick}`, pts: awayActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+      else items.push({ label: `Away scorer(s): ${pick}`, pts: 0, na: true });
     }
   }
   return items;
