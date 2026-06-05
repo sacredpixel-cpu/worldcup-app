@@ -11,7 +11,7 @@ import { BracketView } from '@/components/bracket/BracketView';
 import { subscribeToUserProfiles } from '@/lib/usersService';
 import type { Match } from '@/types/match';
 
-type Tab = 'all' | 'groups' | 'knockout' | 'bracket';
+type Tab = 'groups' | 'knockout' | 'bracket';
 
 function getDateStr(iso: string) {
   return iso.slice(0, 10);
@@ -33,7 +33,7 @@ function ScheduleContent() {
   const { saved } = usePredictionsStore();
   const allSaved = Object.values(saved);
 
-  const [tab, setTab] = useState<Tab>('all');
+  const [tab, setTab] = useState<Tab>('groups');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [fanCount, setFanCount] = useState<number | null>(null);
@@ -60,7 +60,6 @@ function ScheduleContent() {
 
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'all', label: 'All Matches' },
     { id: 'groups', label: 'Group Stage' },
     { id: 'knockout', label: 'Knockout' },
     { id: 'bracket', label: 'Bracket' },
@@ -114,34 +113,11 @@ function ScheduleContent() {
         ))}
       </div>
 
-      {/* All Matches tab */}
-      {tab === 'all' && (
-        <>
-          <DayFilter dates={allDates} selected={selectedDate} onChange={setSelectedDate} />
-          <div className="flex flex-col gap-3 px-4 pb-4">
-            {filteredAll.map(match => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                userPrediction={saved[match.id]}
-                allUserPredictions={allSaved}
-                isAuthenticated={!!user}
-                userId={user?.id}
-              />
-            ))}
-            {filteredAll.length === 0 && (
-              <p className="py-8 text-center text-sm" style={{ color: '#7A91BB' }}>No matches on this date</p>
-            )}
-          </div>
-        </>
-      )}
-
       {/* Group Stage tab */}
       {tab === 'groups' && (
         <div className="flex flex-col gap-3">
-          {/* Group selector */}
+          {/* Group selector pills */}
           <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pt-3">
-            {/* All Matches pill */}
             <button
               onClick={() => setSelectedGroup('all')}
               className="no-press-ring flex-shrink-0 h-9 rounded-full px-3 text-sm font-bold transition-colors"
@@ -150,7 +126,7 @@ function ScheduleContent() {
                 : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
             >
               All matches
-</button>
+            </button>
             {Object.keys(GROUPS).map(g => (
               <button
                 key={g}
@@ -165,21 +141,42 @@ function ScheduleContent() {
             ))}
           </div>
 
-
-          <div className="px-4 pb-4">
-            <div className="flex flex-col gap-3">
-              {groupMatches.map(match => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  userPrediction={saved[match.id]}
-                  allUserPredictions={allSaved}
-                  isAuthenticated={!!user}
-                  userId={user?.id}
-                />
-              ))}
+          {/* All matches sub-tab: date filter + all matches */}
+          {selectedGroup === 'all' ? (
+            <>
+              <DayFilter dates={allDates} selected={selectedDate} onChange={setSelectedDate} />
+              <div className="flex flex-col gap-3 px-4 pb-4">
+                {filteredAll.map(match => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    userPrediction={saved[match.id]}
+                    allUserPredictions={allSaved}
+                    isAuthenticated={!!user}
+                    userId={user?.id}
+                  />
+                ))}
+                {filteredAll.length === 0 && (
+                  <p className="py-8 text-center text-sm" style={{ color: '#7A91BB' }}>No matches on this date</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="px-4 pb-4">
+              <div className="flex flex-col gap-3">
+                {groupMatches.map(match => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    userPrediction={saved[match.id]}
+                    allUserPredictions={allSaved}
+                    isAuthenticated={!!user}
+                    userId={user?.id}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
