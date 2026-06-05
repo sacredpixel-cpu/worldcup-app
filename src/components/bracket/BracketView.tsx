@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { KNOCKOUT_MATCHES, GROUP_STAGE_MATCHES } from '@/data/matches';
+import { getMatchNumber } from '@/lib/utils/matchNumbers';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { PredictionModal } from '@/components/predictions/PredictionModal';
 import { useAuthStore, usePredictionsStore } from '@/store';
@@ -101,10 +102,12 @@ function fmtDate(iso: string) {
 function MatchCardInner({
   match,
   hasPrediction,
+  gameNumber,
   onClick,
 }: {
   match: Match;
   hasPrediction?: boolean;
+  gameNumber?: number;
   onClick?: () => void;
 }) {
   const isTbd      = match.homeTeam.id === 'tbd';
@@ -166,9 +169,16 @@ function MatchCardInner({
         <span style={{ fontSize: 8, color: '#6A82A8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
           {fmtDate(match.kickoffAt)} · {match.city.split(',')[0]}
         </span>
-        {hasPrediction && (
-          <span style={{ fontSize: 9, color: '#FF4DA8', marginLeft: 4, flexShrink: 0, lineHeight: 1 }}>✓</span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, marginLeft: 3 }}>
+          {gameNumber != null && (
+            <span style={{ fontSize: 8, fontWeight: 700, color: '#FFB020', letterSpacing: '0.03em', lineHeight: 1 }}>
+              M{gameNumber}
+            </span>
+          )}
+          {hasPrediction && (
+            <span style={{ fontSize: 9, color: '#FF4DA8', lineHeight: 1 }}>✓</span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -415,6 +425,7 @@ export function BracketView() {
                     <MatchCardInner
                       match={match}
                       hasPrediction={!!saved[match.id]}
+                      gameNumber={getMatchNumber(match.id) ?? undefined}
                       onClick={() => handleMatchTap(match)}
                     />
                   </div>
