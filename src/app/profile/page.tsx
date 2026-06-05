@@ -249,7 +249,7 @@ function ProfileContent() {
         <div className="px-4 pt-3 pb-1">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FF4DA8' }}>Scorer Picks</p>
           {[
-            { pts: '+1', desc: 'Player you picked scores',      color: '#00C44F' },
+            { pts: '+2', desc: 'Player you picked scores',      color: '#00C44F' },
             { pts: '−1', desc: "Player you picked doesn't score", color: '#FF4D4D' },
           ].map(r => (
             <div key={r.desc} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>

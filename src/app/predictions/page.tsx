@@ -946,7 +946,7 @@ function PointRulesTab() {
       </RuleSection>
 
       <RuleSection title="Scorer Picks">
-        <RuleRow desc="Player you picked scores"        pts="+1" color="#00C44F" />
+        <RuleRow desc="Player you picked scores"        pts="+2" color="#00C44F" />
         <RuleRow desc="Player you picked doesn't score" pts="−1" color="#FF4D4D" />
       </RuleSection>
 
