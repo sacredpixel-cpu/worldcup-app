@@ -128,7 +128,7 @@ function ScheduleContent() {
               onClick={() => setSelectedGroup('all')}
               className="no-press-ring flex-shrink-0 h-9 rounded-full px-3 text-sm font-bold transition-colors"
               style={selectedGroup === 'all'
-                ? { background: '#FF1F8E', color: '#06091A' }
+                ? { background: '#FFFFFF', color: '#06091A' }
                 : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
             >
               All matches
@@ -139,7 +139,7 @@ function ScheduleContent() {
                 onClick={() => setSelectedGroup(g)}
                 className="no-press-ring flex-shrink-0 h-9 w-9 rounded-full text-sm font-bold transition-colors"
                 style={selectedGroup === g
-                  ? { background: '#FF1F8E', color: '#06091A' }
+                  ? { background: '#FFFFFF', color: '#06091A' }
                   : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
               >
                 {g}

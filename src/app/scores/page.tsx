@@ -38,7 +38,7 @@ function ScoresContent() {
             key={f}
             onClick={() => setFilter(f)}
             className="no-press-ring rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors"
-            style={filter === f ? { background: '#FF1F8E', color: '#06091A' } : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={filter === f ? { background: '#FFFFFF', color: '#06091A' } : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
           >
             {f === 'all' ? 'All Results' : f === 'live' ? '🔴 Live' : 'Finished'}
           </button>
