@@ -123,12 +123,65 @@ function TeamRow({ standing, rank, advancesThird = false, correct }: {
   );
 }
 
+function matchBreakdown(pred: Prediction, m: Match): { label: string; pts: number; na?: boolean }[] {
+  const isFinished = m.status === 'finished' && m.homeScore !== null;
+  const items: { label: string; pts: number; na?: boolean }[] = [];
+
+  if (!isFinished) {
+    // Upcoming — show potential
+    items.push({ label: `Home score (you: ${pred.homeScore})`, pts: SCORING.CORRECT_SCORE_PER_TEAM, na: true });
+    items.push({ label: `Away score (you: ${pred.awayScore})`, pts: SCORING.CORRECT_SCORE_PER_TEAM, na: true });
+    const outcome = pred.homeScore > pred.awayScore ? 'Home win' : pred.homeScore < pred.awayScore ? 'Away win' : 'Draw';
+    items.push({ label: `Result — predicted: ${outcome}`, pts: SCORING.CORRECT_OUTCOME, na: true });
+  } else {
+    const actual = { homeScore: m.homeScore!, awayScore: m.awayScore! };
+    const homeExact = pred.homeScore === actual.homeScore;
+    const awayExact = pred.awayScore === actual.awayScore;
+    items.push({ label: `Home score — you: ${pred.homeScore} · result: ${actual.homeScore}`, pts: homeExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0 });
+    items.push({ label: `Away score — you: ${pred.awayScore} · result: ${actual.awayScore}`, pts: awayExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0 });
+    if (!homeExact && !awayExact) {
+      const predOut = Math.sign(pred.homeScore - pred.awayScore);
+      const actOut  = Math.sign(actual.homeScore - actual.awayScore);
+      items.push(predOut === actOut
+        ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
+        : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
+    } else {
+      items.push({ label: 'Result (W/D/L) — covered by exact score', pts: 0, na: true });
+    }
+  }
+
+  // Scorer picks
+  const homePicks = pred.homeScorerPicks ?? [];
+  const homeActualSet = m.homeScorers ? new Set(m.homeScorers) : null;
+  if (homePicks.length === 0) {
+    items.push({ label: 'Home scorer — no pick', pts: 0 });
+  } else {
+    for (const pick of homePicks) {
+      if (homeActualSet) items.push({ label: `Home scorer: ${pick}`, pts: homeActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+      else items.push({ label: `Home scorer: ${pick}`, pts: 0, na: true });
+    }
+  }
+  const awayPicks = pred.awayScorerPicks ?? [];
+  const awayActualSet = m.awayScorers ? new Set(m.awayScorers) : null;
+  if (awayPicks.length === 0) {
+    items.push({ label: 'Away scorer — no pick', pts: 0 });
+  } else {
+    for (const pick of awayPicks) {
+      if (awayActualSet) items.push({ label: `Away scorer: ${pick}`, pts: awayActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+      else items.push({ label: `Away scorer: ${pick}`, pts: 0, na: true });
+    }
+  }
+  return items;
+}
+
 function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
   letter: string;
   saved: Record<string, Prediction>;
   pointsResult?: { points: number; winnerCorrect: boolean; runnerUpCorrect: boolean; thirdCorrect: boolean };
   advancingThirdIds: Set<string>;
 }) {
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
+
   const { standings, complete, predictedCount, totalMatches } = useMemo(
     () => buildPredictedStandings(letter, saved),
     [letter, saved]
@@ -183,37 +236,83 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
               const matchPts = isFinished && pred
                 ? calcPoints(pred, { homeScore: m.homeScore!, awayScore: m.awayScore! })
                 : null;
+              const isOpen = expandedMatch === m.id;
+              const breakdown = pred ? matchBreakdown(pred, m) : [];
+              const breakdownTotal = breakdown.filter(i => !i.na).reduce((s, i) => s + i.pts, 0);
+
               return (
-                <div key={m.id} className="flex items-center gap-1.5 px-3 py-1.5" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                  {/* Date */}
-                  <span className="w-10 shrink-0 text-[10px]" style={{ color: '#5A6E94' }}>{fmtDate(m.kickoffAt)}</span>
-                  {/* Home team — flag + 3-letter code */}
-                  <div className="flex flex-1 items-center gap-1 justify-end min-w-0">
-                    {m.homeTeam.flagUrl && <Image src={m.homeTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
-                    <span className="text-[10px] font-semibold shrink-0" style={{ color: '#C8D8F0' }}>{m.homeTeam.code}</span>
-                  </div>
-                  {/* Score */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {isFinished && (
-                      <span className="text-[10px] font-bold" style={{ color: '#4A6090' }}>{m.homeScore}–{m.awayScore}</span>
-                    )}
-                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded"
-                      style={{ background: pred ? 'rgba(255,31,142,0.1)' : 'rgba(255,255,255,0.04)',
-                               color: pred ? '#FF4DA8' : '#3A4E6E',
-                               border: pred ? '1px solid rgba(255,31,142,0.2)' : '1px solid rgba(255,255,255,0.06)' }}>
-                      {pred ? `${pred.homeScore}–${pred.awayScore}` : '–'}
+                <div key={m.id} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  {/* Row — tappable */}
+                  <button
+                    className="no-press-ring w-full flex items-center gap-1.5 px-3 py-1.5 text-left"
+                    onClick={() => setExpandedMatch(isOpen ? null : m.id)}
+                  >
+                    {/* Chevron */}
+                    <span className="shrink-0 text-[9px]" style={{ color: '#3A4E6E' }}>{isOpen ? '▲' : '▾'}</span>
+                    {/* Date */}
+                    <span className="w-9 shrink-0 text-[10px]" style={{ color: '#5A6E94' }}>{fmtDate(m.kickoffAt)}</span>
+                    {/* Home team */}
+                    <div className="flex flex-1 items-center gap-1 justify-end min-w-0">
+                      {m.homeTeam.flagUrl && <Image src={m.homeTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
+                      <span className="text-[10px] font-semibold shrink-0" style={{ color: '#C8D8F0' }}>{m.homeTeam.code}</span>
+                    </div>
+                    {/* Score */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isFinished && (
+                        <span className="text-[10px] font-bold" style={{ color: '#4A6090' }}>{m.homeScore}–{m.awayScore}</span>
+                      )}
+                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded"
+                        style={{ background: pred ? 'rgba(255,31,142,0.1)' : 'rgba(255,255,255,0.04)',
+                                 color: pred ? '#FF4DA8' : '#3A4E6E',
+                                 border: pred ? '1px solid rgba(255,31,142,0.2)' : '1px solid rgba(255,255,255,0.06)' }}>
+                        {pred ? `${pred.homeScore}–${pred.awayScore}` : '–'}
+                      </span>
+                    </div>
+                    {/* Away team */}
+                    <div className="flex flex-1 items-center gap-1 min-w-0">
+                      <span className="text-[10px] font-semibold shrink-0" style={{ color: '#C8D8F0' }}>{m.awayTeam.code}</span>
+                      {m.awayTeam.flagUrl && <Image src={m.awayTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
+                    </div>
+                    {/* Points */}
+                    <span className="w-8 text-right text-[11px] font-black shrink-0"
+                      style={{ color: matchPts === null ? '#3A4E6E' : matchPts > 0 ? '#FFB020' : matchPts < 0 ? '#FF4D4D' : '#5A6E94' }}>
+                      {matchPts === null ? '—' : matchPts > 0 ? `+${matchPts}` : matchPts}
                     </span>
-                  </div>
-                  {/* Away team — 3-letter code + flag */}
-                  <div className="flex flex-1 items-center gap-1 min-w-0">
-                    <span className="text-[10px] font-semibold shrink-0" style={{ color: '#C8D8F0' }}>{m.awayTeam.code}</span>
-                    {m.awayTeam.flagUrl && <Image src={m.awayTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
-                  </div>
-                  {/* Points */}
-                  <span className="w-8 text-right text-[11px] font-black shrink-0"
-                    style={{ color: matchPts === null ? '#3A4E6E' : matchPts > 0 ? '#FFB020' : matchPts < 0 ? '#FF4D4D' : '#5A6E94' }}>
-                    {matchPts === null ? '—' : matchPts > 0 ? `+${matchPts}` : matchPts}
-                  </span>
+                  </button>
+
+                  {/* Expanded breakdown */}
+                  {isOpen && (
+                    <div className="mx-3 mb-2 rounded-xl overflow-hidden" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {pred ? (
+                        <>
+                          {breakdown.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-3 py-1.5"
+                              style={{ borderBottom: idx < breakdown.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
+                              <span className="text-[10px]"
+                                style={{ color: item.na ? '#3A4E6E' : '#7A91BB', fontStyle: item.na ? 'italic' : undefined }}>
+                                {item.label}
+                              </span>
+                              <span className="text-[11px] font-bold ml-2 shrink-0"
+                                style={{ color: item.na ? '#3A4E6E' : item.pts > 0 ? '#00C44F' : item.pts < 0 ? '#FF4D4D' : '#5A6E94' }}>
+                                {item.na ? '—' : item.pts > 0 ? `+${item.pts}` : item.pts}
+                              </span>
+                            </div>
+                          ))}
+                          {isFinished && (
+                            <div className="flex items-center justify-between px-3 py-1.5" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7A91BB' }}>Total</span>
+                              <span className="text-[12px] font-black"
+                                style={{ color: breakdownTotal > 0 ? '#FFB020' : breakdownTotal < 0 ? '#FF4D4D' : '#5A6E94' }}>
+                                {breakdownTotal > 0 ? `+${breakdownTotal}` : breakdownTotal} pts
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="px-3 py-2 text-[10px] text-center" style={{ color: '#5A6E94' }}>No prediction made for this match</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
