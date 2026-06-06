@@ -254,6 +254,26 @@ const TTIcon = () => (
   </svg>
 );
 
+// Curved forward/share arrow — matches the icon in the design brief
+const CurvedShareArrow = ({ size = 15 }: { size?: number }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ display: 'block', flexShrink: 0 }}
+  >
+    {/* Smooth arc: lower-left → upper-right */}
+    <path d="M4 20 C4 10 14 10 20 4" />
+    {/* Arrowhead at upper-right tip */}
+    <polyline points="15,1.5 20,4 17.5,9" />
+  </svg>
+);
+
 // ── Full share panel (used in share phase after first submit) ─────────────────
 
 function SharePanel({ match, prediction, userId }: { match: Match; prediction: Prediction; userId: string }) {
@@ -269,7 +289,7 @@ function SharePanel({ match, prediction, userId }: { match: Match; prediction: P
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold active:scale-95"
           style={{ border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF' }}
         >
-          {status === 'copied' ? '✓ Copied!' : '↑ Post'}
+          {status === 'copied' ? '✓ Copied!' : <><CurvedShareArrow size={13} /><span>Share on Social</span></>}
         </button>
         <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg active:scale-95 flex-shrink-0" style={{ background: '#1877F2' }}>
           <FBIcon />
@@ -302,9 +322,9 @@ function CompactShareBar({ match, prediction, userId }: { match: Match; predicti
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={() => nativeShare(shareUrl, caption, match, prediction, setStatus)}
-          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF', gap: 6 }}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 0', borderRadius: 10, fontSize: 12, fontWeight: 600, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF', gap: 6 }}
         >
-          {status === 'copied' ? '✓ Copied!' : '↑ Post'}
+          {status === 'copied' ? '✓ Copied!' : <><CurvedShareArrow size={14} /><span>Share on Social</span></>}
         </button>
         <a href={fbUrl} target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: '#1877F2', flexShrink: 0 }}>
           <FBIcon />
@@ -480,13 +500,13 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
     if (isLocked) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {existing && <CompactShareBar match={match} prediction={existing} userId={userId} />}
           <button
             onClick={onClose}
-            style={{ width: '100%', padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 600, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#7A91BB' }}
+            style={{ width: '100%', padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 600, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#7A91BB', marginBottom: existing ? 12 : 0 }}
           >
             Close
           </button>
+          {existing && <CompactShareBar match={match} prediction={existing} userId={userId} />}
         </div>
       );
     }
@@ -519,11 +539,10 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
       );
     }
 
-    // Return user: compact share bar + Cancel | Save
+    // Return user: Cancel | Save first, then compact share bar below
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-        <CompactShareBar match={match} prediction={existing!} userId={userId} />
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
           <button
             onClick={handleAttemptClose}
             style={{ flex: 1, padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 600, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: '#7A91BB' }}
@@ -545,6 +564,7 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
             Save
           </button>
         </div>
+        <CompactShareBar match={match} prediction={existing!} userId={userId} />
       </div>
     );
   })();
