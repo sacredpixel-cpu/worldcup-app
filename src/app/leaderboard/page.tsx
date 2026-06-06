@@ -253,7 +253,7 @@ function LeaderboardContent() {
             ? { background: 'rgba(255,255,255,0.85)', color: '#06091A' }
             : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
         >
-          Groups
+          Top Groups
         </button>
       </div>
 
