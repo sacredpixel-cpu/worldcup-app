@@ -50,17 +50,22 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
   const avatarUrl = profile?.avatarUrl ?? entry.avatarUrl;
 
   return (
-    <div className={`flex items-center gap-3 rounded-xl px-4 py-3 ${isMe ? 'border border-brand/40 bg-brand/10' : 'bg-card'}`}>
+    <div
+      className="flex items-center gap-3 rounded-xl px-4 py-3"
+      style={isMe
+        ? { border: '1px solid rgba(255,31,142,0.3)', background: 'rgba(255,31,142,0.08)' }
+        : { background: '#0E1535', border: '1px solid rgba(255,255,255,0.06)' }}
+    >
       <RankBadge rank={rank} />
       {avatarUrl ? (
         <Image src={avatarUrl} alt={entry.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
       ) : (
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-gray-900">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold" style={{ background: '#FF1F8E', color: '#06091A' }}>
           {entry.displayName[0].toUpperCase()}
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <p className={`truncate text-sm font-semibold ${isMe ? 'text-brand-light' : 'text-white'}`}>
+        <p className="truncate text-sm font-semibold" style={{ color: isMe ? '#FF4DA8' : '#C8D8F0' }}>
           {entry.displayName} {isMe && '(You)'}
         </p>
         {location ? (
@@ -76,7 +81,7 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
         )}
       </div>
       <div className="text-right">
-        <p className="text-lg font-black text-gold">{entry.totalPoints}</p>
+        <p className="text-lg font-black" style={{ color: '#FFB020', fontFamily: 'var(--font-barlow-condensed)' }}>{entry.totalPoints}</p>
         <p className="text-[10px]" style={{ color: '#7A91BB' }}>pts</p>
       </div>
     </div>
@@ -109,12 +114,15 @@ function calcGroupScore(
 function GroupLeaderboardRow({ entry, rank }: { entry: GroupEntry; rank: number }) {
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl px-4 py-3 ${entry.isMine ? 'border border-brand/40 bg-brand/10' : 'bg-card'}`}
+      className="flex items-center gap-3 rounded-xl px-4 py-3"
+      style={entry.isMine
+        ? { border: '1px solid rgba(255,31,142,0.3)', background: 'rgba(255,31,142,0.08)' }
+        : { background: '#0E1535', border: '1px solid rgba(255,255,255,0.06)' }}
     >
       <RankBadge rank={rank} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className={`truncate text-sm font-semibold ${entry.isMine ? 'text-brand-light' : 'text-white'}`}>
+          <p className="truncate text-sm font-semibold" style={{ color: entry.isMine ? '#FF4DA8' : '#C8D8F0' }}>
             {entry.group.name}
           </p>
           {entry.isMine && (
@@ -135,7 +143,7 @@ function GroupLeaderboardRow({ entry, rank }: { entry: GroupEntry; rank: number 
         </p>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-lg font-black text-gold">{entry.score}</p>
+        <p className="text-lg font-black" style={{ color: '#FFB020', fontFamily: 'var(--font-barlow-condensed)' }}>{entry.score}</p>
         <p className="text-[10px]" style={{ color: '#7A91BB' }}>pts</p>
       </div>
     </div>
@@ -270,7 +278,7 @@ function LeaderboardContent() {
         <div className="flex flex-col gap-2 px-4 pb-4">
           {allGroupsLoading ? (
             [...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-card" />
+              <div key={i} className="h-16 animate-pulse rounded-xl" style={{ background: '#0E1535' }} />
             ))
           ) : rankedGroups.length === 0 ? (
             <div className="flex flex-col items-center py-14 text-center">
@@ -305,7 +313,7 @@ function LeaderboardContent() {
 
 export default function LeaderboardPage() {
   return (
-    <ClientOnly fallback={<div className="flex flex-col gap-3 p-4">{[...Array(8)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-card" />)}</div>}>
+    <ClientOnly fallback={<div className="flex flex-col gap-3 p-4">{[...Array(8)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl" style={{ background: '#0E1535' }} />)}</div>}>
       <LeaderboardContent />
     </ClientOnly>
   );
