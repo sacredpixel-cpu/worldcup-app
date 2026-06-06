@@ -8,13 +8,15 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  /** Sticky bar rendered below the scroll area — stays visible even when content is long */
+  footer?: React.ReactNode;
   className?: string;
 }
 
 const DISMISS_THRESHOLD = 120; // px dragged before auto-close
 const SPRING = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
 
-export function Modal({ open, onClose, title, children, className }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, className }: ModalProps) {
   const [dragY, setDragY] = useState(0);
   const [animated, setAnimated] = useState(false); // enable transition for snap-back / close
   const touchStartY = useRef(0);
@@ -112,12 +114,24 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         </div>
 
         {/* ── Scrollable content ── */}
-        <div className={cn('overflow-y-auto px-6 pb-8', className)}>
+        <div className={cn('flex-1 min-h-0 overflow-y-auto px-6', footer ? 'pb-4' : 'pb-8', className)}>
           {title && (
             <h2 className="mb-4 text-lg font-bold" style={{ color: '#E8F0FF' }}>{title}</h2>
           )}
           {children}
         </div>
+
+        {/* ── Sticky footer (Cancel/Submit bar, share bar, etc.) ── */}
+        {footer && (
+          <div style={{
+            flexShrink: 0,
+            padding: '12px 16px 20px',
+            background: '#0E1535',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
