@@ -282,14 +282,13 @@ function SharePanel({ match, prediction, userId }: { match: Match; prediction: P
 
   return (
     <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <p className="text-xs font-semibold" style={{ color: '#7A91BB' }}>Share your prediction</p>
       <div className="flex gap-2">
         <button
           onClick={() => nativeShare(shareUrl, caption, match, prediction, setStatus)}
           className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold active:scale-95"
           style={{ border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF' }}
         >
-          {status === 'copied' ? '✓ Copied!' : <><CurvedShareArrow size={13} /><span>Share on Social</span></>}
+          {status === 'copied' ? '✓ Copied!' : <><CurvedShareArrow size={13} /><span>Share your prediction</span></>}
         </button>
         <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg active:scale-95 flex-shrink-0" style={{ background: '#1877F2' }}>
           <FBIcon />
@@ -316,15 +315,12 @@ function CompactShareBar({ match, prediction, userId }: { match: Match; predicti
 
   return (
     <div style={{ marginBottom: 8 }}>
-      <p style={{ fontSize: 10, fontWeight: 600, color: '#5A6E94', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
-        Share your prediction
-      </p>
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={() => nativeShare(shareUrl, caption, match, prediction, setStatus)}
           style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 0', borderRadius: 10, fontSize: 12, fontWeight: 600, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF', gap: 6 }}
         >
-          {status === 'copied' ? '✓ Copied!' : <><CurvedShareArrow size={14} /><span>Share on Social</span></>}
+          {status === 'copied' ? '✓ Copied!' : <><CurvedShareArrow size={14} /><span>Share your prediction</span></>}
         </button>
         <a href={fbUrl} target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: '#1877F2', flexShrink: 0 }}>
           <FBIcon />
