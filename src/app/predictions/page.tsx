@@ -14,13 +14,15 @@ import { getGradingScore } from '@/lib/utils/getGradingScore';
 import { SCORING } from '@/lib/constants/scoring';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { PredictionModal } from '@/components/predictions/PredictionModal';
+import { FirstPredictionModal } from '@/components/predictions/FirstPredictionModal';
+import { GoalsTab } from '@/components/predictions/GoalsTab';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
 import { formatKickoff } from '@/lib/utils/formatDate';
 import { saveTournamentPick, getTournamentPick, subscribeToTournamentSettings } from '@/lib/tournamentService';
 import type { Match, Team } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
-type SubTab = 'groups' | 'standings' | 'point-rules';
+type SubTab = 'groups' | 'standings' | 'goals' | 'point-rules';
 
 
 interface Standing {
@@ -320,7 +322,7 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
         </>
       ) : (
         <div className="px-3 pb-3 flex flex-col gap-1.5">
-          {predictedStandings.map((s, i) => (
+          {standings.map((s, i) => (
             <div key={s.team.id} className="flex items-center gap-2 rounded-lg border border-border/50 bg-card/40 px-3 py-2 opacity-50">
               <span className="w-5 text-center text-xs font-bold" style={{ color: '#5A6E94' }}>{i + 1}</span>
               {s.team.flagUrl && (
@@ -497,6 +499,7 @@ function ResultCard({ match, prediction, userId }: {
   userId: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [showFirstPrediction, setShowFirstPrediction] = useState(false);
   const hasScore = match.homeScore !== null && match.awayScore !== null;
 
   const gradingScore = hasScore ? getGradingScore(match) : null;
@@ -649,6 +652,11 @@ function ResultCard({ match, prediction, userId }: {
         existing={prediction}
         open={open}
         onClose={() => setOpen(false)}
+        onFirstEverPrediction={() => setShowFirstPrediction(true)}
+      />
+      <FirstPredictionModal
+        open={showFirstPrediction}
+        onClose={() => setShowFirstPrediction(false)}
       />
     </>
   );
@@ -1232,16 +1240,17 @@ function PredictionsContent() {
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex gap-1 px-4 overflow-x-auto" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', scrollbarWidth: 'none' }}>
+      <div className="flex px-3 overflow-x-auto" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', scrollbarWidth: 'none' }}>
         {([
           { id: 'groups'      as SubTab, label: 'My Predictions' },
           { id: 'standings'   as SubTab, label: 'Standings'      },
+          { id: 'goals'       as SubTab, label: 'Players'        },
           { id: 'point-rules' as SubTab, label: 'Rules'          },
         ]).map(t => (
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className="no-press-ring flex-shrink-0 px-4 py-2.5 text-sm font-semibold transition-colors whitespace-nowrap"
+            className="no-press-ring flex-shrink-0 px-3 py-2.5 text-sm font-semibold transition-colors whitespace-nowrap"
             style={subTab === t.id
               ? { borderBottom: '2px solid #FF4DA8', color: '#FF4DA8', marginBottom: -1 }
               : { borderBottom: '2px solid transparent', color: '#7A91BB' }}
@@ -1253,6 +1262,7 @@ function PredictionsContent() {
 
       {subTab === 'groups'      && <GroupsTab saved={saved} />}
       {subTab === 'standings'   && <StandingsTab />}
+      {subTab === 'goals'       && <GoalsTab />}
       {subTab === 'point-rules' && <PointRulesTab />}
     </div>
   );

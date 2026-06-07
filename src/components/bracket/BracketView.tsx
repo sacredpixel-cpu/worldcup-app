@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KNOCKOUT_MATCHES, GROUP_STAGE_MATCHES } from '@/data/matches';
 import { getMatchNumber } from '@/lib/utils/matchNumbers';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { PredictionModal } from '@/components/predictions/PredictionModal';
+import { FirstPredictionModal } from '@/components/predictions/FirstPredictionModal';
 import { useAuthStore, usePredictionsStore } from '@/store';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
+import { computeKnockoutTeams, resolveR32Teams } from '@/lib/utils/knockoutAdvancement';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
@@ -348,27 +351,50 @@ function KnockoutCardInner({
 export function BracketView() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
+  const { updates, getLiveMatch } = useMatchesStore();
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [showFirstPrediction, setShowFirstPrediction] = useState(false);
+
+  // Compute which teams advance to knockout rounds based on group results
+  const ktm = useMemo(() => computeKnockoutTeams(updates), [updates]);
 
   const handleMatchTap = (match: Match) => {
     if (!user || match.homeTeam.id === 'tbd') return;
     setSelectedMatch(match);
   };
 
-  // Group stage data
+  // Group stage data (with live scores merged in)
   const groupMatchData: Record<string, Match[]> = {};
   for (const letter of GROUP_LETTERS) {
     groupMatchData[letter] = GROUP_STAGE_MATCHES
       .filter(m => m.homeTeam.group === letter)
-      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
+      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))
+      .map(m => getLiveMatch(m));
   }
 
-  // Knockout stage data
+  // Knockout stage data — merge live scores and auto-advance R32 teams
+  const resolvedKnockoutMatches: Match[] = useMemo(() => {
+    return KNOCKOUT_MATCHES.map(match => {
+      // Apply live score overlay
+      const live = getLiveMatch(match);
+      // For R32 TBD matches, fill in resolved teams from group standings
+      // — only when BOTH home and away can be determined
+      if (live.homeTeam.id === 'tbd' && live.stage === 'round-of-32') {
+        const { homeTeam, awayTeam } = resolveR32Teams(live.id, ktm);
+        if (homeTeam && awayTeam) {
+          return { ...live, homeTeam, awayTeam };
+        }
+      }
+      return live;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updates, ktm]);
+
   const matchesByStage: Partial<Record<Match['stage'], Match[]>> = {};
   for (const r of BRACKET_ROUNDS) {
-    matchesByStage[r.stage] = KNOCKOUT_MATCHES.filter(m => m.stage === r.stage);
+    matchesByStage[r.stage] = resolvedKnockoutMatches.filter(m => m.stage === r.stage);
   }
-  const thirdPlace = KNOCKOUT_MATCHES.find(m => m.stage === 'third-place');
+  const thirdPlace = resolvedKnockoutMatches.find(m => m.stage === 'third-place');
 
   const KO_W = BRACKET_ROUNDS.length * KO_CARD_W + (BRACKET_ROUNDS.length - 1) * COL_GAP;
   const KO_H = 15 * KO_CARD_H + 7 * PAIR_GAP + KO_CARD_H;
@@ -487,8 +513,13 @@ export function BracketView() {
           existing={saved[selectedMatch.id]}
           open={true}
           onClose={() => setSelectedMatch(null)}
+          onFirstEverPrediction={() => setShowFirstPrediction(true)}
         />
       )}
+      <FirstPredictionModal
+        open={showFirstPrediction}
+        onClose={() => setShowFirstPrediction(false)}
+      />
     </div>
   );
 }
