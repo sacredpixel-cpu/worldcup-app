@@ -20,7 +20,17 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isStandalone, setIsStandalone] = useState(false);
+
+  // Detect standalone mode synchronously on first render — eliminates the
+  // race window where a fast tap on the Google button would bypass the guard
+  // before a useEffect had a chance to run.
+  const [isStandalone] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    );
+  });
 
   useEffect(() => {
     if (user) {
@@ -29,12 +39,16 @@ export default function RegisterPage() {
     }
   }, [user]);
 
+  // Safety net: if signInWithPopup somehow fires in standalone mode and the
+  // Promise never resolves, clear the spinner after 8 s with a helpful message.
   useEffect(() => {
-    setIsStandalone(
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true
-    );
-  }, []);
+    if (!loading) return;
+    const tid = setTimeout(() => {
+      setLoading(false);
+      setErrors({ google: 'Sign-in timed out. On the home screen app, please use email and password.' });
+    }, 8000);
+    return () => clearTimeout(tid);
+  }, [loading]);
 
   async function handleGoogle() {
     if (isStandalone) {
