@@ -151,18 +151,19 @@ function SideBySidePicker({
     if (locked) return;
     if (picks.includes(name)) onChange(picks.filter(p => p !== name));
     else if (picks.length < 2) onChange([...picks, name]);
+    else onChange([picks[1], name]); // FIFO: drop oldest, add newest
   }
 
   return (
     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#E8F0FF' }}>{match.homeTeam.name}</div>
-          <div style={{ fontSize: 9, color: homePicks.length === 2 ? '#FF4DA8' : '#5A6E94', marginTop: 1 }}>{homePicks.length}/2 selected</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#E8F0FF' }}>{match.homeTeam.name}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: homePicks.length === 2 ? '#FF4DA8' : '#9AAED4', marginTop: 2 }}>{homePicks.length}/2 selected</div>
         </div>
         <div style={{ padding: '8px 10px', textAlign: 'right' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#E8F0FF' }}>{match.awayTeam.name}</div>
-          <div style={{ fontSize: 9, color: awayPicks.length === 2 ? '#FF4DA8' : '#5A6E94', marginTop: 1 }}>{awayPicks.length}/2 selected</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#E8F0FF' }}>{match.awayTeam.name}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: awayPicks.length === 2 ? '#FF4DA8' : '#9AAED4', marginTop: 2 }}>{awayPicks.length}/2 selected</div>
         </div>
       </div>
 
@@ -176,9 +177,8 @@ function SideBySidePicker({
                 <div style={{ fontSize: 8, fontWeight: 700, color: '#FF4DA8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 3px' }}>{POS_LABELS[pos]}</div>
                 {players.map(name => {
                   const selected = homePicks.includes(name);
-                  const maxed = homePicks.length >= 2 && !selected;
                   return (
-                    <button key={name} disabled={locked || maxed} onClick={() => toggle(homePicks, onHomePicks, name)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', fontSize: 12, lineHeight: 1.4, fontWeight: selected ? 700 : 400, color: selected ? '#00C44F' : maxed ? 'rgba(154,174,212,0.3)' : '#9AAED4', background: selected ? 'rgba(0,196,79,0.08)' : 'transparent', borderLeft: selected ? '2px solid #00C44F' : '2px solid transparent', cursor: locked || maxed ? 'default' : 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                    <button key={name} disabled={locked} onClick={() => toggle(homePicks, onHomePicks, name)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', fontSize: 12, lineHeight: 1.4, fontWeight: selected ? 700 : 400, color: selected ? '#00C44F' : '#9AAED4', background: selected ? 'rgba(0,196,79,0.08)' : 'transparent', borderLeft: selected ? '2px solid #00C44F' : '2px solid transparent', cursor: locked ? 'default' : 'pointer', WebkitTapHighlightColor: 'transparent' }}>
                       {name}
                     </button>
                   );
@@ -196,9 +196,8 @@ function SideBySidePicker({
                 <div style={{ fontSize: 8, fontWeight: 700, color: '#FF4DA8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '6px 10px 3px', textAlign: 'right' }}>{POS_LABELS[pos]}</div>
                 {players.map(name => {
                   const selected = awayPicks.includes(name);
-                  const maxed = awayPicks.length >= 2 && !selected;
                   return (
-                    <button key={name} disabled={locked || maxed} onClick={() => toggle(awayPicks, onAwayPicks, name)} style={{ display: 'block', width: '100%', textAlign: 'right', padding: '6px 10px', fontSize: 12, lineHeight: 1.4, fontWeight: selected ? 700 : 400, color: selected ? '#FF4DA8' : maxed ? 'rgba(154,174,212,0.3)' : '#9AAED4', background: selected ? 'rgba(255,77,168,0.08)' : 'transparent', borderRight: selected ? '2px solid #FF4DA8' : '2px solid transparent', cursor: locked || maxed ? 'default' : 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                    <button key={name} disabled={locked} onClick={() => toggle(awayPicks, onAwayPicks, name)} style={{ display: 'block', width: '100%', textAlign: 'right', padding: '6px 10px', fontSize: 12, lineHeight: 1.4, fontWeight: selected ? 700 : 400, color: selected ? '#FF4DA8' : '#9AAED4', background: selected ? 'rgba(255,77,168,0.08)' : 'transparent', borderRight: selected ? '2px solid #FF4DA8' : '2px solid transparent', cursor: locked ? 'default' : 'pointer', WebkitTapHighlightColor: 'transparent' }}>
                       {name}
                     </button>
                   );
@@ -360,7 +359,7 @@ function UnsavedGuard({ onDiscard, onSave }: { onDiscard: () => void; onSave: ()
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 28, marginBottom: 8 }}>⚠️</div>
           <p style={{ fontSize: 15, fontWeight: 600, color: '#E8F0FF', lineHeight: 1.45, margin: 0 }}>
-            You entered or changed the score of this match, do you want to save it?
+            You have unsaved changes to this prediction. Do you want to save them?
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -400,9 +399,12 @@ interface PredictionModalProps {
   existing?: Prediction;
   open: boolean;
   onClose: () => void;
+  onFirstEverPrediction?: () => void;
 }
 
-export function PredictionModal({ match, userId, existing, open, onClose }: PredictionModalProps) {
+const FIRST_EVER_KEY = 'wc2026_first_match_done';
+
+export function PredictionModal({ match, userId, existing, open, onClose, onFirstEverPrediction }: PredictionModalProps) {
   const { setDraft, submitPrediction } = usePredictionsStore();
 
   const isFirstUse = !existing;
@@ -418,6 +420,8 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
   const [phase,      setPhase]      = useState<'predict' | 'share'>('predict');
   // capture the saved prediction for the share screen (existing updates async)
   const [justSaved,  setJustSaved]  = useState<Prediction | null>(null);
+  // true when this is the user's very first ever prediction (drives post-close popup)
+  const [isFirstEver, setIsFirstEver] = useState(false);
 
   const hasRosters = !!(ROSTERS[match.homeTeam.id] || ROSTERS[match.awayTeam.id]);
 
@@ -438,12 +442,18 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
   // Submit is enabled once both scores are set (not null)
   const canSubmit = homeScore !== null && awayScore !== null;
 
-  // Guard triggers when score is dirty and user tries to close without saving.
-  // First use: any score entered (both set). Return use: score differs from saved.
+  // Guard triggers when anything is dirty and user tries to close without saving.
+  // First use: any score entered (both set). Return use: score OR picks differ from saved.
+  const sortedStr = (arr: string[]) => [...arr].sort().join(',');
   const scoreDirty = !isLocked && (
     isFirstUse
       ? canSubmit
-      : (homeScore !== existing!.homeScore || awayScore !== existing!.awayScore)
+      : (
+          homeScore !== existing!.homeScore ||
+          awayScore !== existing!.awayScore ||
+          sortedStr(homePicks) !== sortedStr(existing!.homeScorerPicks ?? []) ||
+          sortedStr(awayPicks) !== sortedStr(existing!.awayScorerPicks ?? [])
+        )
   );
 
   // ── Actions ───────────────────────────────────────────────────────────────
@@ -461,6 +471,12 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
     setDraft(match.id, homeScore, awayScore, homePicks, awayPicks);
     const saved = submitPrediction(match.id, userId);
     if (isFirstUse) {
+      // Detect very first prediction ever across all matches
+      const firstEver = typeof window !== 'undefined' && !localStorage.getItem(FIRST_EVER_KEY);
+      if (firstEver) {
+        localStorage.setItem(FIRST_EVER_KEY, '1');
+        setIsFirstEver(true);
+      }
       setJustSaved(saved);
       setPhase('share');
     } else {
@@ -484,7 +500,10 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
     if (phase === 'share') {
       return (
         <button
-          onClick={onClose}
+          onClick={() => {
+            if (isFirstEver && onFirstEverPrediction) onFirstEverPrediction();
+            onClose();
+          }}
           style={{ width: '100%', padding: '14px 0', borderRadius: 14, fontSize: 15, fontWeight: 700, background: '#FF1F8E', color: '#fff', border: 'none' }}
         >
           Done
@@ -692,11 +711,11 @@ export function PredictionModal({ match, userId, existing, open, onClose }: Pred
             {/* Scorer picks */}
             {!isLocked && hasRosters && (
               <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <h3 className="text-sm font-bold" style={{ color: '#E8F0FF' }}>Who will score? Choose up to 2 per team</h3>
-                  <p className="text-[11px]" style={{ color: '#7A91BB' }}>
-                    <span className="font-bold" style={{ color: '#00C44F' }}>+2 pts</span> for each correct,{' '}
-                    <span className="font-bold" style={{ color: '#FF4D4D' }}>−1 pt</span> for each incorrect
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'center' }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#E8F0FF', margin: 0 }}>Who will score? Choose up to 2 per team</h3>
+                  <p style={{ fontSize: 13, color: '#7A91BB', margin: 0 }}>
+                    <span style={{ fontWeight: 700, color: '#00C44F' }}>+2 pts</span> for each correct,{' '}
+                    <span style={{ fontWeight: 700, color: '#FF4D4D' }}>−1 pt</span> for each incorrect
                   </p>
                 </div>
                 <SideBySidePicker
