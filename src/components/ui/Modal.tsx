@@ -114,7 +114,13 @@ export function Modal({ open, onClose, title, children, footer, className }: Mod
         </div>
 
         {/* ── Scrollable content ── */}
-        <div className={cn('flex-1 min-h-0 overflow-y-auto px-6', footer ? 'pb-4' : 'pb-8', className)}>
+        {/* WebkitOverflowScrolling + overscrollBehavior are required on iOS standalone
+            (homescreen app) to prevent body-overflow:hidden from suppressing tap events
+            on buttons inside this scroll container. */}
+        <div
+          className={cn('flex-1 min-h-0 overflow-y-auto px-6', footer ? 'pb-4' : 'pb-8', className)}
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+        >
           {title && (
             <h2 className="mb-4 text-lg font-bold" style={{ color: '#E8F0FF' }}>{title}</h2>
           )}

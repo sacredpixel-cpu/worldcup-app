@@ -28,7 +28,7 @@ function ScoreStepper({
         disabled={locked || value === null || value <= 0}
         onClick={() => onChange(value! - 1)}
         className="flex h-11 w-11 items-center justify-center rounded-xl text-xl font-bold disabled:opacity-30 active:scale-90"
-        style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF' }}
+        style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF', touchAction: 'manipulation' }}
       >−</button>
 
       <span
@@ -46,7 +46,7 @@ function ScoreStepper({
         disabled={locked || (value !== null && value >= 10)}
         onClick={() => onChange(value === null ? 0 : value + 1)}
         className="flex h-11 w-11 items-center justify-center rounded-xl text-xl font-bold disabled:opacity-30 active:scale-90"
-        style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF' }}
+        style={{ border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#E8F0FF', touchAction: 'manipulation' }}
       >+</button>
     </div>
   );
@@ -178,7 +178,7 @@ function SideBySidePicker({
                 {players.map(name => {
                   const selected = homePicks.includes(name);
                   return (
-                    <button key={name} disabled={locked} onClick={() => toggle(homePicks, onHomePicks, name)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', fontSize: 12, lineHeight: 1.4, fontWeight: selected ? 700 : 400, color: selected ? '#00C44F' : '#9AAED4', background: selected ? 'rgba(0,196,79,0.08)' : 'transparent', borderLeft: selected ? '2px solid #00C44F' : '2px solid transparent', cursor: locked ? 'default' : 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                    <button key={name} disabled={locked} onClick={() => toggle(homePicks, onHomePicks, name)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', fontSize: 12, lineHeight: 1.4, fontWeight: selected ? 700 : 400, color: selected ? '#00C44F' : '#9AAED4', background: selected ? 'rgba(0,196,79,0.08)' : 'transparent', borderLeft: selected ? '2px solid #00C44F' : '2px solid transparent', cursor: locked ? 'default' : 'pointer', WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}>
                       {name}
                     </button>
                   );
@@ -197,7 +197,7 @@ function SideBySidePicker({
                 {players.map(name => {
                   const selected = awayPicks.includes(name);
                   return (
-                    <button key={name} disabled={locked} onClick={() => toggle(awayPicks, onAwayPicks, name)} style={{ display: 'block', width: '100%', textAlign: 'right', padding: '6px 10px', fontSize: 12, lineHeight: 1.4, fontWeight: selected ? 700 : 400, color: selected ? '#FF4DA8' : '#9AAED4', background: selected ? 'rgba(255,77,168,0.08)' : 'transparent', borderRight: selected ? '2px solid #FF4DA8' : '2px solid transparent', cursor: locked ? 'default' : 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                    <button key={name} disabled={locked} onClick={() => toggle(awayPicks, onAwayPicks, name)} style={{ display: 'block', width: '100%', textAlign: 'right', padding: '6px 10px', fontSize: 12, lineHeight: 1.4, fontWeight: selected ? 700 : 400, color: selected ? '#FF4DA8' : '#9AAED4', background: selected ? 'rgba(255,77,168,0.08)' : 'transparent', borderRight: selected ? '2px solid #FF4DA8' : '2px solid transparent', cursor: locked ? 'default' : 'pointer', WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}>
                       {name}
                     </button>
                   );
@@ -576,6 +576,7 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
               border: 'none',
               transition: 'background 0.2s, color 0.2s',
               cursor: canSubmit ? 'pointer' : 'default',
+              touchAction: 'manipulation',
             }}
           >
             {canSubmit ? 'Submit Prediction' : 'Set score above ↑'}
@@ -604,6 +605,7 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
               border: 'none',
               cursor: savedFlash ? 'default' : 'pointer',
               transition: 'background 0.2s',
+              touchAction: 'manipulation',
             }}
           >
             {savedFlash ? 'Saved ✓' : 'Save'}
