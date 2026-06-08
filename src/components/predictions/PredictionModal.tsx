@@ -565,15 +565,13 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
             Cancel
           </button>
           <button
-            disabled={!scoreDirty}
             onClick={handleSubmit}
             style={{
               flex: 2, padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 700,
-              background: scoreDirty ? '#FF1F8E' : 'rgba(255,31,142,0.18)',
-              color: scoreDirty ? '#fff' : 'rgba(255,255,255,0.28)',
+              background: '#FF1F8E',
+              color: '#fff',
               border: 'none',
-              transition: 'background 0.2s, color 0.2s',
-              cursor: scoreDirty ? 'pointer' : 'default',
+              cursor: 'pointer',
             }}
           >
             Save
