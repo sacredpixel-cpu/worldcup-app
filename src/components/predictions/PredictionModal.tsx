@@ -438,6 +438,17 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
     }
   }, [open, match.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Race-condition guard: if existing arrives from Firestore AFTER the modal opened,
+  // homeScore/awayScore are still null — re-initialise them from existing.
+  useEffect(() => {
+    if (open && existing && homeScore === null) {
+      setHomeScore(existing.homeScore);
+      setAwayScore(existing.awayScore);
+      setHomePicks(existing.homeScorerPicks ?? []);
+      setAwayPicks(existing.awayScorerPicks ?? []);
+    }
+  }, [open, existing]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Derived state ─────────────────────────────────────────────────────────
   // Submit is enabled once both scores are set (not null)
   const canSubmit = homeScore !== null && awayScore !== null;
@@ -466,9 +477,12 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
   }
 
   function handleSubmit() {
-    if (homeScore === null || awayScore === null) return;
+    // Fall back to existing scores in case of a Firestore race-condition
+    const finalHome = homeScore ?? existing?.homeScore ?? null;
+    const finalAway = awayScore ?? existing?.awayScore ?? null;
+    if (finalHome === null || finalAway === null) return;
     // Push to draft store then commit
-    setDraft(match.id, homeScore, awayScore, homePicks, awayPicks);
+    setDraft(match.id, finalHome, finalAway, homePicks, awayPicks);
     const saved = submitPrediction(match.id, userId);
     if (isFirstUse) {
       // Detect very first prediction ever across all matches
