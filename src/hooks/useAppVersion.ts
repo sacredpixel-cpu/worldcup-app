@@ -2,48 +2,42 @@
 
 import { useEffect, useState } from 'react';
 
-const VERSION_KEY = 'wc2026_build_time';
+const VERSION_KEY = 'wc2026_build_id';
+
+// NEXT_PUBLIC_BUILD_ID is baked into the JS bundle at build time by next.config.js.
+// Vercel sets VERCEL_GIT_COMMIT_SHA (unique per deploy); locally falls back to Date.now().
+const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? '';
 
 export function useAppVersion() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    async function checkVersion() {
-      try {
-        // cache: 'no-store' forces a real network request every time
-        const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
-        if (!res.ok) return;
-        const { buildTime } = await res.json();
-        const stored = localStorage.getItem(VERSION_KEY);
-        if (stored && stored !== String(buildTime)) {
-          // A new build was deployed since this page last loaded
-          setUpdateAvailable(true);
-        } else {
-          // First visit or version unchanged — just store it
-          localStorage.setItem(VERSION_KEY, String(buildTime));
-        }
-      } catch {
-        // Network error — silently ignore
+    if (!BUILD_ID) return;
+
+    function check() {
+      const stored = localStorage.getItem(VERSION_KEY);
+      if (stored && stored !== BUILD_ID) {
+        // The JS bundle has a newer build ID than what was last acknowledged
+        setUpdateAvailable(true);
+      } else if (!stored) {
+        // First launch — just store the current build ID, no banner
+        localStorage.setItem(VERSION_KEY, BUILD_ID);
       }
     }
 
-    checkVersion();
+    check();
 
-    // Re-check whenever the user switches back to the tab / homescreen app
+    // Re-check whenever the user switches back to the app
     function handleVisibility() {
-      if (document.visibilityState === 'visible') checkVersion();
+      if (document.visibilityState === 'visible') check();
     }
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   function applyUpdate() {
-    // Store the new version before reloading so the banner doesn't reappear
-    fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(({ buildTime }) => localStorage.setItem(VERSION_KEY, String(buildTime)))
-      .catch(() => {})
-      .finally(() => window.location.reload());
+    localStorage.setItem(VERSION_KEY, BUILD_ID);
+    window.location.reload();
   }
 
   return { updateAvailable, applyUpdate };

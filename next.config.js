@@ -10,14 +10,10 @@ const nextConfig = {
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
     ],
   },
-  async headers() {
-    return [
-      {
-        // Never cache the version file — must always be fresh
-        source: '/version.json',
-        headers: [{ key: 'Cache-Control', value: 'no-store, max-age=0' }],
-      },
-    ];
+  // Bake a unique build ID into the JS bundle on every deploy.
+  // Vercel sets VERCEL_GIT_COMMIT_SHA automatically; falls back to timestamp locally.
+  env: {
+    NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now()),
   },
 };
 
