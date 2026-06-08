@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { usePredictionsStore } from '@/store';
@@ -422,12 +422,21 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
   const [justSaved,  setJustSaved]  = useState<Prediction | null>(null);
   // true when this is the user's very first ever prediction (drives post-close popup)
   const [isFirstEver, setIsFirstEver] = useState(false);
+  // brief "Saved ✓" flash for return-user saves
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  // Ref-based initialization tracker — avoids stale-closure issues entirely.
+  // Set to true when the modal opens WITHOUT existing data (Firestore still loading).
+  // The late-init effect clears it once existing arrives and state is seeded.
+  const needsLateInitRef = useRef(false);
 
   const hasRosters = !!(ROSTERS[match.homeTeam.id] || ROSTERS[match.awayTeam.id]);
 
   // Reset all local state whenever this match opens fresh
   useEffect(() => {
     if (open) {
+      const hasExisting = !!existing;
+      needsLateInitRef.current = !hasExisting; // needs late init only if existing not yet loaded
       setHomeScore(existing?.homeScore  ?? null);
       setAwayScore(existing?.awayScore  ?? null);
       setHomePicks(existing?.homeScorerPicks ?? []);
@@ -435,19 +444,24 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
       setShowGuard(false);
       setPhase('predict');
       setJustSaved(null);
+      setSavedFlash(false);
+    } else {
+      needsLateInitRef.current = false;
     }
   }, [open, match.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Race-condition guard: if existing arrives from Firestore AFTER the modal opened,
-  // homeScore/awayScore are still null — re-initialise them from existing.
+  // Late-init: fires when Firestore delivers `existing` AFTER the modal was already open.
+  // Uses a ref flag (not state) to avoid stale-closure issues — the ref always reflects
+  // whether initialization was still pending regardless of React's rendering cycle.
   useEffect(() => {
-    if (open && existing && homeScore === null) {
+    if (open && existing && needsLateInitRef.current) {
+      needsLateInitRef.current = false; // mark done — won't re-run on subsequent existing changes
       setHomeScore(existing.homeScore);
       setAwayScore(existing.awayScore);
       setHomePicks(existing.homeScorerPicks ?? []);
       setAwayPicks(existing.awayScorerPicks ?? []);
     }
-  }, [open, existing]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, existing]);
 
   // ── Derived state ─────────────────────────────────────────────────────────
   // Submit is enabled once both scores are set (not null)
@@ -494,7 +508,9 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
       setJustSaved(saved);
       setPhase('share');
     } else {
-      onClose();
+      // Flash "Saved ✓" briefly before closing so the user gets clear feedback
+      setSavedFlash(true);
+      setTimeout(() => { setSavedFlash(false); onClose(); }, 900);
     }
   }
 
@@ -562,7 +578,7 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
               cursor: canSubmit ? 'pointer' : 'default',
             }}
           >
-            Submit Prediction
+            {canSubmit ? 'Submit Prediction' : 'Set score above ↑'}
           </button>
         </div>
       );
@@ -580,15 +596,17 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
           </button>
           <button
             onClick={handleSubmit}
+            disabled={savedFlash}
             style={{
               flex: 2, padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 700,
-              background: '#FF1F8E',
+              background: savedFlash ? '#00C44F' : '#FF1F8E',
               color: '#fff',
               border: 'none',
-              cursor: 'pointer',
+              cursor: savedFlash ? 'default' : 'pointer',
+              transition: 'background 0.2s',
             }}
           >
-            Save
+            {savedFlash ? 'Saved ✓' : 'Save'}
           </button>
         </div>
         <CompactShareBar match={match} prediction={existing!} userId={userId} />
