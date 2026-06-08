@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { PredictionModal } from '@/components/predictions/PredictionModal';
+import { FirstPredictionModal } from '@/components/predictions/FirstPredictionModal';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 import { formatKickoff } from '@/lib/utils/formatDate';
 import { STAGE_LABELS } from '@/data/matches';
 import { ROSTERS } from '@/data/rosters';
 import { SCORING } from '@/lib/constants/scoring';
+import { getMatchNumber } from '@/lib/utils/matchNumbers';
 import { usePredictionsStore } from '@/store/slices/predictionsSlice';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
 
@@ -91,12 +93,14 @@ const PREDICT_OPENS: Record<string, string> = {
 function formatCountdown(kickoffAt: string): string | null {
   const diff = new Date(kickoffAt).getTime() - Date.now();
   if (diff <= 0) return null;
-  const totalHours = Math.floor(diff / (1000 * 60 * 60));
-  const days  = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
-  if (days > 0) return `${days} day${days !== 1 ? 's' : ''}, ${hours} hr${hours !== 1 ? 's' : ''} to predict`;
-  if (hours > 0) return `${hours} hr${hours !== 1 ? 's' : ''} to predict`;
-  return '< 1 hr to predict';
+  const totalMins = Math.floor(diff / 60_000);
+  const days  = Math.floor(totalMins / 1440);
+  const hours = Math.floor((totalMins % 1440) / 60);
+  const mins  = totalMins % 60;
+  if (days > 0)  return `${days}d ${hours}h to predict`;
+  if (hours > 0) return `${hours}h ${mins}m to predict`;
+  if (mins > 0)  return `${mins}m to predict`;
+  return '< 1 min to predict';
 }
 
 export function MatchCard({ match, userPrediction, allUserPredictions, isAuthenticated, userId }: MatchCardProps) {
@@ -105,14 +109,26 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   const { community } = usePredictionsStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [showFirstPrediction, setShowFirstPrediction] = useState(false);
 
   const isTbd = liveMatch.homeTeam.id === 'tbd';
   const isLive = liveMatch.status === 'live';
   const isFinished = liveMatch.status === 'finished';
   const isLocked = new Date(liveMatch.kickoffAt) <= new Date() || liveMatch.status !== 'upcoming';
   const hasScore = liveMatch.homeScore !== null;
-  const countdown = (!isLocked && !isTbd) ? formatCountdown(liveMatch.kickoffAt) : null;
   const hasPrediction = !!userPrediction;
+
+  // Live-ticking countdown — updates every 30 s so minutes stay accurate
+  const [countdown, setCountdown] = useState<string | null>(() =>
+    (!isLocked && !isTbd) ? formatCountdown(liveMatch.kickoffAt) : null
+  );
+  useEffect(() => {
+    if (isLocked || isTbd) { setCountdown(null); return; }
+    const tick = () => setCountdown(formatCountdown(liveMatch.kickoffAt));
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, [isLocked, isTbd, liveMatch.kickoffAt]);
 
   // Points breakdown — every rule always shown; na=true means rule didn't apply
   const breakdownItems = (() => {
@@ -214,12 +230,17 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
         }}
         onClick={() => !isTbd && setModalOpen(true)}
       >
-        {/* Top: stage label + live/FT badge */}
+        {/* Top: stage label + match number + live/FT badge */}
         <div className="flex items-center justify-between px-4 pt-3 pb-1">
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#5A6E94' }}>
             {liveMatch.homeTeam.group ? `Group ${liveMatch.homeTeam.group} · ` : ''}{STAGE_LABELS[liveMatch.stage]}
           </span>
           <div className="flex items-center gap-2">
+            {getMatchNumber(liveMatch.id) !== null && (
+              <span className="text-[10px] font-bold" style={{ color: '#3A4E6E' }}>
+                M{getMatchNumber(liveMatch.id)}
+              </span>
+            )}
             {isLive && (
               <div className="flex items-center gap-1.5 rounded-full px-2.5 py-0.5" style={{ background: 'rgba(255,176,32,0.1)', border: '1px solid rgba(255,176,32,0.2)' }}>
                 <LivePulse />
@@ -399,13 +420,20 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
       </div>
 
       {!isTbd && isAuthenticated && userId && (
-        <PredictionModal
-          match={liveMatch}
-          userId={userId}
-          existing={userPrediction}
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-        />
+        <>
+          <PredictionModal
+            match={liveMatch}
+            userId={userId}
+            existing={userPrediction}
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onFirstEverPrediction={() => setShowFirstPrediction(true)}
+          />
+          <FirstPredictionModal
+            open={showFirstPrediction}
+            onClose={() => setShowFirstPrediction(false)}
+          />
+        </>
       )}
     </>
   );
