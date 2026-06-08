@@ -20,17 +20,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Detect standalone mode synchronously on first render — eliminates the
-  // race window where a fast tap on the Google button would bypass the guard
-  // before a useEffect had a chance to run.
-  const [isStandalone] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true
-    );
-  });
-
+  // When auth completes (including after returning from a Google OAuth popup
+  // that opened in Safari on iOS standalone), clear the spinner and redirect.
   useEffect(() => {
     if (user) {
       setLoading(false);
@@ -38,27 +29,14 @@ export default function LoginPage() {
     }
   }, [user]);
 
-  // Safety net: if signInWithPopup somehow fires in standalone mode and the
-  // Promise never resolves, clear the spinner after 8 s with a helpful message.
-  useEffect(() => {
-    if (!loading) return;
-    const tid = setTimeout(() => {
-      setLoading(false);
-      setError('Sign-in timed out. On the home screen app, please use email and password.');
-    }, 8000);
-    return () => clearTimeout(tid);
-  }, [loading]);
-
   async function handleGoogle() {
-    if (isStandalone) {
-      setError('Google sign-in doesn\'t work from the home screen app. Please use email and password below.');
-      return;
-    }
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
-      // Explicit redirect in case onAuthStateChanged fires after the popup
-      // resolves but before the useEffect([user]) has a chance to run.
+      // Explicit redirect for the case where signInWithPopup resolves normally
+      // (desktop / Safari browser). On iOS standalone the popup opens in a
+      // separate Safari window; when the user returns, onAuthStateChanged fires
+      // and the useEffect([user]) above handles the redirect instead.
       router.push('/schedule');
     } catch (err: any) {
       setError(err.message || 'Google sign-in failed.');
@@ -95,18 +73,7 @@ export default function LoginPage() {
         <p className="mt-1 text-sm" style={{ color: '#7A91BB' }}>Sign in to submit predictions</p>
       </div>
 
-      {isStandalone && (
-        <div style={{
-          width: '100%', marginBottom: 20, padding: '10px 14px', borderRadius: 10,
-          background: 'rgba(255,176,32,0.07)', border: '1px solid rgba(255,176,32,0.22)',
-        }}>
-          <p style={{ fontSize: 13, color: '#C8A84B', lineHeight: 1.5, margin: 0 }}>
-            📲 <strong>Home screen tip:</strong> Use email &amp; password to sign in — Google login requires Safari.
-          </p>
-        </div>
-      )}
-
-      <Button variant="google" size="lg" className="mb-6 w-full" style={{ background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)', opacity: isStandalone ? 0.45 : 1 }} onClick={handleGoogle} loading={loading}>
+      <Button variant="google" size="lg" className="mb-6 w-full" style={{ background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.12)' }} onClick={handleGoogle} loading={loading}>
         <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
