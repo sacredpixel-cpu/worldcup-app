@@ -23,7 +23,10 @@ export default function RegisterPage() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    if (user) router.push('/schedule');
+    if (user) {
+      setLoading(false);
+      router.push('/schedule');
+    }
   }, [user]);
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged in FirebaseAuthSync handles the rest
+      router.push('/schedule');
     } catch (err: any) {
       setErrors({ google: err.message || 'Google sign-in failed.' });
       setLoading(false);

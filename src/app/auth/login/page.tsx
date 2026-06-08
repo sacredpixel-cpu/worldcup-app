@@ -22,7 +22,10 @@ export default function LoginPage() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    if (user) router.push('/schedule');
+    if (user) {
+      setLoading(false);
+      router.push('/schedule');
+    }
   }, [user]);
 
   useEffect(() => {
@@ -40,7 +43,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged in FirebaseAuthSync handles the rest
+      // Explicit redirect in case onAuthStateChanged fires after the popup
+      // resolves but before the useEffect([user]) has a chance to run.
+      router.push('/schedule');
     } catch (err: any) {
       setError(err.message || 'Google sign-in failed.');
       setLoading(false);
