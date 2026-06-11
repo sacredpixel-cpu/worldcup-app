@@ -8,7 +8,7 @@ import { PredictionModal } from '@/components/predictions/PredictionModal';
 import { FirstPredictionModal } from '@/components/predictions/FirstPredictionModal';
 import { useAuthStore, usePredictionsStore } from '@/store';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
-import { computeKnockoutTeams, resolveR32Teams } from '@/lib/utils/knockoutAdvancement';
+import { computeKnockoutTeams, resolveMatchTeams } from '@/lib/utils/knockoutAdvancement';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
@@ -372,20 +372,11 @@ export function BracketView() {
       .map(m => getLiveMatch(m));
   }
 
-  // Knockout stage data — merge live scores and auto-advance R32 teams
+  // Knockout stage data — merge live scores and cascade-resolve teams through all rounds
   const resolvedKnockoutMatches: Match[] = useMemo(() => {
     return KNOCKOUT_MATCHES.map(match => {
-      // Apply live score overlay
       const live = getLiveMatch(match);
-      // For R32 TBD matches, fill in resolved teams from group standings
-      // — only when BOTH home and away can be determined
-      if (live.homeTeam.id === 'tbd' && live.stage === 'round-of-32') {
-        const { homeTeam, awayTeam } = resolveR32Teams(live.id, ktm);
-        if (homeTeam && awayTeam) {
-          return { ...live, homeTeam, awayTeam };
-        }
-      }
-      return live;
+      return resolveMatchTeams(live, ktm);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updates, ktm]);

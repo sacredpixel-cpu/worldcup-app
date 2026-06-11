@@ -74,7 +74,7 @@ function GroupDetailContent() {
             awayScorers: match.awayScorers,
           });
         });
-        pts += calcGroupPoints(preds).total;
+        pts += calcGroupPoints(preds, updates).total;
 
         return { ...m, totalPoints: pts };
       })

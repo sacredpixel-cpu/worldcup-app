@@ -11,6 +11,11 @@ interface Standing {
   ga: number;
 }
 
+type MatchUpdateRecord = Record<
+  string,
+  { homeScore: number | null; awayScore: number | null; status: string }
+>;
+
 function sortStandings(standings: Standing[]): Standing[] {
   return [...standings].sort((a, b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
@@ -20,27 +25,43 @@ function sortStandings(standings: Standing[]): Standing[] {
   });
 }
 
-/** Build actual standings from finished match results. Returns null if group not fully complete. */
-function buildActualStandings(groupLetter: string): Standing[] | null {
+/**
+ * Build actual standings from Firestore live data merged with static match data.
+ * Returns null if the group is not fully complete yet.
+ */
+function buildActualStandings(
+  groupLetter: string,
+  updates: MatchUpdateRecord,
+): Standing[] | null {
   const teams = GROUPS[groupLetter] ?? [];
   const standings: Standing[] = teams.map(team => ({ team, pts: 0, gf: 0, ga: 0 }));
   const byId = Object.fromEntries(standings.map(s => [s.team.id, s]));
 
   const matches = GROUP_STAGE_MATCHES.filter(m => m.homeTeam.group === groupLetter);
-  const finished = matches.filter(m => m.status === 'finished' && m.homeScore !== null);
+  let finishedCount = 0;
 
-  if (finished.length < matches.length) return null; // group not fully played yet
+  for (const match of matches) {
+    const upd = updates[match.id];
+    const homeScore = upd?.homeScore ?? match.homeScore;
+    const awayScore  = upd?.awayScore  ?? match.awayScore;
+    const status     = upd?.status     ?? match.status;
 
-  finished.forEach(m => {
-    const home = byId[m.homeTeam.id];
-    const away = byId[m.awayTeam.id];
-    if (!home || !away) return;
-    home.gf += m.homeScore!; home.ga += m.awayScore!;
-    away.gf += m.awayScore!; away.ga += m.homeScore!;
-    if (m.homeScore! > m.awayScore!) { home.pts += 3; }
-    else if (m.homeScore! < m.awayScore!) { away.pts += 3; }
-    else { home.pts++; away.pts++; }
-  });
+    if (status !== 'finished' || homeScore === null || awayScore === null) continue;
+    finishedCount++;
+
+    const home = byId[match.homeTeam.id];
+    const away = byId[match.awayTeam.id];
+    if (!home || !away) continue;
+
+    home.gf += homeScore; home.ga += awayScore;
+    away.gf += awayScore; away.ga += homeScore;
+
+    if (homeScore > awayScore)      { home.pts += 3; }
+    else if (homeScore < awayScore) { away.pts += 3; }
+    else                            { home.pts++;  away.pts++; }
+  }
+
+  if (finishedCount < matches.length) return null; // group not fully played yet
 
   return sortStandings(standings);
 }
@@ -88,8 +109,14 @@ export interface GroupPointsResult {
  * +3 for correct group winner
  * +2 for correct runner-up
  * +1 for correct 3rd-place finisher
+ *
+ * @param saved   - user's saved predictions (matchId → Prediction)
+ * @param updates - live Firestore match updates from useMatchesStore().updates
  */
-export function calcGroupPoints(saved: Record<string, Prediction>): {
+export function calcGroupPoints(
+  saved: Record<string, Prediction>,
+  updates: MatchUpdateRecord = {},
+): {
   results: GroupPointsResult[];
   total: number;
 } {
@@ -97,7 +124,7 @@ export function calcGroupPoints(saved: Record<string, Prediction>): {
   let total = 0;
 
   Object.keys(GROUPS).forEach(letter => {
-    const actual = buildActualStandings(letter);
+    const actual = buildActualStandings(letter, updates);
     const predicted = buildPredictedStandings(letter, saved);
 
     if (!actual || !predicted) return; // skip if group unfinished or user hasn't predicted all

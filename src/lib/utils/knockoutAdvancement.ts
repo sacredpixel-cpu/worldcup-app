@@ -1,18 +1,19 @@
 /**
  * knockoutAdvancement.ts
  *
- * Computes which real teams fill the R32 bracket slots based on actual
- * group-stage results fetched from Firestore (via useMatchesStore updates).
+ * Computes which real teams fill knockout bracket slots based on actual
+ * group-stage and knockout-round results fetched from Firestore.
  *
  * Usage:
  *   const { updates } = useMatchesStore();
  *   const ktm = useMemo(() => computeKnockoutTeams(updates), [updates]);
- *   const { homeTeam, awayTeam } = resolveR32Teams('R32-07', ktm);
+ *   // Resolve any knockout match (R32 through Final):
+ *   const resolved = resolveMatchTeams(match, ktm);
  */
 
 import { GROUP_STAGE_MATCHES } from '@/data/matches';
 import { GROUPS } from '@/data/teams';
-import type { Team } from '@/types/match';
+import type { Match, Team } from '@/types/match';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,7 +25,7 @@ interface GroupStanding {
 }
 
 export interface KnockoutTeamMap {
-  /** Slot key → resolved Team. Keys like "W-A", "RU-A", "W-B", etc. */
+  /** Group slot key → resolved Team. Keys like "W-A", "RU-A", "W-B", etc. */
   bySlot: Map<string, Team>;
   /**
    * Best 8 third-place teams (sorted by pts → GD → GF).
@@ -35,6 +36,16 @@ export interface KnockoutTeamMap {
   bestThirds: Team[];
   completedGroups: Set<string>;
   allGroupsComplete: boolean;
+  /**
+   * "W:<matchId>" / "L:<matchId>" → winner or loser team.
+   * Populated for every finished knockout match whose teams were both resolved.
+   */
+  matchWinners: Map<string, Team>;
+  /**
+   * Fully resolved { homeTeam, awayTeam } for every knockout match where
+   * both feeders are known (R32 through Final).
+   */
+  resolvedMatchTeams: Map<string, { homeTeam: Team; awayTeam: Team }>;
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -117,13 +128,52 @@ const BEST3RD_IDX: Record<string, number> = {
   'R32-09': 4, 'R32-10': 5, 'R32-13': 6, 'R32-15': 7,
 };
 
+// ─── R16–Final feeder mapping ─────────────────────────────────────────────────
+// "W:<matchId>" = winner of that match, "L:<matchId>" = loser (3rd-place only)
+
+const KNOCKOUT_FEEDERS: Record<string, [string, string]> = {
+  'R16-01': ['W:R32-02', 'W:R32-05'],
+  'R16-02': ['W:R32-01', 'W:R32-03'],
+  'R16-03': ['W:R32-04', 'W:R32-06'],
+  'R16-04': ['W:R32-07', 'W:R32-08'],
+  'R16-05': ['W:R32-11', 'W:R32-12'],
+  'R16-06': ['W:R32-09', 'W:R32-10'],
+  'R16-07': ['W:R32-14', 'W:R32-16'],
+  'R16-08': ['W:R32-13', 'W:R32-15'],
+  'QF-01':  ['W:R16-01', 'W:R16-02'],
+  'QF-02':  ['W:R16-05', 'W:R16-06'],
+  'QF-03':  ['W:R16-03', 'W:R16-04'],
+  'QF-04':  ['W:R16-07', 'W:R16-08'],
+  'SF-01':  ['W:QF-01',  'W:QF-02'],
+  'SF-02':  ['W:QF-03',  'W:QF-04'],
+  '3RD':    ['L:SF-01',  'L:SF-02'],
+  'FINAL':  ['W:SF-01',  'W:SF-02'],
+};
+
+const R32_IDS = [
+  'R32-01', 'R32-02', 'R32-03', 'R32-04',
+  'R32-05', 'R32-06', 'R32-07', 'R32-08',
+  'R32-09', 'R32-10', 'R32-11', 'R32-12',
+  'R32-13', 'R32-14', 'R32-15', 'R32-16',
+] as const;
+
+const CASCADED_ROUNDS = [
+  ['R16-01', 'R16-02', 'R16-03', 'R16-04', 'R16-05', 'R16-06', 'R16-07', 'R16-08'],
+  ['QF-01', 'QF-02', 'QF-03', 'QF-04'],
+  ['SF-01', 'SF-02'],
+  ['3RD', 'FINAL'],
+] as const;
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * Computes the full knockout team map from live Firestore match updates.
+ * Cascades R32 team resolution through R16, QF, SF, and Final/3rd-Place.
+ *
  * Pass `updates` from `useMatchesStore().updates`.
  */
 export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMap {
+  // ── Phase 1: group standings ──────────────────────────────────────────────
   const bySlot = new Map<string, Team>();
   const completedGroups = new Set<string>();
   const thirds: Array<GroupStanding> = [];
@@ -138,7 +188,6 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
     if (standings[2]) thirds.push(standings[2]);
   }
 
-  // Best 8 third-place teams (only relevant once all 12 groups complete)
   thirds.sort((a, b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
     const gd = (b.gf - b.ga) - (a.gf - a.ga);
@@ -146,13 +195,65 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
     return b.gf - a.gf;
   });
   const bestThirds = thirds.slice(0, 8).map(t => t.team);
+  const allGroupsComplete = completedGroups.size === Object.keys(GROUPS).length;
 
-  return {
-    bySlot,
-    bestThirds,
-    completedGroups,
-    allGroupsComplete: completedGroups.size === Object.keys(GROUPS).length,
+  const matchWinners = new Map<string, Team>();
+  const resolvedMatchTeams = new Map<string, { homeTeam: Team; awayTeam: Team }>();
+
+  // Partial ktm used by resolveR32Teams — new maps start empty but that's fine
+  const partialKtm: KnockoutTeamMap = {
+    bySlot, bestThirds, completedGroups, allGroupsComplete,
+    matchWinners, resolvedMatchTeams,
   };
+
+  // ── Phase 2: resolve R32 teams from group standings ───────────────────────
+  for (const matchId of R32_IDS) {
+    const { homeTeam, awayTeam } = resolveR32Teams(matchId, partialKtm);
+    if (!homeTeam || !awayTeam) continue;
+
+    resolvedMatchTeams.set(matchId, { homeTeam, awayTeam });
+
+    // Determine winner/loser from Firestore if match is finished
+    const upd = updates[matchId];
+    if (upd?.status === 'finished' && upd.homeScore !== null && upd.awayScore !== null) {
+      // homeScore > awayScore → home won (or penalty convention: admin stores penalty score)
+      if (upd.homeScore > upd.awayScore) {
+        matchWinners.set(`W:${matchId}`, homeTeam);
+        matchWinners.set(`L:${matchId}`, awayTeam);
+      } else if (upd.awayScore > upd.homeScore) {
+        matchWinners.set(`W:${matchId}`, awayTeam);
+        matchWinners.set(`L:${matchId}`, homeTeam);
+      }
+      // Equal (went to penalties stored as separate score): no winner determinable from score alone
+    }
+  }
+
+  // ── Phase 3: cascade R16 → QF → SF → 3rd/Final ───────────────────────────
+  for (const round of CASCADED_ROUNDS) {
+    for (const matchId of round) {
+      const feeders = KNOCKOUT_FEEDERS[matchId];
+      if (!feeders) continue;
+
+      const homeTeam = matchWinners.get(feeders[0]) ?? null;
+      const awayTeam = matchWinners.get(feeders[1]) ?? null;
+      if (!homeTeam || !awayTeam) continue;
+
+      resolvedMatchTeams.set(matchId, { homeTeam, awayTeam });
+
+      const upd = updates[matchId];
+      if (upd?.status === 'finished' && upd.homeScore !== null && upd.awayScore !== null) {
+        if (upd.homeScore > upd.awayScore) {
+          matchWinners.set(`W:${matchId}`, homeTeam);
+          matchWinners.set(`L:${matchId}`, awayTeam);
+        } else if (upd.awayScore > upd.homeScore) {
+          matchWinners.set(`W:${matchId}`, awayTeam);
+          matchWinners.set(`L:${matchId}`, homeTeam);
+        }
+      }
+    }
+  }
+
+  return { bySlot, bestThirds, completedGroups, allGroupsComplete, matchWinners, resolvedMatchTeams };
 }
 
 /**
@@ -182,4 +283,25 @@ export function resolveR32Teams(
     homeTeam: resolveKey(homeKey, matchId),
     awayTeam: resolveKey(awayKey, matchId),
   };
+}
+
+/**
+ * Resolves the teams for any knockout match (R32 through Final).
+ * For R32: uses group standings.
+ * For R16+: uses cascade winner resolution.
+ * Returns the match unchanged if teams can't yet be determined.
+ */
+export function resolveMatchTeams(match: Match, ktm: KnockoutTeamMap): Match {
+  // Already concrete teams — nothing to do
+  if (match.homeTeam.id !== 'tbd' && match.awayTeam.id !== 'tbd') return match;
+
+  if (match.stage === 'round-of-32') {
+    const { homeTeam, awayTeam } = resolveR32Teams(match.id, ktm);
+    if (homeTeam && awayTeam) return { ...match, homeTeam, awayTeam };
+    return match;
+  }
+
+  const resolved = ktm.resolvedMatchTeams.get(match.id);
+  if (!resolved) return match;
+  return { ...match, homeTeam: resolved.homeTeam, awayTeam: resolved.awayTeam };
 }

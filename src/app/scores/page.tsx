@@ -1,22 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ALL_MATCHES } from '@/data/matches';
 import { MatchCard } from '@/components/schedule/MatchCard';
 import { useAuthStore, usePredictionsStore } from '@/store';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
+import { computeKnockoutTeams, resolveMatchTeams } from '@/lib/utils/knockoutAdvancement';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 
 function ScoresContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
+  const { updates, getLiveMatch } = useMatchesStore();
   const [filter, setFilter] = useState<'all' | 'live' | 'finished'>('all');
 
-  const filtered = ALL_MATCHES.filter(m => {
+  // Resolve real team names for knockout matches as rounds complete
+  const ktm = useMemo(() => computeKnockoutTeams(updates), [updates]);
+
+  // Build fully resolved match list: live scores + real team names
+  const resolvedMatches = useMemo(
+    () => ALL_MATCHES.map(m => resolveMatchTeams(getLiveMatch(m), ktm)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [updates, ktm],
+  );
+
+  const filtered = resolvedMatches.filter(m => {
     if (filter === 'all') return m.status === 'live' || m.status === 'finished';
     return m.status === filter;
   });
 
-  const live = ALL_MATCHES.filter(m => m.status === 'live');
+  const live = resolvedMatches.filter(m => m.status === 'live');
   const allSaved = Object.values(saved);
 
   return (

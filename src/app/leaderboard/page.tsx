@@ -212,7 +212,7 @@ function LeaderboardContent() {
       if (earned > 0) correct++;
     });
     // Add group-advancement prediction points (+3 winner, +2 runner-up, +1 third)
-    pts += calcGroupPoints(saved).total;
+    pts += calcGroupPoints(saved, updates).total;
     return { userId: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, totalPoints: pts, correctScores: exact, correctOutcomes: correct };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, saved, updates]);
@@ -250,7 +250,7 @@ function LeaderboardContent() {
         if (p.homeScore === m.homeScore && p.awayScore === m.awayScore) exact++;
         if (earned > 0) correct++;
       });
-      pts += calcGroupPoints(preds).total;
+      pts += calcGroupPoints(preds, updates).total;
 
       return {
         userId: profile.userId,
@@ -321,7 +321,7 @@ function LeaderboardContent() {
               awayScorers: match.awayScorers,
             });
           });
-          pts += calcGroupPoints(preds).total;
+          pts += calcGroupPoints(preds, updates).total;
           return { ...m, totalPoints: pts };
         });
 

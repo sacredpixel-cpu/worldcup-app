@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useAuthStore, usePredictionsStore } from '@/store';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
 import { ALL_MATCHES, GROUP_STAGE_MATCHES, KNOCKOUT_MATCHES, STAGE_LABELS } from '@/data/matches';
 import { GROUPS } from '@/data/teams';
 import { MatchCard } from '@/components/schedule/MatchCard';
@@ -10,6 +11,7 @@ import { ClientOnly } from '@/components/ui/ClientOnly';
 import { BracketView } from '@/components/bracket/BracketView';
 import { GoldenBootTab } from '@/components/predictions/GoldenBootTab';
 import { subscribeToUserProfiles } from '@/lib/usersService';
+import { computeKnockoutTeams, resolveMatchTeams } from '@/lib/utils/knockoutAdvancement';
 import type { Match } from '@/types/match';
 
 type Tab = 'groups' | 'knockout' | 'bracket' | 'golden-boot';
@@ -36,7 +38,11 @@ const KNOCKOUT_STAGES: Match['stage'][] = ['round-of-32', 'round-of-16', 'quarte
 function ScheduleContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
+  const { updates, getLiveMatch } = useMatchesStore();
   const allSaved = Object.values(saved);
+
+  // Resolve real team names for knockout matches as groups + rounds complete
+  const ktm = useMemo(() => computeKnockoutTeams(updates), [updates]);
 
   const [tab, setTab] = useState<Tab>('groups');
   // Default to today's date pill (or the next upcoming match day if no matches today)
@@ -196,7 +202,11 @@ function ScheduleContent() {
       {tab === 'knockout' && (
         <div className="flex flex-col gap-6 px-4 py-3 pb-4">
           {KNOCKOUT_STAGES.map(stage => {
-            const stageMatches = [...KNOCKOUT_MATCHES].filter(m => m.stage === stage).sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
+            const stageMatches = [...KNOCKOUT_MATCHES]
+              .filter(m => m.stage === stage)
+              .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))
+              // Overlay live scores then resolve real team names from group/round results
+              .map(m => resolveMatchTeams(getLiveMatch(m), ktm));
             return (
               <div key={stage}>
                 <h2 className="mb-2 text-xs font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>{STAGE_LABELS[stage]}</h2>

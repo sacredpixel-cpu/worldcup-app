@@ -17,6 +17,7 @@ import { PredictionModal } from '@/components/predictions/PredictionModal';
 import { FirstPredictionModal } from '@/components/predictions/FirstPredictionModal';
 import { GoalsTab } from '@/components/predictions/GoalsTab';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
+import { computeKnockoutTeams, resolveMatchTeams } from '@/lib/utils/knockoutAdvancement';
 import { formatKickoff } from '@/lib/utils/formatDate';
 import { saveTournamentPick, getTournamentPick, subscribeToTournamentSettings } from '@/lib/tournamentService';
 import type { Match, Team } from '@/types/match';
@@ -1032,22 +1033,29 @@ function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
 
 // ─── Standings Tab ────────────────────────────────────────────────────────────
 
-function buildActualStandings(groupLetter: string) {
+type StandingsUpdateRecord = Record<string, { homeScore: number | null; awayScore: number | null; status: string }>;
+
+function buildActualStandings(groupLetter: string, updates: StandingsUpdateRecord = {}) {
   const teams = GROUPS[groupLetter] ?? [];
   const standings: Standing[] = teams.map(team => ({ team, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }));
   const byId = Object.fromEntries(standings.map(s => [s.team.id, s]));
 
   GROUP_STAGE_MATCHES
-    .filter(m => m.homeTeam.group === groupLetter && m.status === 'finished' && m.homeScore !== null)
+    .filter(m => m.homeTeam.group === groupLetter)
     .forEach(m => {
+      const upd = updates[m.id];
+      const homeScore = upd?.homeScore ?? m.homeScore;
+      const awayScore  = upd?.awayScore  ?? m.awayScore;
+      const status     = upd?.status     ?? m.status;
+      if (status !== 'finished' || homeScore === null || awayScore === null) return;
       const home = byId[m.homeTeam.id];
       const away = byId[m.awayTeam.id];
       if (!home || !away) return;
       home.played++; away.played++;
-      home.gf += m.homeScore!; home.ga += m.awayScore!;
-      away.gf += m.awayScore!; away.ga += m.homeScore!;
-      if (m.homeScore! > m.awayScore!) { home.won++; home.pts += 3; away.lost++; }
-      else if (m.homeScore! < m.awayScore!) { away.won++; away.pts += 3; home.lost++; }
+      home.gf += homeScore; home.ga += awayScore;
+      away.gf += awayScore; away.ga += homeScore;
+      if (homeScore > awayScore) { home.won++; home.pts += 3; away.lost++; }
+      else if (homeScore < awayScore) { away.won++; away.pts += 3; home.lost++; }
       else { home.drawn++; home.pts++; away.drawn++; away.pts++; }
     });
 
@@ -1064,18 +1072,24 @@ function buildActualStandings(groupLetter: string) {
 const KNOCKOUT_ROUND_ORDER: Match['stage'][] = ['round-of-32', 'round-of-16', 'quarter-final', 'semi-final', 'third-place', 'final'];
 
 function StandingsTab() {
+  const { updates, getLiveMatch } = useMatchesStore();
+
+  // Resolve real team names for knockout matches as groups + rounds complete
+  const ktm = useMemo(() => computeKnockoutTeams(updates), [updates]);
+
   // Determine which 3rd-place teams advance globally (best 8 of 12)
   const advancingThirdIds = useMemo<Set<string>>(() => {
     const thirds: { teamId: string; pts: number; gd: number; gf: number }[] = [];
     Object.keys(GROUPS).forEach(letter => {
-      const s = buildActualStandings(letter);
+      const s = buildActualStandings(letter, updates);
       if (s[2] && s[2].played > 0) {
         thirds.push({ teamId: s[2].team.id, pts: s[2].pts, gd: s[2].gf - s[2].ga, gf: s[2].gf });
       }
     });
     thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
     return new Set(thirds.slice(0, 8).map(t => t.teamId));
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updates]);
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6 mt-4">
@@ -1084,7 +1098,7 @@ function StandingsTab() {
       <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Group Stage</p>
 
       {Object.keys(GROUPS).map(letter => {
-        const standings = buildActualStandings(letter);
+        const standings = buildActualStandings(letter, updates);
         const played = standings.reduce((s, r) => s + r.played, 0) / 2;
         const total = GROUP_STAGE_MATCHES.filter(m => m.homeTeam.group === letter).length;
 
@@ -1146,7 +1160,9 @@ function StandingsTab() {
       {KNOCKOUT_ROUND_ORDER.map(stage => {
         const matches = KNOCKOUT_MATCHES
           .filter(m => m.stage === stage)
-          .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
+          .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))
+          // Overlay live scores then resolve real team names
+          .map(m => resolveMatchTeams(getLiveMatch(m), ktm));
         const anyPlayed = matches.some(m => m.status !== 'upcoming');
         return (
           <div key={stage}>
