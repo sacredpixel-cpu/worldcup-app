@@ -34,4 +34,6 @@ export interface Match {
   status: 'upcoming' | 'live' | 'finished';
   homeScorers?: string[];  // actual goal scorers, set when finished
   awayScorers?: string[];
+  /** Structured per-match goal scorer events written by the live-score poller */
+  goalScorerEvents?: Array<{ player: string; teamCode: string; goals: number }>;
 }

@@ -73,8 +73,8 @@ function ScheduleContent() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'groups', label: 'Group Stage' },
     { id: 'knockout', label: 'Knockout' },
-    { id: 'bracket', label: 'Bracket' },
     { id: 'golden-boot', label: 'Golden Boot' },
+    { id: 'bracket', label: 'Bracket' },
   ];
 
   return (

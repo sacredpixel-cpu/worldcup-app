@@ -103,13 +103,16 @@ function GroupDetailContent() {
           return (
             <div
               key={m.userId}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 ${isMe ? 'border border-brand/40 bg-brand/10' : 'bg-card'}`}
+              className="flex items-center gap-3 rounded-xl px-4 py-3"
+              style={isMe
+                ? { background: 'rgba(255,31,142,0.08)', border: '1px solid rgba(255,31,142,0.3)' }
+                : { background: '#0E1535', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               <span className="w-6 text-center text-sm font-bold" style={{ color: '#7A91BB' }}>{i + 1}</span>
               {avatarUrl ? (
                 <Image src={avatarUrl} alt={m.displayName} width={36} height={36} className="rounded-full object-cover" unoptimized />
               ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold" style={{ background: '#FF1F8E', color: '#06091A' }}>
                   {m.displayName[0].toUpperCase()}
                 </div>
               )}

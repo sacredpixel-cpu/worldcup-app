@@ -19,7 +19,9 @@ import {
   requestAndSaveToken,
 } from '@/lib/notifications';
 
-const DISMISSED_KEY = 'wc2026_notif_dismissed_until';
+// Bump the key version to re-prompt users who previously dismissed.
+// Users who already granted permission are unaffected (browser keeps 'granted' state).
+const DISMISSED_KEY = 'wc2026_notif_dismissed_v3_until';
 const DISMISS_DAYS  = 7;
 
 type PromptState = 'hidden' | 'pwa-required' | 'ask';
@@ -31,20 +33,26 @@ export function NotificationPrompt() {
 
   useEffect(() => {
     if (!user) return;
-    if (!isNotificationSupported()) return;
-
-    // Don't show if permission is already decided
-    if (Notification.permission === 'granted' || Notification.permission === 'denied') return;
 
     // Don't show if the user dismissed recently
     const dismissedUntil = localStorage.getItem(DISMISSED_KEY);
     if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
 
-    // Delay a little so it doesn't pop on every page transition
-    const timer = setTimeout(() => {
-      setState(needsPWAInstall() ? 'pwa-required' : 'ask');
-    }, 8000); // 8 seconds after mount
+    // iOS Safari (non-PWA): Notification API isn't available yet, but we still
+    // want to show the "Add to Home Screen" nudge — check this BEFORE the
+    // isNotificationSupported() guard which would return false and bail early.
+    if (needsPWAInstall()) {
+      const timer = setTimeout(() => setState('pwa-required'), 2000);
+      return () => clearTimeout(timer);
+    }
 
+    // All other browsers: need full notification support
+    if (!isNotificationSupported()) return;
+
+    // Don't show if permission is already decided
+    if (Notification.permission === 'granted' || Notification.permission === 'denied') return;
+
+    const timer = setTimeout(() => setState('ask'), 2000);
     return () => clearTimeout(timer);
   }, [user]);
 

@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import type { Match } from '@/types/match';
 import { subscribeToMatchUpdates } from '@/lib/matchesService';
+import type { GoalScorerEvent } from '@/lib/matchesService';
 
 interface MatchUpdate {
   homeScore: number | null;
@@ -10,6 +11,7 @@ interface MatchUpdate {
   status: 'upcoming' | 'live' | 'finished';
   homeScorers?: string[];
   awayScorers?: string[];
+  goalScorerEvents?: GoalScorerEvent[];
 }
 
 interface MatchesState {
@@ -37,6 +39,7 @@ export const useMatchesStore = create<MatchesState>()((set, get) => ({
       status: update.status,
       homeScorers: update.homeScorers,
       awayScorers: update.awayScorers,
+      goalScorerEvents: update.goalScorerEvents,
     };
   },
 }));

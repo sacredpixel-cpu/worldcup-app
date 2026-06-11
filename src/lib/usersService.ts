@@ -5,6 +5,7 @@ export interface UserProfile {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  email?: string;
   country?: string;
   countryCode?: string;
   state?: string;

@@ -1,6 +1,12 @@
 import { doc, setDoc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 import { db } from './firebase';
 
+export interface GoalScorerEvent {
+  player: string;
+  teamCode: string;
+  goals: number;
+}
+
 export interface MatchScoreUpdate {
   homeScore: number;
   awayScore: number;
@@ -10,6 +16,8 @@ export interface MatchScoreUpdate {
   status: 'upcoming' | 'live' | 'finished';
   homeScorers?: string[];
   awayScorers?: string[];
+  /** Per-match goal scorer events written by the live-score poller */
+  goalScorerEvents?: GoalScorerEvent[];
 }
 
 export async function updateMatchScore(
@@ -88,6 +96,7 @@ export function subscribeToMatchUpdates(
         status: data.status,
         homeScorers: data.homeScorers,
         awayScorers: data.awayScorers,
+        goalScorerEvents: data.goalScorerEvents,
       };
     });
     cb(updates);

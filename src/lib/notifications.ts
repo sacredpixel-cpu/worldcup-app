@@ -17,7 +17,11 @@ import { getToken, onMessage } from 'firebase/messaging';
 import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db, getMessagingInstance } from './firebase';
 
-const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+const _RAW_VAPID = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+// Treat the placeholder value as "not set" so we don't pass garbage to getToken()
+const VAPID_KEY = _RAW_VAPID && _RAW_VAPID !== 'REPLACE_WITH_YOUR_VAPID_KEY'
+  ? _RAW_VAPID
+  : undefined;
 
 // ─── Platform detection ──────────────────────────────────────────────────────
 

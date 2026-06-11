@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { subscribeToGoalScorers } from '@/lib/matchesService';
-import type { GoalScorer } from '@/lib/matchesService';
+import { useMemo } from 'react';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
 import { FlagImage } from '@/components/ui/FlagImage';
 
 // Medal colours
@@ -16,14 +15,11 @@ function RankBadge({ rank }: { rank: number }) {
   const style = RANK_STYLE[rank];
   if (style) {
     return (
-      <div
-        style={{
-          width: 28, height: 28, borderRadius: '50%',
-          background: style.bg, border: `1.5px solid ${style.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
+      <div style={{
+        width: 28, height: 28, borderRadius: '50%',
+        background: style.bg, border: `1.5px solid ${style.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
         <span style={{ fontSize: 11, fontWeight: 900, color: style.color, fontFamily: 'var(--font-barlow-condensed)' }}>
           {rank}
         </span>
@@ -31,12 +27,10 @@ function RankBadge({ rank }: { rank: number }) {
     );
   }
   return (
-    <div
-      style={{
-        width: 28, height: 28, borderRadius: '50%',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}
-    >
+    <div style={{
+      width: 28, height: 28, borderRadius: '50%',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: '#7A91BB', fontFamily: 'var(--font-barlow-condensed)' }}>
         {rank}
       </span>
@@ -44,40 +38,34 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function ScorerRow({ scorer, rank, isLast }: { scorer: GoalScorer; rank: number; isLast: boolean }) {
+interface ScorerEntry { player: string; teamCode: string; goals: number }
+
+function ScorerRow({ scorer, rank, isLast }: { scorer: ScorerEntry; rank: number; isLast: boolean }) {
   return (
-    <div
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 16px',
-        borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.05)',
-      }}
-    >
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '10px 16px',
+      borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.05)',
+    }}>
       <RankBadge rank={rank} />
 
-      {/* Flag */}
       <div style={{ flexShrink: 0 }}>
         <FlagImage code={scorer.teamCode} size={22} />
       </div>
 
-      {/* Player + team */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
           fontSize: 14, fontWeight: 700, color: '#E8F0FF',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          lineHeight: 1.2,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2,
         }}>
           {scorer.player}
         </p>
         <p style={{ fontSize: 11, color: '#7A91BB', lineHeight: 1.2, marginTop: 2 }}>
-          {scorer.team}
+          {scorer.teamCode}
         </p>
       </div>
 
-      {/* Goal count */}
-      <div style={{
-        flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-      }}>
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
         <span style={{
           fontFamily: 'var(--font-barlow-condensed)',
           fontSize: 22, fontWeight: 900,
@@ -95,26 +83,27 @@ function ScorerRow({ scorer, rank, isLast }: { scorer: GoalScorer; rank: number;
 }
 
 export function GoalsTab() {
-  const [scorers, setScorers] = useState<GoalScorer[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const { updates } = useMatchesStore();
 
-  useEffect(() => {
-    const unsub = subscribeToGoalScorers((data) => {
-      setScorers(data);
-      setLoaded(true);
-    });
-    return unsub;
-  }, []);
+  // Aggregate goalScorerEvents across all match updates
+  const scorers = useMemo(() => {
+    const map = new Map<string, ScorerEntry>();
 
-  if (!loaded) {
-    return (
-      <div style={{ padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} style={{ height: 54, borderRadius: 12, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s infinite' }} />
-        ))}
-      </div>
-    );
-  }
+    for (const update of Object.values(updates)) {
+      const events = update.goalScorerEvents;
+      if (!events || events.length === 0) continue;
+
+      for (const ev of events) {
+        if (!ev.player || ev.goals <= 0) continue;
+        const key = `${ev.player}::${ev.teamCode}`;
+        const existing = map.get(key) ?? { player: ev.player, teamCode: ev.teamCode, goals: 0 };
+        existing.goals += ev.goals;
+        map.set(key, existing);
+      }
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.goals - a.goals || a.player.localeCompare(b.player));
+  }, [updates]);
 
   if (scorers.length === 0) {
     return (
@@ -125,19 +114,17 @@ export function GoalsTab() {
         <span style={{ fontSize: 40 }}>⚽</span>
         <p style={{ fontSize: 15, fontWeight: 700, color: '#E8F0FF' }}>No goals yet</p>
         <p style={{ fontSize: 13, color: '#7A91BB', lineHeight: 1.5, maxWidth: 260 }}>
-          Goal tallies will appear here once the tournament begins.
+          Goal tallies update live as matches are played. Check back on June 11 for the first games.
         </p>
       </div>
     );
   }
 
-  // Resolve ties — same goal count = same rank
+  // Assign ranks — tied scorers share the same rank
   let rank = 1;
-  const ranked: Array<{ scorer: GoalScorer; rank: number }> = [];
+  const ranked: Array<{ scorer: ScorerEntry; rank: number }> = [];
   for (let i = 0; i < scorers.length; i++) {
-    if (i > 0 && scorers[i].goals < scorers[i - 1].goals) {
-      rank = i + 1;
-    }
+    if (i > 0 && scorers[i].goals < scorers[i - 1].goals) rank = i + 1;
     ranked.push({ scorer: scorers[i], rank });
   }
 
@@ -153,23 +140,27 @@ export function GoalsTab() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <span style={{ fontSize: 13, color: '#9AAED4' }}>
-          Top scorer{scorers[0] && scorers[0].goals > 0 ? ': ' : ''}
-          {scorers[0] && <span style={{ color: '#E8F0FF', fontWeight: 700 }}>{scorers[0].player}</span>}
+          {'Top scorer: '}
+          <span style={{ color: '#E8F0FF', fontWeight: 700 }}>{scorers[0].player}</span>
+          {' — '}
+          <span style={{ color: '#FFB020', fontWeight: 700 }}>{scorers[0].goals}</span>
+          {scorers[0].goals === 1 ? ' goal' : ' goals'}
         </span>
-        <span style={{ fontSize: 11, color: '#7A91BB' }}>{scorers.length} scorer{scorers.length !== 1 ? 's' : ''}</span>
+        <span style={{ fontSize: 11, color: '#7A91BB', flexShrink: 0, marginLeft: 8 }}>
+          {scorers.length} scorer{scorers.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
       {/* Scorer list */}
       <div style={{
         margin: '12px 16px 0',
-        borderRadius: 14,
-        overflow: 'hidden',
+        borderRadius: 14, overflow: 'hidden',
         border: '1px solid rgba(255,255,255,0.07)',
         background: '#0E1535',
       }}>
         {ranked.map(({ scorer, rank }, i) => (
           <ScorerRow
-            key={scorer.id}
+            key={`${scorer.player}::${scorer.teamCode}`}
             scorer={scorer}
             rank={rank}
             isLast={i === ranked.length - 1}
@@ -179,7 +170,7 @@ export function GoalsTab() {
 
       {/* Disclaimer */}
       <p style={{ margin: '10px 16px 0', fontSize: 11, color: '#5A6E94', lineHeight: 1.5 }}>
-        Goals scored in penalty shootouts are not counted. Tallies updated live by our admin team.
+        Updated every 2 minutes from live match data. Penalty shootout goals excluded per Golden Boot rules.
       </p>
     </div>
   );

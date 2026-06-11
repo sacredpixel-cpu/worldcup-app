@@ -3,8 +3,10 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useAuthStore, usePredictionsStore } from '@/store';
 import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
+import { subscribeToCommunityPredictions } from '@/lib/predictionsService';
 import { getAllGroups } from '@/lib/groupsService';
 import type { Group, GroupMember } from '@/types/group';
+import type { Prediction } from '@/types/prediction';
 import { ALL_MATCHES } from '@/data/matches';
 import { calcPoints } from '@/lib/utils/calcPoints';
 import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
@@ -19,20 +21,22 @@ interface LeaderboardEntry {
   totalPoints: number;
   correctScores: number;
   correctOutcomes: number;
+  country?: string;
+  countryCode?: string;
 }
 
 // Seed mock global users
 const MOCK_USERS: LeaderboardEntry[] = [
-  { userId: 'mock-1', displayName: 'Cristiano_Fan', avatarUrl: `https://i.pravatar.cc/150?u=1`, totalPoints: 42, correctScores: 3, correctOutcomes: 9 },
-  { userId: 'mock-2', displayName: 'GoalKing88', avatarUrl: `https://i.pravatar.cc/150?u=2`, totalPoints: 38, correctScores: 2, correctOutcomes: 8 },
-  { userId: 'mock-3', displayName: 'TacticsMaestro', avatarUrl: `https://i.pravatar.cc/150?u=3`, totalPoints: 35, correctScores: 1, correctOutcomes: 8 },
-  { userId: 'mock-4', displayName: 'SoccerOracle', avatarUrl: `https://i.pravatar.cc/150?u=4`, totalPoints: 31, correctScores: 2, correctOutcomes: 7 },
-  { userId: 'mock-5', displayName: 'PredictionKing', avatarUrl: `https://i.pravatar.cc/150?u=5`, totalPoints: 28, correctScores: 1, correctOutcomes: 7 },
-  { userId: 'mock-6', displayName: 'WorldCupWizard', avatarUrl: `https://i.pravatar.cc/150?u=6`, totalPoints: 25, correctScores: 0, correctOutcomes: 6 },
-  { userId: 'mock-7', displayName: 'FootballGuru', avatarUrl: `https://i.pravatar.cc/150?u=7`, totalPoints: 22, correctScores: 1, correctOutcomes: 5 },
-  { userId: 'mock-8', displayName: 'MatchAnalyst', avatarUrl: `https://i.pravatar.cc/150?u=8`, totalPoints: 18, correctScores: 0, correctOutcomes: 5 },
-  { userId: 'mock-9', displayName: 'BallPark99', avatarUrl: `https://i.pravatar.cc/150?u=9`, totalPoints: 15, correctScores: 1, correctOutcomes: 4 },
-  { userId: 'mock-10', displayName: 'TacticsNerd', avatarUrl: `https://i.pravatar.cc/150?u=10`, totalPoints: 12, correctScores: 0, correctOutcomes: 4 },
+  { userId: 'mock-1', displayName: 'Cristiano_Fan', avatarUrl: `https://i.pravatar.cc/150?u=1`, totalPoints: 42, correctScores: 3, correctOutcomes: 9, country: 'Brazil', countryCode: 'br' },
+  { userId: 'mock-2', displayName: 'GoalKing88', avatarUrl: `https://i.pravatar.cc/150?u=2`, totalPoints: 38, correctScores: 2, correctOutcomes: 8, country: 'Mexico', countryCode: 'mx' },
+  { userId: 'mock-3', displayName: 'TacticsMaestro', avatarUrl: `https://i.pravatar.cc/150?u=3`, totalPoints: 35, correctScores: 1, correctOutcomes: 8, country: 'Germany', countryCode: 'de' },
+  { userId: 'mock-4', displayName: 'SoccerOracle', avatarUrl: `https://i.pravatar.cc/150?u=4`, totalPoints: 31, correctScores: 2, correctOutcomes: 7, country: 'Argentina', countryCode: 'ar' },
+  { userId: 'mock-5', displayName: 'PredictionKing', avatarUrl: `https://i.pravatar.cc/150?u=5`, totalPoints: 28, correctScores: 1, correctOutcomes: 7, country: 'France', countryCode: 'fr' },
+  { userId: 'mock-6', displayName: 'WorldCupWizard', avatarUrl: `https://i.pravatar.cc/150?u=6`, totalPoints: 25, correctScores: 0, correctOutcomes: 6, country: 'Spain', countryCode: 'es' },
+  { userId: 'mock-7', displayName: 'FootballGuru', avatarUrl: `https://i.pravatar.cc/150?u=7`, totalPoints: 22, correctScores: 1, correctOutcomes: 5, country: 'England', countryCode: 'gb-eng' },
+  { userId: 'mock-8', displayName: 'MatchAnalyst', avatarUrl: `https://i.pravatar.cc/150?u=8`, totalPoints: 18, correctScores: 0, correctOutcomes: 5, country: 'Italy', countryCode: 'it' },
+  { userId: 'mock-9', displayName: 'BallPark99', avatarUrl: `https://i.pravatar.cc/150?u=9`, totalPoints: 15, correctScores: 1, correctOutcomes: 4, country: 'United States', countryCode: 'us' },
+  { userId: 'mock-10', displayName: 'TacticsNerd', avatarUrl: `https://i.pravatar.cc/150?u=10`, totalPoints: 12, correctScores: 0, correctOutcomes: 4, country: 'Japan', countryCode: 'jp' },
 ];
 
 function RankBadge({ rank }: { rank: number }) {
@@ -74,11 +78,13 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
             <img src={`https://flagcdn.com/w20/${profile!.countryCode}.png`} alt="" className="h-3 w-4 object-cover rounded-sm" />
             <span className="text-xs truncate" style={{ color: '#7A91BB' }}>{location}</span>
           </div>
-        ) : (
-          <p className="text-xs" style={{ color: '#7A91BB' }}>
-            {entry.correctScores} exact · {entry.correctOutcomes} correct
-          </p>
-        )}
+        ) : entry.countryCode ? (
+          <div className="flex items-center gap-1 mt-0.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`https://flagcdn.com/w20/${entry.countryCode}.png`} alt="" className="h-3 w-4 object-cover rounded-sm" />
+            <span className="text-xs truncate" style={{ color: '#7A91BB' }}>{entry.country}</span>
+          </div>
+        ) : null}
       </div>
       <div className="text-right">
         <p className="text-lg font-black" style={{ color: '#FFB020', fontFamily: 'var(--font-barlow-condensed)' }}>{entry.totalPoints}</p>
@@ -157,11 +163,21 @@ function LeaderboardContent() {
   const { saved } = usePredictionsStore();
   const [tab, setTab] = useState<'global' | 'groups'>('global');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+  const [allPredictions, setAllPredictions] = useState<Prediction[]>([]);
+  const [boardLoading, setBoardLoading] = useState(true);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [allGroupsLoading, setAllGroupsLoading] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToUserProfiles(setUserProfiles);
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeToCommunityPredictions(preds => {
+      setAllPredictions(preds);
+      setBoardLoading(false);
+    });
     return () => unsub();
   }, []);
 
@@ -194,12 +210,73 @@ function LeaderboardContent() {
   }, [user, saved]);
 
   const globalBoard = useMemo(() => {
-    const tournamentStart = new Date('2026-06-11T00:00:00');
-    const showMocks = new Date() < tournamentStart;
-    const all = showMocks ? [...MOCK_USERS] : [];
-    if (userEntry) all.push(userEntry);
-    return all.sort((a, b) => b.totalPoints - a.totalPoints);
-  }, [userEntry]);
+    const finishedMatches = ALL_MATCHES.filter(m => m.status === 'finished' && m.homeScore !== null);
+
+    // Group all Firestore predictions by userId → matchId
+    const predsByUser: Record<string, Record<string, Prediction>> = {};
+    for (const pred of allPredictions) {
+      if (!predsByUser[pred.userId]) predsByUser[pred.userId] = {};
+      predsByUser[pred.userId][pred.matchId] = pred;
+    }
+
+    // Build one entry per real user profile
+    const rawEntries: (LeaderboardEntry & { email?: string })[] = Object.values(userProfiles).map(profile => {
+      // Use live Zustand-derived entry for the current user (most up-to-date)
+      if (user && profile.userId === user.id && userEntry) {
+        return { ...userEntry, email: profile.email, country: profile.country, countryCode: profile.countryCode };
+      }
+
+      const preds = predsByUser[profile.userId] ?? {};
+      let pts = 0, exact = 0, correct = 0;
+      finishedMatches.forEach(m => {
+        const p = preds[m.id];
+        if (!p) return;
+        const earned = calcPoints(p, { homeScore: m.homeScore!, awayScore: m.awayScore! });
+        pts += earned;
+        if (earned === 5) exact++;
+        if (earned >= 3) correct++;
+      });
+      pts += calcGroupPoints(preds).total;
+
+      return {
+        userId: profile.userId,
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        totalPoints: pts,
+        correctScores: exact,
+        correctOutcomes: correct,
+        email: profile.email,
+        country: profile.country,
+        countryCode: profile.countryCode,
+      };
+    });
+
+    // If the current user has no profile yet, add their live entry
+    if (user && userEntry && !userProfiles[user.id]) {
+      rawEntries.push(userEntry);
+    }
+
+    // Deduplicate by email — same email = same person with multiple UIDs.
+    // Keep the entry with the most points; prefer the current user's live entry.
+    const byEmail = new Map<string, LeaderboardEntry & { email?: string }>();
+    const noEmail: (LeaderboardEntry & { email?: string })[] = [];
+    for (const entry of rawEntries) {
+      if (!entry.email) { noEmail.push(entry); continue; }
+      const key = entry.email.toLowerCase();
+      const existing = byEmail.get(key);
+      if (!existing || entry.totalPoints > existing.totalPoints ||
+          (user && entry.userId === user.id)) {
+        byEmail.set(key, entry);
+      }
+    }
+    const entries: LeaderboardEntry[] = [...byEmail.values(), ...noEmail];
+
+    // Sort: highest points first; alphabetical by displayName on tie
+    return entries.sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      return a.displayName.localeCompare(b.displayName);
+    });
+  }, [userProfiles, allPredictions, user, userEntry]);
 
   const rankedGroups = useMemo<GroupEntry[]>(() => {
     if (!allGroups.length) return [];
@@ -293,6 +370,18 @@ function LeaderboardContent() {
               <GroupLeaderboardRow key={entry.group.id} entry={entry} rank={i + 1} />
             ))
           )}
+        </div>
+      ) : boardLoading ? (
+        <div className="flex flex-col gap-2 px-4 pb-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl" style={{ background: '#0E1535' }} />
+          ))}
+        </div>
+      ) : board.length === 0 ? (
+        <div className="flex flex-col items-center py-14 px-4 text-center">
+          <div className="mb-3 text-4xl">🏆</div>
+          <p className="text-sm font-semibold" style={{ color: '#E8F0FF' }}>No fans yet</p>
+          <p className="text-xs mt-1" style={{ color: '#7A91BB' }}>Be the first to make predictions and claim the top spot</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2 px-4 pb-4">
