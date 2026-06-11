@@ -332,8 +332,8 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
           <TeamBlock team={liveMatch.awayTeam} role="Away" />
         </div>
 
-        {/* Crowd prediction bar */}
-        {liveMatch.status === 'upcoming' && crowd && (
+        {/* Crowd prediction bar — visible while upcoming or live, hidden after FT */}
+        {(liveMatch.status === 'upcoming' || liveMatch.status === 'live') && crowd && (
           <div className="px-4 pb-1">
             <div className="flex overflow-hidden rounded-full" style={{ height: '3px', background: 'rgba(255,255,255,0.05)' }}>
               <div style={{ width: `${crowd.homePct}%`, background: '#00C44F' }} />
