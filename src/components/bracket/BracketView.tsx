@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { KNOCKOUT_MATCHES, GROUP_STAGE_MATCHES } from '@/data/matches';
 import { getMatchNumber } from '@/lib/utils/matchNumbers';
 import { FlagImage } from '@/components/ui/FlagImage';
@@ -355,6 +355,68 @@ export function BracketView() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [showFirstPrediction, setShowFirstPrediction] = useState(false);
 
+  // ── Pinch-to-zoom ────────────────────────────────────────────────────────
+  const [scale, setScale] = useState(1);
+  const scaleRef = useRef(1);          // mirror for use inside event closures
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lastTapRef = useRef(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    let startDist = 0;
+    let startScale = 1;
+    let isPinching = false;
+
+    function getTouchDist(e: TouchEvent): number {
+      return Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY,
+      );
+    }
+
+    function onStart(e: TouchEvent) {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        startDist = getTouchDist(e);
+        startScale = scaleRef.current;
+        e.preventDefault(); // prevent browser page-zoom
+      }
+    }
+
+    function onMove(e: TouchEvent) {
+      if (!isPinching || e.touches.length !== 2) return;
+      const newScale = Math.min(Math.max(startScale * (getTouchDist(e) / startDist), 0.5), 3.5);
+      scaleRef.current = newScale;
+      setScale(newScale);
+      e.preventDefault();
+    }
+
+    function onEnd(e: TouchEvent) {
+      if (e.touches.length < 2) isPinching = false;
+    }
+
+    el.addEventListener('touchstart', onStart, { passive: false });
+    el.addEventListener('touchmove',  onMove,  { passive: false });
+    el.addEventListener('touchend',   onEnd);
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove',  onMove);
+      el.removeEventListener('touchend',   onEnd);
+    };
+  }, []);
+
+  // Double-tap anywhere on the bracket to reset zoom
+  function handleDoubleTap() {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      scaleRef.current = 1;
+      setScale(1);
+    }
+    lastTapRef.current = now;
+  }
+
   // Compute which teams advance to knockout rounds based on group results
   const ktm = useMemo(() => computeKnockoutTeams(updates), [updates]);
 
@@ -405,8 +467,30 @@ export function BracketView() {
     }
   }
 
+  const scalePct = Math.round(scale * 100);
+
   return (
-    <div style={{ paddingBottom: 24 }}>
+    <div ref={containerRef} style={{ paddingBottom: 24 }} onClick={handleDoubleTap}>
+
+      {/* Zoom indicator — shown whenever scale ≠ 100% */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 8px' }}>
+        <span style={{ fontSize: 10, color: '#5A6E94' }}>Pinch to zoom · double-tap to reset</span>
+        {scalePct !== 100 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); scaleRef.current = 1; setScale(1); }}
+            style={{
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700,
+              color: '#E8F0FF', cursor: 'pointer',
+            }}
+          >
+            {scalePct}% · Reset
+          </button>
+        )}
+      </div>
+
+      {/* Zoomable bracket content — CSS zoom expands the scroll area proportionally */}
+      <div style={{ zoom: scale } as React.CSSProperties}>
       <div style={{ overflowX: 'auto', paddingLeft: 16, paddingRight: 16, paddingBottom: 4 }}>
 
         {/* Column headers */}
@@ -495,8 +579,9 @@ export function BracketView() {
           />
         </div>
       )}
+      </div>{/* end zoom wrapper */}
 
-      {/* Prediction modal */}
+      {/* Prediction modal — intentionally outside the zoom div so it renders at full size */}
       {selectedMatch && user && (
         <PredictionModal
           match={selectedMatch}
