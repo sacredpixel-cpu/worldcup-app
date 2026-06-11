@@ -13,6 +13,11 @@ import { Input } from '@/components/ui/Input';
 
 export default function RegisterPage() {
   const router = useRouter();
+  // Read ?from= without useSearchParams (avoids Suspense requirement on a force-dynamic page)
+  const [redirectTo] = useState(() => {
+    if (typeof window === 'undefined') return '/schedule';
+    return new URLSearchParams(window.location.search).get('from') || '/schedule';
+  });
   const { user, loginWithGoogle } = useAuthStore();
 
   const [name, setName] = useState('');
@@ -26,7 +31,7 @@ export default function RegisterPage() {
   useEffect(() => {
     if (user) {
       setLoading(false);
-      router.push('/schedule');
+      router.push(redirectTo);
     }
   }, [user]);
 
@@ -34,7 +39,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
-      router.push('/schedule');
+      router.push(redirectTo);
     } catch (err: any) {
       setErrors({ google: err.message || 'Google sign-in failed.' });
       setLoading(false);
@@ -66,7 +71,7 @@ export default function RegisterPage() {
         email: credential.user.email,
         photoURL: null,
       });
-      router.push('/schedule');
+      router.push(redirectTo);
     } catch (err: any) {
       const msg =
         err.code === 'auth/email-already-in-use' ? 'An account with this email already exists.' :

@@ -13,6 +13,11 @@ import { Input } from '@/components/ui/Input';
 
 export default function LoginPage() {
   const router = useRouter();
+  // Read ?from= without useSearchParams (avoids Suspense requirement on a force-dynamic page)
+  const [redirectTo] = useState(() => {
+    if (typeof window === 'undefined') return '/schedule';
+    return new URLSearchParams(window.location.search).get('from') || '/schedule';
+  });
   const { user } = useAuthStore();
 
   const [email, setEmail] = useState('');
@@ -25,7 +30,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) {
       setLoading(false);
-      router.push('/schedule');
+      router.push(redirectTo);
     }
   }, [user]);
 
@@ -37,7 +42,7 @@ export default function LoginPage() {
       // (desktop / Safari browser). On iOS standalone the popup opens in a
       // separate Safari window; when the user returns, onAuthStateChanged fires
       // and the useEffect([user]) above handles the redirect instead.
-      router.push('/schedule');
+      router.push(redirectTo);
     } catch (err: any) {
       setError(err.message || 'Google sign-in failed.');
       setLoading(false);
@@ -51,7 +56,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // onAuthStateChanged in FirebaseAuthSync will call loginWithGoogle with real Firebase user
-      router.push('/schedule');
+      router.push(redirectTo);
     } catch (err: any) {
       const msg =
         err.code === 'auth/user-not-found' ? 'No account found with this email. Please create a new account.' :

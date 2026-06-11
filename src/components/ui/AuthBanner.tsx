@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store';
 import { ClientOnly } from './ClientOnly';
 import Image from 'next/image';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 function BannerInner() {
   const { user, clearAuth } = useAuthStore();
@@ -55,7 +57,7 @@ function BannerInner() {
         <span className="text-[12px] font-bold" style={{ color: '#FFB020' }}>{user.totalPoints} pts</span>
       </div>
       <button
-        onClick={clearAuth}
+        onClick={() => { signOut(auth).catch(console.error); clearAuth(); }}
         className="rounded-full px-3 py-1 text-[11px] font-semibold"
         style={{ color: '#7A91BB', border: '1px solid rgba(255,255,255,0.08)' }}
       >

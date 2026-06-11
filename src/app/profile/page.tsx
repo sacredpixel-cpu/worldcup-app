@@ -10,6 +10,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { uploadAvatar } from '@/lib/uploadService';
 import { COUNTRIES, US_STATES } from '@/data/countries';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 function ProfileContent() {
   const { user, clearAuth, updateAvatar, updateLocation } = useAuthStore();
@@ -291,7 +293,7 @@ function ProfileContent() {
 
       {/* Sign out */}
       <button
-        onClick={clearAuth}
+        onClick={() => { signOut(auth).catch(console.error); clearAuth(); }}
         className="mx-4 rounded-xl py-3 text-sm font-semibold transition-colors"
         style={{ border: '1px solid rgba(0,196,79,0.25)', color: 'rgba(0,196,79,0.7)' }}
       >
