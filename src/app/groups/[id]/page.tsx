@@ -2,13 +2,17 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore, useGroupsStore, usePredictionsStore } from '@/store';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import { calcPoints } from '@/lib/utils/calcPoints';
+import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
 import { ALL_MATCHES } from '@/data/matches';
 import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
+import { subscribeToCommunityPredictions } from '@/lib/predictionsService';
+import type { Prediction } from '@/types/prediction';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 function GroupDetailContent() {
   const params = useParams();
@@ -16,16 +20,67 @@ function GroupDetailContent() {
   const { user } = useAuthStore();
   const { getGroup, leaveGroup, removeMember } = useGroupsStore();
   const { saved } = usePredictionsStore();
+  const { getLiveMatch, updates } = useMatchesStore();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+  const [allPredictions, setAllPredictions] = useState<Prediction[]>([]);
 
   useEffect(() => {
     const unsub = subscribeToUserProfiles(setUserProfiles);
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    const unsub = subscribeToCommunityPredictions(setAllPredictions);
+    return () => unsub();
+  }, []);
+
   const group = getGroup(params.id as string);
+
+  // Live finished matches with actual scores + scorers from Firestore
+  const finishedMatches = useMemo(
+    () => ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore !== null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [updates],
+  );
+
+  // Build member leaderboard — calculate every member's points dynamically
+  const members = useMemo(() => {
+    if (!group) return [];
+
+    // Index community predictions by userId → matchId
+    const predsByUser: Record<string, Record<string, Prediction>> = {};
+    for (const pred of allPredictions) {
+      if (!predsByUser[pred.userId]) predsByUser[pred.userId] = {};
+      predsByUser[pred.userId][pred.matchId] = pred;
+    }
+
+    return group.members
+      .map(m => {
+        // For the current user, use the Zustand store (most up-to-date, includes unsaved changes)
+        const preds: Record<string, Prediction> = m.userId === user?.id
+          ? saved
+          : (predsByUser[m.userId] ?? {});
+
+        let pts = 0;
+        finishedMatches.forEach(match => {
+          const p = preds[match.id];
+          if (!p) return;
+          pts += calcPoints(p, {
+            homeScore: match.homeScore!,
+            awayScore: match.awayScore!,
+            homeScorers: match.homeScorers,
+            awayScorers: match.awayScorers,
+          });
+        });
+        pts += calcGroupPoints(preds).total;
+
+        return { ...m, totalPoints: pts };
+      })
+      .sort((a, b) => b.totalPoints - a.totalPoints);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group, allPredictions, saved, finishedMatches, user?.id]);
 
   if (!group) {
     return (
@@ -37,25 +92,6 @@ function GroupDetailContent() {
   }
 
   const isCreator = user?.id === group.creatorId;
-
-  // Build member leaderboard
-  const userPts = (() => {
-    const finished = ALL_MATCHES.filter(m => m.status === 'finished' && m.homeScore !== null);
-    let pts = 0;
-    finished.forEach(m => {
-      const p = saved[m.id];
-      if (!p) return;
-      pts += calcPoints(p, { homeScore: m.homeScore!, awayScore: m.awayScore! });
-    });
-    return pts;
-  })();
-
-  const members = group.members
-    .map(m => ({
-      ...m,
-      totalPoints: m.userId === user?.id ? userPts : m.totalPoints,
-    }))
-    .sort((a, b) => b.totalPoints - a.totalPoints);
 
   async function handleRemove(memberId: string) {
     if (confirmId !== memberId) {
