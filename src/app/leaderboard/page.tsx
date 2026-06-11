@@ -100,12 +100,12 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
 interface GroupEntry {
   group: Group;
   score: number;
-  /** Up to 3 members whose points make up the score, sorted desc */
+  /** Up to 2 members whose points make up the score, sorted desc */
   topMembers: GroupMember[];
   isMine: boolean;
 }
 
-/** Top-3 members aggregate; current user's live points substituted if present */
+/** Top-2 members aggregate — only the best 2 players' points count for a group's score */
 function calcGroupScore(
   members: GroupMember[],
   currentUserId?: string,
@@ -114,7 +114,7 @@ function calcGroupScore(
   return [...members]
     .map(m => ({ ...m, totalPoints: m.userId === currentUserId ? (currentUserPts ?? m.totalPoints) : m.totalPoints }))
     .sort((a, b) => b.totalPoints - a.totalPoints)
-    .slice(0, 3)
+    .slice(0, 2)
     .reduce((sum, m) => sum + m.totalPoints, 0);
 }
 
@@ -143,7 +143,7 @@ function GroupLeaderboardRow({ entry, rank }: { entry: GroupEntry; rank: number 
         </div>
         <p className="text-xs mt-0.5" style={{ color: '#7A91BB' }}>
           {entry.group.members.length} member{entry.group.members.length !== 1 ? 's' : ''}
-          {entry.group.members.length > 3 ? ' · top 3 scoring' : ''}
+          {entry.group.members.length > 2 ? ' · top 2 scoring' : ''}
         </p>
         <p className="text-[10px] truncate mt-0.5" style={{ color: '#5A6E94' }}>
           {entry.topMembers.map(m => m.displayName).join(' · ')}
@@ -296,19 +296,42 @@ function LeaderboardContent() {
   const rankedGroups = useMemo<GroupEntry[]>(() => {
     if (!allGroups.length) return [];
     const userId = user?.id;
-    const userPts = userEntry?.totalPoints;
+
+    // Index community predictions by userId → matchId (same data used for global leaderboard)
+    const predsByUser: Record<string, Record<string, Prediction>> = {};
+    for (const pred of allPredictions) {
+      if (!predsByUser[pred.userId]) predsByUser[pred.userId] = {};
+      predsByUser[pred.userId][pred.matchId] = pred;
+    }
+    const finishedMatches = ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore !== null);
+
     return [...allGroups]
       .map(g => {
-        const adjusted = g.members.map(m => ({
-          ...m,
-          totalPoints: m.userId === userId ? (userPts ?? m.totalPoints) : m.totalPoints,
-        }));
-        const sorted = [...adjusted].sort((a, b) => b.totalPoints - a.totalPoints);
-        const top3 = sorted.slice(0, 3);
+        // Calculate every member's live points dynamically (not the stale join-time snapshot)
+        const scoredMembers = g.members.map(m => {
+          const preds = m.userId === userId ? saved : (predsByUser[m.userId] ?? {});
+          let pts = 0;
+          finishedMatches.forEach(match => {
+            const p = preds[match.id];
+            if (!p) return;
+            pts += calcPoints(p, {
+              homeScore: match.homeScore!,
+              awayScore: match.awayScore!,
+              homeScorers: match.homeScorers,
+              awayScorers: match.awayScorers,
+            });
+          });
+          pts += calcGroupPoints(preds).total;
+          return { ...m, totalPoints: pts };
+        });
+
+        const sorted = [...scoredMembers].sort((a, b) => b.totalPoints - a.totalPoints);
+        // Only the best 2 players' points count toward the group's leaderboard score
+        const top2 = sorted.slice(0, 2);
         return {
           group: g,
-          score: top3.reduce((sum, m) => sum + m.totalPoints, 0),
-          topMembers: top3,
+          score: top2.reduce((sum, m) => sum + m.totalPoints, 0),
+          topMembers: top2,
           isMine: userId ? g.members.some(m => m.userId === userId) : false,
         };
       })
@@ -316,7 +339,8 @@ function LeaderboardContent() {
         if (b.score !== a.score) return b.score - a.score;
         return a.group.name.localeCompare(b.group.name); // alphabetical on tie
       });
-  }, [allGroups, user, userEntry]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allGroups, allPredictions, saved, user, updates]);
 
   const board = globalBoard;
   const userRank = (tab !== 'groups' && user) ? board.findIndex(e => e.userId === user.id) + 1 : -1;
