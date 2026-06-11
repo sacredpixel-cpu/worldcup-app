@@ -200,20 +200,19 @@ function isPowerhouse(teamName) {
  *   status → "finished" → final score + upset-win alert
  */
 exports.onMatchStatusChange = (0, firestore_1.onDocumentUpdated)('matches/{matchId}', async (event) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f, _g;
     const before = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before.data();
     const after = (_b = event.data) === null || _b === void 0 ? void 0 : _b.after.data();
     if (!before || !after)
         return;
     const prevStatus = before.status;
     const newStatus = after.status;
-    if (prevStatus === newStatus)
-        return;
+    const statusChanged = prevStatus !== newStatus;
     const matchId = event.params.matchId;
     const entry = schedule_1.MATCH_SCHEDULE[matchId];
     const teamsKnown = (entry === null || entry === void 0 ? void 0 : entry.home) && (entry === null || entry === void 0 ? void 0 : entry.away);
     // ── 2. Match kicked off — predictions are now locked ──────────────────
-    if (newStatus === 'live') {
+    if (statusChanged && newStatus === 'live') {
         const title = teamsKnown
             ? `🔒 ${entry.home} vs ${entry.away} — Predictions Locked`
             : '🔒 Match Started — Predictions Locked';
@@ -226,7 +225,7 @@ exports.onMatchStatusChange = (0, firestore_1.onDocumentUpdated)('matches/{match
         console.log(`Kickoff notification sent for ${matchId}.`);
     }
     // ── 3. Match finished — show final score ──────────────────────────────
-    if (newStatus === 'finished') {
+    if (statusChanged && newStatus === 'finished') {
         const homeScore = (_c = after.homeScore) !== null && _c !== void 0 ? _c : '?';
         const awayScore = (_d = after.awayScore) !== null && _d !== void 0 ? _d : '?';
         const scoreStr = `${homeScore}–${awayScore}`;
@@ -241,7 +240,45 @@ exports.onMatchStatusChange = (0, firestore_1.onDocumentUpdated)('matches/{match
             } }));
         console.log(`Full-time notification sent for ${matchId} (${scoreStr}).`);
     }
-    // ── 4. Upset alert ────────────────────────────────────────────────────
+    // ── 4. Goal scored — live score update with scorer name ───────────────
+    // Fires on score changes while the match is active (status stays 'live',
+    // 'halftime', 'extratime', or 'penalties').  A per-scoreline sentinel doc
+    // prevents duplicate notifications if the trigger fires more than once.
+    const isActive = newStatus === 'live' || newStatus === 'halftime' ||
+        newStatus === 'extratime' || newStatus === 'penalties';
+    if (isActive && teamsKnown) {
+        const prevHome = typeof before.homeScore === 'number' ? before.homeScore : -1;
+        const prevAway = typeof before.awayScore === 'number' ? before.awayScore : -1;
+        const newHome = typeof after.homeScore === 'number' ? after.homeScore : -1;
+        const newAway = typeof after.awayScore === 'number' ? after.awayScore : -1;
+        if ((newHome > prevHome || newAway > prevAway) && newHome >= 0 && newAway >= 0) {
+            const scoreStr = `${newHome}–${newAway}`;
+            const goalSentinel = db.doc(`notificationsSent/${matchId}_goal_${newHome}_${newAway}`);
+            if (!(await goalSentinel.get()).exists) {
+                // Determine which team scored
+                const scoringTeam = newHome > prevHome ? entry.home : entry.away;
+                const beforeEvts = ((_e = before.goalScorerEvents) !== null && _e !== void 0 ? _e : []);
+                const afterEvts = ((_f = after.goalScorerEvents) !== null && _f !== void 0 ? _f : []);
+                const beforeMap = new Map(beforeEvts.map(e => [`${e.player}::${e.teamCode}`, e.goals]));
+                let newScorer = null;
+                for (const ev of afterEvts) {
+                    const prevGoals = (_g = beforeMap.get(`${ev.player}::${ev.teamCode}`)) !== null && _g !== void 0 ? _g : 0;
+                    if (ev.goals > prevGoals) {
+                        newScorer = ev.player;
+                        break;
+                    }
+                }
+                const title = `⚽ GOAL! ${entry.home} ${scoreStr} ${entry.away}`;
+                const body = newScorer
+                    ? `${newScorer} scores for ${scoringTeam}!`
+                    : `${scoringTeam} score! ${scoreStr}`;
+                await broadcast(Object.assign(Object.assign({ notification: { title, body }, data: { matchId, url: '/scores', type: 'goal' } }, webpushOptions('/scores', `goal-${matchId}-${newHome}-${newAway}`)), { android: { notification: { icon: 'ic_notification', priority: 'high' } } }));
+                await goalSentinel.set({ sentAt: admin.firestore.FieldValue.serverTimestamp() });
+                console.log(`Goal notification: ${title} — ${body}`);
+            }
+        }
+    }
+    // ── 5. Upset alert ────────────────────────────────────────────────────
     if (teamsKnown) {
         const home = entry.home;
         const away = entry.away;
@@ -257,7 +294,7 @@ exports.onMatchStatusChange = (0, firestore_1.onDocumentUpdated)('matches/{match
             // Underdog is ahead (home is underdog → homeScore > awayScore, or vice versa)
             const underdogAhead = (homePower && awayScore > homeScore) ||
                 (awayPower && homeScore > awayScore);
-            if (newStatus === 'live' && underdogAhead) {
+            if (isActive && underdogAhead) {
                 const sentRef = db.doc(`notificationsSent/${matchId}_upset_live`);
                 if (!(await sentRef.get()).exists) {
                     await broadcast(Object.assign(Object.assign({ notification: {
@@ -268,7 +305,7 @@ exports.onMatchStatusChange = (0, firestore_1.onDocumentUpdated)('matches/{match
                     console.log(`Upset-live alert: ${underdog} leads ${powerhouse} in ${matchId}.`);
                 }
             }
-            if (newStatus === 'finished' && underdogAhead) {
+            if (statusChanged && newStatus === 'finished' && underdogAhead) {
                 const sentRef = db.doc(`notificationsSent/${matchId}_upset_win`);
                 if (!(await sentRef.get()).exists) {
                     await broadcast(Object.assign(Object.assign({ notification: {
@@ -552,7 +589,8 @@ exports.pollLiveScores = (0, scheduler_1.onSchedule)({
         console.log('Outside tournament window — skipping poll.');
         return;
     }
-    const key = RAPIDAPI_KEY.value();
+    // .trim() strips any accidental trailing newline from the secret value
+    const key = RAPIDAPI_KEY.value().trim();
     if (!key) {
         console.error('RAPIDAPI_KEY secret not set.');
         return;
