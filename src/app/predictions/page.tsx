@@ -184,6 +184,7 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
   advancingThirdIds: Set<string>;
 }) {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
+  const { updates, getLiveMatch } = useMatchesStore();
 
   const { standings, complete, predictedCount, totalMatches } = useMemo(
     () => buildPredictedStandings(letter, saved),
@@ -193,8 +194,10 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
   const groupMatches = useMemo(
     () => GROUP_STAGE_MATCHES
       .filter(m => m.homeTeam.group === letter)
-      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt)),
-    [letter]
+      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt))
+      .map(m => getLiveMatch(m)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [letter, updates]
   );
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -235,7 +238,9 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
             </div>
             {groupMatches.map(m => {
               const pred = saved[m.id];
+              const isLive     = m.status === 'live' && m.homeScore !== null;
               const isFinished = m.status === 'finished' && m.homeScore !== null;
+              const hasScore   = isLive || isFinished;
               const matchPts = isFinished && pred
                 ? calcPoints(pred, { homeScore: m.homeScore!, awayScore: m.awayScore! })
                 : null;
@@ -261,8 +266,13 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
                     </div>
                     {/* Score */}
                     <div className="flex items-center gap-1 shrink-0">
-                      {isFinished && (
-                        <span className="text-[10px] font-bold" style={{ color: '#4A6090' }}>{m.homeScore}–{m.awayScore}</span>
+                      {hasScore && (
+                        <span className="flex items-center gap-0.5">
+                          {isLive && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />}
+                          <span className="text-[10px] font-bold" style={{ color: isLive ? '#EF4444' : '#4A6090' }}>
+                            {m.homeScore}–{m.awayScore}
+                          </span>
+                        </span>
                       )}
                       <span className="text-[10px] font-black px-1.5 py-0.5 rounded"
                         style={{ background: pred ? 'rgba(255,31,142,0.1)' : 'rgba(255,255,255,0.04)',
