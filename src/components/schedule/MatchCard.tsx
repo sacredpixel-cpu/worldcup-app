@@ -112,7 +112,8 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   const [showFirstPrediction, setShowFirstPrediction] = useState(false);
 
   const isTbd = liveMatch.homeTeam.id === 'tbd';
-  const isLive = liveMatch.status === 'live';
+  const isLive = liveMatch.status === 'live' || liveMatch.status === 'halftime' ||
+                 liveMatch.status === 'extratime' || liveMatch.status === 'penalties';
   const isFinished = liveMatch.status === 'finished';
   const isLocked = new Date(liveMatch.kickoffAt) <= new Date() || liveMatch.status !== 'upcoming';
   const hasScore = liveMatch.homeScore !== null;
@@ -245,7 +246,9 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
               <div className="flex items-center gap-1.5 rounded-full px-2.5 py-0.5" style={{ background: 'rgba(255,176,32,0.1)', border: '1px solid rgba(255,176,32,0.2)' }}>
                 <LivePulse />
                 <span className="text-[11px] font-bold" style={{ color: '#FFB020' }}>
-                  {liveMatch.status === 'live' ? 'LIVE' : ''}
+                  {liveMatch.status === 'halftime' ? 'HT' :
+                   liveMatch.status === 'extratime' ? 'ET' :
+                   liveMatch.status === 'penalties' ? 'PENS' : 'LIVE'}
                 </span>
               </div>
             )}
