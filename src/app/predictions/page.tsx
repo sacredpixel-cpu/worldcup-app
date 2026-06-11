@@ -720,7 +720,9 @@ function ByGameTab({ saved, userId }: { saved: Record<string, Prediction>; userI
 
 // ─── Picks tab (Golden Boot etc.) ────────────────────────────────────────────
 
-const TOURNAMENT_STARTS = '2026-06-11T00:00:00Z';
+// Golden Boot picks lock at midnight EST on June 18 (after all group stage matches).
+// Midnight EST = 05:00 UTC the following day.
+const GOLDEN_BOOT_LOCK = '2026-06-19T05:00:00Z';
 
 function PicksTab({ userId }: { userId: string }) {
   const [goldenBootPick, setGoldenBootPick] = useState<string | null>(null);
@@ -729,7 +731,7 @@ function PicksTab({ userId }: { userId: string }) {
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  const isLocked = typeof window !== 'undefined' && new Date() >= new Date(TOURNAMENT_STARTS);
+  const isLocked = typeof window !== 'undefined' && new Date() >= new Date(GOLDEN_BOOT_LOCK);
 
   useEffect(() => {
     let cancelled = false;
@@ -848,7 +850,7 @@ function PicksTab({ userId }: { userId: string }) {
               </div>
             </div>
           ) : isLocked ? (
-            <p className="text-sm text-center py-2" style={{ color: '#5A6E94' }}>No pick was made before the tournament started</p>
+            <p className="text-sm text-center py-2" style={{ color: '#5A6E94' }}>No pick was made before the June 18 deadline</p>
           ) : (
             <button
               onClick={() => setShowSearch(true)}
