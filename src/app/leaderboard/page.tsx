@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useAuthStore, usePredictionsStore } from '@/store';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
 import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
 import { subscribeToCommunityPredictions } from '@/lib/predictionsService';
 import { getAllGroups } from '@/lib/groupsService';
@@ -161,6 +162,7 @@ function GroupLeaderboardRow({ entry, rank }: { entry: GroupEntry; rank: number 
 function LeaderboardContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
+  const { getLiveMatch, updates } = useMatchesStore();
   const [tab, setTab] = useState<'global' | 'groups'>('global');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [allPredictions, setAllPredictions] = useState<Prediction[]>([]);
@@ -193,24 +195,31 @@ function LeaderboardContent() {
 
   const userEntry = useMemo<LeaderboardEntry | null>(() => {
     if (!user) return null;
-    const preds = Object.values(saved);
-    const finished = ALL_MATCHES.filter(m => m.status === 'finished' && m.homeScore !== null);
+    // Use live Firestore match data (scores + scorers written by Cloud Functions)
+    const finished = ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore !== null);
     let pts = 0, exact = 0, correct = 0;
     finished.forEach(m => {
       const p = saved[m.id];
       if (!p) return;
-      const earned = calcPoints(p, { homeScore: m.homeScore!, awayScore: m.awayScore! });
+      const earned = calcPoints(p, {
+        homeScore: m.homeScore!,
+        awayScore: m.awayScore!,
+        homeScorers: m.homeScorers,
+        awayScorers: m.awayScorers,
+      });
       pts += earned;
-      if (earned === 5) exact++;
-      if (earned >= 3) correct++;
+      if (p.homeScore === m.homeScore && p.awayScore === m.awayScore) exact++;
+      if (earned > 0) correct++;
     });
     // Add group-advancement prediction points (+3 winner, +2 runner-up, +1 third)
     pts += calcGroupPoints(saved).total;
     return { userId: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, totalPoints: pts, correctScores: exact, correctOutcomes: correct };
-  }, [user, saved]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, saved, updates]);
 
   const globalBoard = useMemo(() => {
-    const finishedMatches = ALL_MATCHES.filter(m => m.status === 'finished' && m.homeScore !== null);
+    // Use live Firestore match data (scores + scorers written by Cloud Functions)
+    const finishedMatches = ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore !== null);
 
     // Group all Firestore predictions by userId → matchId
     const predsByUser: Record<string, Record<string, Prediction>> = {};
@@ -231,10 +240,15 @@ function LeaderboardContent() {
       finishedMatches.forEach(m => {
         const p = preds[m.id];
         if (!p) return;
-        const earned = calcPoints(p, { homeScore: m.homeScore!, awayScore: m.awayScore! });
+        const earned = calcPoints(p, {
+          homeScore: m.homeScore!,
+          awayScore: m.awayScore!,
+          homeScorers: m.homeScorers,
+          awayScorers: m.awayScorers,
+        });
         pts += earned;
-        if (earned === 5) exact++;
-        if (earned >= 3) correct++;
+        if (p.homeScore === m.homeScore && p.awayScore === m.awayScore) exact++;
+        if (earned > 0) correct++;
       });
       pts += calcGroupPoints(preds).total;
 
@@ -276,7 +290,8 @@ function LeaderboardContent() {
       if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
       return a.displayName.localeCompare(b.displayName);
     });
-  }, [userProfiles, allPredictions, user, userEntry]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfiles, allPredictions, user, userEntry, updates]);
 
   const rankedGroups = useMemo<GroupEntry[]>(() => {
     if (!allGroups.length) return [];
