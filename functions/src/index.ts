@@ -435,35 +435,67 @@ const RAPIDAPI_HOST = 'free-api-live-football-data.p.rapidapi.com';
  * Maps common API name variants → our canonical schedule names.
  * Add entries here if the API returns a different spelling.
  */
+/**
+ * Maps API team name variants → our canonical schedule names.
+ *
+ * Direction: API name → schedule name.
+ * Only add an entry when the API returns a spelling that differs from the schedule.
+ * Do NOT add an entry when the API already matches the schedule — that would
+ * convert the matching name to something that doesn't match.
+ */
 const TEAM_NAME_ALIASES: Record<string, string> = {
-  'Czech Republic':        'Czechia',
-  'Bosnia Herzegovina':    'Bosnia & Herzegovina',
-  'Bosnia and Herzegovina':'Bosnia & Herzegovina',
-  'United States':         'USA',
-  'United Arab Emirates':  'UAE',
-  'IR Iran':               'Iran',
-  'Korea Republic':        'South Korea',
-  'Republic of Korea':     'South Korea',
-  'Ivory Coast':           "Côte d'Ivoire",
-  "Cote d'Ivoire":         "Côte d'Ivoire",
-  'DR Congo':              'Congo DR',
-  'Democratic Republic of Congo': 'Congo DR',
+  // API says → schedule uses
+  'Czech Republic':                 'Czechia',
+  'Bosnia Herzegovina':             'Bosnia & Herzegovina',
+  'Bosnia and Herzegovina':         'Bosnia & Herzegovina',
+  // 'United States' is correct in the schedule — no alias needed.
+  // Add 'USA' as defensive alias in case the API returns the abbreviation.
+  'USA':                            'United States',
+  'IR Iran':                        'Iran',
+  'Korea Republic':                 'South Korea',
+  'Republic of Korea':              'South Korea',
+  'Ivory Coast':                    "Côte d'Ivoire",
+  "Cote d'Ivoire":                  "Côte d'Ivoire",
+  // 'DR Congo' is correct in the schedule — no alias needed.
+  // Add 'Congo DR' as defensive alias in case the API returns the reversed form.
+  'Congo DR':                       'DR Congo',
+  'Democratic Republic of Congo':   'DR Congo',
+  'Republic of Congo':              'DR Congo',
+  // Türkiye variants
+  'Turkey':                         'Türkiye',
 };
 
-/** Normalises a team name from the API to our canonical name. */
+/** Normalises a team name from the API to our canonical schedule name. */
 function normalise(name: string): string {
   return TEAM_NAME_ALIASES[name] ?? name;
 }
 
 /**
- * Builds a reverse lookup: "Home|Away" → our matchId
- * using the static MATCH_SCHEDULE (group stage + knockout stubs).
+ * Builds a reverse lookup: "Home|Away" → matchId
+ * for group-stage matches where both team names are known upfront.
  */
 function buildTeamPairIndex(): Map<string, string> {
   const idx = new Map<string, string>();
   for (const [matchId, entry] of Object.entries(MATCH_SCHEDULE)) {
     if (entry.home && entry.away) {
       idx.set(`${entry.home}|${entry.away}`, matchId);
+    }
+  }
+  return idx;
+}
+
+/**
+ * Builds a kickoff-time index: "YYYY-MM-DDTHH:MM" → matchId
+ * for knockout matches where team names are not known at schedule-build time.
+ * The API's status.utcTime is normalised to minute precision for matching.
+ */
+function buildKickoffIndex(): Map<string, string> {
+  const idx = new Map<string, string>();
+  for (const [matchId, entry] of Object.entries(MATCH_SCHEDULE)) {
+    // Only index knockout slots — identified by empty home/away
+    if (!entry.home && !entry.away && entry.kickoffAt) {
+      const key = new Date(entry.kickoffAt).toISOString().slice(0, 16);
+      idx.set(key, matchId);
     }
   }
   return idx;
@@ -673,13 +705,28 @@ export const pollLiveScores = onSchedule(
     console.log(`Found ${apiMatches.length} WC matches for ${dateStr}.`);
 
     const teamPairIndex = buildTeamPairIndex();
+    const kickoffIndex  = buildKickoffIndex(); // fallback for knockout matches (TBD teams)
     const batch = db.batch();
     let updateCount = 0;
 
     for (const m of apiMatches) {
       const homeNorm = normalise(m.home.name);
       const awayNorm = normalise(m.away.name);
-      const matchId  = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
+
+      // Primary lookup: team-name pair (works for all group-stage matches)
+      let matchId: string | undefined = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
+
+      // Fallback for knockout matches whose slots have blank home/away in the schedule:
+      // match by kickoff time (each knockout slot has a unique UTC kickoff minute).
+      if (!matchId) {
+        const apiKickoff = m.status.utcTime
+          ? new Date(m.status.utcTime).toISOString().slice(0, 16)
+          : null;
+        if (apiKickoff) matchId = kickoffIndex.get(apiKickoff);
+        if (matchId) {
+          console.log(`  Knockout slot via kickoff ${apiKickoff} → ${matchId} (${homeNorm} vs ${awayNorm})`);
+        }
+      }
 
       if (!matchId) {
         console.warn(`No schedule entry for "${homeNorm} vs ${awayNorm}" — skipping.`);
@@ -731,7 +778,15 @@ export const pollLiveScores = onSchedule(
     await Promise.allSettled(liveOrDone.map(async (m) => {
       const homeNorm = normalise(m.home.name);
       const awayNorm = normalise(m.away.name);
-      const matchId  = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
+
+      let matchId: string | undefined = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
+      if (!matchId) {
+        // Same kickoff-time fallback as the score-update loop above
+        const apiKickoff = m.status.utcTime
+          ? new Date(m.status.utcTime).toISOString().slice(0, 16)
+          : null;
+        if (apiKickoff) matchId = kickoffIndex.get(apiKickoff);
+      }
       if (!matchId) return;
 
       const homeCode = TEAM_NAME_TO_CODE[homeNorm] ?? homeNorm.slice(0, 3).toUpperCase();
