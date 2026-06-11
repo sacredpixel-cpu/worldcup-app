@@ -1,20 +1,25 @@
-name: Deploy (EAS)
+name: Deploy to Vercel
 
 on:
   push:
     branches: [main]
 
 jobs:
-  eas-build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: npm ci
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-      - run: eas build --non-interactive --platform all
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy to Vercel (production)
+        run: npx vercel deploy --prod --token ${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: team_9pyk4hVWVBFWciT6jH7SrAeM
+          VERCEL_PROJECT_ID: prj_hCYFBaKh5yusuSUQEnHXPzjaJAvA
