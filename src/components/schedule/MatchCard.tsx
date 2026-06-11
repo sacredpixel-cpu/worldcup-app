@@ -262,71 +262,71 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
           <TeamBlock team={liveMatch.homeTeam} role="Home" />
 
           {/* Score / VS box */}
-          <div className="flex flex-col items-center justify-center px-1">
-            {hasScore ? (
-              <div
-                className="flex flex-col items-center gap-1 rounded-2xl px-4 py-2"
-                style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}
-              >
+          <div className="flex flex-col items-center justify-center px-1 gap-1.5">
+
+            {/* Live / Final score — sits above the VS box when match has started */}
+            {(isLive || isFinished) && hasScore && (
+              <div className="flex flex-col items-center gap-0.5">
+                {isFinished ? (
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#7A91BB', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Final</span>
+                ) : (
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ backgroundColor: '#EF4444' }} />
+                    <span className="relative inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: '#EF4444' }} />
+                  </span>
+                )}
                 <div className="flex items-baseline gap-1">
-                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '40px', fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
+                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '38px', fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
                     {liveMatch.homeScore}
                   </span>
-                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '26px', fontWeight: 700, color: '#3A4E6E', lineHeight: 1, margin: '0 2px' }}>:</span>
-                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '40px', fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
+                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '24px', fontWeight: 700, color: '#3A4E6E', lineHeight: 1, margin: '0 1px' }}>–</span>
+                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '38px', fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
                     {liveMatch.awayScore}
                   </span>
                 </div>
-                {isFinished && hasPrediction && (
-                  <div className="flex flex-col items-center" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px', width: '100%' }}>
-                    <span style={{ fontSize: '8px', fontWeight: 700, color: '#5A6E94', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1 }}>Your pick</span>
-                    <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '14px', fontWeight: 900, color: '#7A91BB', lineHeight: 1.2 }}>
-                      {userPrediction!.homeScore}–{userPrediction!.awayScore}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div
-                className="flex flex-col items-center gap-1 rounded-2xl px-5 py-2"
-                style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)', minWidth: '80px' }}
-              >
-                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '18px', fontWeight: 900, color: '#3A4E6E', letterSpacing: '0.15em' }}>VS</span>
-                {isAuthenticated && !isLocked && hasPrediction ? (
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#FF1F8E' }}>Predicted</span>
-                    <span className="flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[15px] font-bold" style={{ background: 'rgba(255,31,142,0.1)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.2)', marginLeft: '-1.5px', marginRight: '-1.5px' }}>
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                      </svg>
-                      {userPrediction!.homeScore}–{userPrediction!.awayScore}
-                    </span>
-                  </div>
-                ) : isTbd && PREDICT_OPENS[liveMatch.id] ? (
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Predict on</span>
-                    <span className="text-[12px] font-bold" style={{ color: '#7A91BB' }}>{PREDICT_OPENS[liveMatch.id]}</span>
-                  </div>
-                ) : !isLocked && !isTbd && !hasPrediction ? (
-                  <>
-                    {countdown && (
-                      <span className="text-center text-[9px] font-semibold leading-tight" style={{ color: '#7A91BB' }}>
-                        {countdown}
-                      </span>
-                    )}
-                    {isAuthenticated && (
-                      <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.15)' }}>
-                        + Predict
-                      </span>
-                    )}
-                  </>
-                ) : crowd ? (
-                  <span className="text-[12px] font-bold" style={{ color: '#FFB020' }}>
-                    {crowd.homeAvg}–{crowd.awayAvg}
-                  </span>
-                ) : null}
               </div>
             )}
+
+            {/* VS box — always visible */}
+            <div
+              className="flex flex-col items-center gap-1 rounded-2xl px-5 py-2"
+              style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)', minWidth: '80px' }}
+            >
+              <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: '18px', fontWeight: 900, color: '#3A4E6E', letterSpacing: '0.15em' }}>VS</span>
+              {isAuthenticated && !isLocked && hasPrediction ? (
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#FF1F8E' }}>Predicted</span>
+                  <span className="flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[15px] font-bold" style={{ background: 'rgba(255,31,142,0.1)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.2)', marginLeft: '-1.5px', marginRight: '-1.5px' }}>
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                    </svg>
+                    {userPrediction!.homeScore}–{userPrediction!.awayScore}
+                  </span>
+                </div>
+              ) : isTbd && PREDICT_OPENS[liveMatch.id] ? (
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[9px] font-semibold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Predict on</span>
+                  <span className="text-[12px] font-bold" style={{ color: '#7A91BB' }}>{PREDICT_OPENS[liveMatch.id]}</span>
+                </div>
+              ) : !isLocked && !isTbd && !hasPrediction ? (
+                <>
+                  {countdown && (
+                    <span className="text-center text-[9px] font-semibold leading-tight" style={{ color: '#7A91BB' }}>
+                      {countdown}
+                    </span>
+                  )}
+                  {isAuthenticated && (
+                    <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: 'rgba(255,255,255,0.04)', color: '#FF1F8E', border: '1px solid rgba(255,31,142,0.15)' }}>
+                      + Predict
+                    </span>
+                  )}
+                </>
+              ) : crowd ? (
+                <span className="text-[12px] font-bold" style={{ color: '#FFB020' }}>
+                  {crowd.homeAvg}–{crowd.awayAvg}
+                </span>
+              ) : null}
+            </div>
           </div>
 
           <TeamBlock team={liveMatch.awayTeam} role="Away" />
