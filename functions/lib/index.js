@@ -60,11 +60,8 @@ exports.pollLiveScores = exports.morningResultsDigest = exports.onMatchStatusCha
 const admin = __importStar(require("firebase-admin"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-functions/v2/firestore");
-const params_1 = require("firebase-functions/params");
 const node_fetch_1 = __importDefault(require("node-fetch"));
 const schedule_1 = require("./schedule");
-// Firebase Secret — set with: firebase functions:secrets:set RAPIDAPI_KEY
-const RAPIDAPI_KEY = (0, params_1.defineSecret)('RAPIDAPI_KEY');
 admin.initializeApp();
 const db = admin.firestore();
 const fcm = admin.messaging();
@@ -406,11 +403,73 @@ exports.morningResultsDigest = (0, scheduler_1.onSchedule)({
 });
 // ─── 3. Live Score Poller ─────────────────────────────────────────────────────
 /**
- * WC 2026 league ID in the "Free API Live Football Data" (RapidAPI / FotMob).
- * Confirmed by querying /football-get-matches-by-date for June 11 2026.
+ * ESPN public scoreboard API for the FIFA World Cup.
+ * No API key required; returns all WC group-stage and knockout matches
+ * with live scores, statuses, and kickoff times.
+ *
+ * NOTE: The original RapidAPI / FotMob endpoint (league ID 914609) only
+ * covers pre-tournament warm-up friendlies and is NOT used for live scores.
  */
-const WC_LEAGUE_ID = 914609;
-const RAPIDAPI_HOST = 'free-api-live-football-data.p.rapidapi.com';
+const ESPN_WC_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+const ESPN_WC_SUMMARY = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary';
+/** Maps ESPN status → our Firestore status string. */
+function espnToAppStatus(status) {
+    const { name, state, completed } = status.type;
+    if (state === 'pre')
+        return 'upcoming';
+    if (state === 'post' || completed)
+        return 'finished';
+    if (name === 'STATUS_HALFTIME')
+        return 'halftime';
+    if (name === 'STATUS_OVERTIME' || name === 'STATUS_END_OVERTIME')
+        return 'extratime';
+    if (name === 'STATUS_SHOOTOUT' || name === 'STATUS_PENALTY')
+        return 'penalties';
+    return 'live';
+}
+function extractEspnScorers(summary, homeCode, awayCode) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
+    const map = new Map();
+    const add = (player, teamCode) => {
+        var _a;
+        if (!player)
+            return;
+        const key = `${player}::${teamCode}`;
+        const entry = (_a = map.get(key)) !== null && _a !== void 0 ? _a : { player, teamCode, goals: 0 };
+        entry.goals++;
+        map.set(key, entry);
+    };
+    // ESPN keyEvents
+    for (const ev of (_a = summary.keyEvents) !== null && _a !== void 0 ? _a : []) {
+        const typeText = ((_c = (_b = ev.type) === null || _b === void 0 ? void 0 : _b.text) !== null && _c !== void 0 ? _c : '').toLowerCase();
+        if (!typeText.includes('goal'))
+            continue;
+        // Skip OG and penalties (shootout)
+        if (typeText.includes('own') || typeText.includes('penalty'))
+            continue;
+        if (((_e = (_d = ev.period) === null || _d === void 0 ? void 0 : _d.number) !== null && _e !== void 0 ? _e : 0) > 4)
+            continue; // period 5+ = shootout
+        const name = (_h = (_g = (_f = ev.athlete) === null || _f === void 0 ? void 0 : _f.displayName) !== null && _g !== void 0 ? _g : ev.text) !== null && _h !== void 0 ? _h : '';
+        const teamCode = ev.homeAway === 'home' ? homeCode : awayCode;
+        add(name, teamCode);
+    }
+    // Fallback: scoring plays
+    if (map.size === 0) {
+        for (const sp of (_j = summary.scoring) !== null && _j !== void 0 ? _j : []) {
+            const typeText = ((_l = (_k = sp.type) === null || _k === void 0 ? void 0 : _k.text) !== null && _l !== void 0 ? _l : '').toLowerCase();
+            if (!typeText.includes('goal'))
+                continue;
+            if (typeText.includes('own') || typeText.includes('penalty'))
+                continue;
+            if (((_o = (_m = sp.period) === null || _m === void 0 ? void 0 : _m.number) !== null && _o !== void 0 ? _o : 0) > 4)
+                continue;
+            const name = (_t = (_s = (_r = (_q = (_p = sp.participants) === null || _p === void 0 ? void 0 : _p[0]) === null || _q === void 0 ? void 0 : _q.athlete) === null || _r === void 0 ? void 0 : _r.displayName) !== null && _s !== void 0 ? _s : sp.text) !== null && _t !== void 0 ? _t : '';
+            const teamCode = sp.homeAway === 'home' ? homeCode : awayCode;
+            add(name, teamCode);
+        }
+    }
+    return Array.from(map.values());
+}
 /**
  * Maps common API name variants → our canonical schedule names.
  * Add entries here if the API returns a different spelling.
@@ -479,108 +538,19 @@ function buildKickoffIndex() {
     return idx;
 }
 /**
- * Maps FotMob statusId to our Firestore status string.
- *  1  = Not started
- *  2  = First half
- *  3  = Half time
- *  4  = Second half
- *  5  = Full time (regular)
- *  6  = Extra time
- *  7  = Extra time (second half)
- *  8  = Penalty shootout
- * 13  = Full time after extra/pens
- */
-function toAppStatus(m) {
-    if (!m.status.started)
-        return 'upcoming';
-    if (m.status.finished)
-        return 'finished';
-    const sid = m.statusId;
-    if (sid === 3)
-        return 'halftime';
-    if (sid === 6 || sid === 7)
-        return 'extratime';
-    if (sid === 8)
-        return 'penalties';
-    return 'live';
-}
-/**
- * Extracts goal scorers from a FotMob match-details response.
- * Excludes own goals and penalty-shootout goals (per Golden Boot rules).
- *
- * Tries two data sources in order:
- *   1. content.shotmap.shots  — most reliable (per-shot granularity)
- *   2. content.matchFacts.events.events — fallback event list
- */
-function extractGoalScorers(details, homeCode, awayCode) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w;
-    const homeTeamId = (_c = (_b = (_a = details.header) === null || _a === void 0 ? void 0 : _a.teams) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.id;
-    const awayTeamId = (_f = (_e = (_d = details.header) === null || _d === void 0 ? void 0 : _d.teams) === null || _e === void 0 ? void 0 : _e[1]) === null || _f === void 0 ? void 0 : _f.id;
-    const map = new Map();
-    const add = (playerName, teamCode) => {
-        var _a;
-        if (!playerName)
-            return;
-        const key = `${playerName}::${teamCode}`;
-        const entry = (_a = map.get(key)) !== null && _a !== void 0 ? _a : { player: playerName, teamCode, goals: 0 };
-        entry.goals++;
-        map.set(key, entry);
-    };
-    const resolveTeam = (teamId, isHome) => {
-        if (isHome !== undefined)
-            return isHome ? homeCode : awayCode;
-        if (homeTeamId && teamId === homeTeamId)
-            return homeCode;
-        if (awayTeamId && teamId === awayTeamId)
-            return awayCode;
-        return homeCode; // fallback
-    };
-    // Method 1: shotmap
-    const shots = (_j = (_h = (_g = details.content) === null || _g === void 0 ? void 0 : _g.shotmap) === null || _h === void 0 ? void 0 : _h.shots) !== null && _j !== void 0 ? _j : [];
-    for (const s of shots) {
-        if (s.eventType !== 'Goal')
-            continue;
-        if (s.isOwnGoal)
-            continue;
-        if (String((_k = s.period) !== null && _k !== void 0 ? _k : '').toLowerCase().includes('penalt'))
-            continue;
-        const name = s.playerName || `${(_l = s.firstName) !== null && _l !== void 0 ? _l : ''} ${(_m = s.lastName) !== null && _m !== void 0 ? _m : ''}`.trim();
-        add(name, resolveTeam(s.teamId));
-    }
-    // Method 2: matchFacts events (fallback if shotmap empty)
-    if (map.size === 0) {
-        const events = (_r = (_q = (_p = (_o = details.content) === null || _o === void 0 ? void 0 : _o.matchFacts) === null || _p === void 0 ? void 0 : _p.events) === null || _q === void 0 ? void 0 : _q.events) !== null && _r !== void 0 ? _r : [];
-        for (const ev of events) {
-            const typeId = typeof ev.type === 'string' ? ev.type : (_t = (_s = ev.type) === null || _s === void 0 ? void 0 : _s.id) !== null && _t !== void 0 ? _t : '';
-            if (typeId !== 'Goal' && typeId !== 'PenGoal')
-                continue;
-            if (ev.isOwnGoal)
-                continue;
-            if (String((_u = ev.period) !== null && _u !== void 0 ? _u : '').toLowerCase().includes('penalt'))
-                continue;
-            const name = (_w = (_v = ev.player) === null || _v === void 0 ? void 0 : _v.name) !== null && _w !== void 0 ? _w : '';
-            add(name, resolveTeam(ev.teamId, ev.isHome));
-        }
-    }
-    return Array.from(map.values());
-}
-/**
- * Polls the RapidAPI live football data for today's World Cup matches
+ * Polls the ESPN public scoreboard for today's World Cup matches every 2 min
  * and writes updated scores + status to Firestore.
+ * No API key required — ESPN serves WC data publicly.
  *
- * Runs every 2 minutes. Only active during the tournament window
- * (Jun 11 – Jul 19 2026) to avoid burning API quota.
- *
- * The onMatchStatusChange trigger above then fires notifications
- * automatically whenever status or scores change in Firestore.
+ * The onMatchStatusChange trigger fires notifications automatically whenever
+ * status or scores change in Firestore.
  */
 exports.pollLiveScores = (0, scheduler_1.onSchedule)({
     schedule: 'every 2 minutes',
-    secrets: [RAPIDAPI_KEY],
     timeoutSeconds: 60,
     memory: '256MiB',
 }, async () => {
-    var _a, _b;
+    var _a, _b, _c, _d;
     // Only run during the tournament window
     const now = new Date();
     const start = new Date('2026-06-11T00:00:00Z');
@@ -589,148 +559,159 @@ exports.pollLiveScores = (0, scheduler_1.onSchedule)({
         console.log('Outside tournament window — skipping poll.');
         return;
     }
-    // .trim() strips any accidental trailing newline from the secret value
-    const key = RAPIDAPI_KEY.value().trim();
-    if (!key) {
-        console.error('RAPIDAPI_KEY secret not set.');
-        return;
-    }
-    // Fetch today's matches from the API (YYYYMMDD format)
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const url = `https://${RAPIDAPI_HOST}/football-get-matches-by-date?date=${dateStr}`;
-    let apiMatches = [];
+    const url = `${ESPN_WC_SCOREBOARD}?dates=${dateStr}`;
+    let events = [];
     try {
-        const res = await (0, node_fetch_1.default)(url, {
-            headers: {
-                'x-rapidapi-host': RAPIDAPI_HOST,
-                'x-rapidapi-key': key,
-            },
-        });
-        const json = await res.json();
-        if (json.status !== 'success') {
-            console.error('API returned non-success:', JSON.stringify(json));
+        const res = await (0, node_fetch_1.default)(url);
+        if (!res.ok) {
+            console.error(`ESPN API HTTP ${res.status}`);
+            await db.doc('pollDiagnostics/latest').set({
+                checkedAt: admin.firestore.FieldValue.serverTimestamp(),
+                source: 'espn', date: dateStr, httpStatus: res.status,
+            }, { merge: true });
             return;
         }
-        apiMatches = ((_b = (_a = json.response) === null || _a === void 0 ? void 0 : _a.matches) !== null && _b !== void 0 ? _b : []).filter((m) => m.leagueId === WC_LEAGUE_ID);
+        const json = await res.json();
+        events = (_a = json.events) !== null && _a !== void 0 ? _a : [];
     }
     catch (err) {
-        console.error('Failed to fetch live scores:', err);
+        console.error('ESPN fetch failed:', err);
+        await db.doc('pollDiagnostics/latest').set({
+            checkedAt: admin.firestore.FieldValue.serverTimestamp(),
+            source: 'espn', date: dateStr, error: String(err),
+        }, { merge: true });
         return;
     }
-    if (apiMatches.length === 0) {
-        console.log(`No WC matches found for date ${dateStr}.`);
+    // Write diagnostic — useful for verifying team names and statuses
+    await db.doc('pollDiagnostics/latest').set({
+        checkedAt: admin.firestore.FieldValue.serverTimestamp(),
+        source: 'espn',
+        date: dateStr,
+        totalEvents: events.length,
+        sampleEvents: events.slice(0, 8).map((ev) => {
+            var _a, _b, _c, _d, _e, _f, _g;
+            const comp = (_a = ev.competitions) === null || _a === void 0 ? void 0 : _a[0];
+            const home = comp === null || comp === void 0 ? void 0 : comp.competitors.find((c) => c.homeAway === 'home');
+            const away = comp === null || comp === void 0 ? void 0 : comp.competitors.find((c) => c.homeAway === 'away');
+            return {
+                id: ev.id,
+                home: (_b = home === null || home === void 0 ? void 0 : home.team.displayName) !== null && _b !== void 0 ? _b : '?',
+                away: (_c = away === null || away === void 0 ? void 0 : away.team.displayName) !== null && _c !== void 0 ? _c : '?',
+                score: `${(_d = home === null || home === void 0 ? void 0 : home.score) !== null && _d !== void 0 ? _d : 0}-${(_e = away === null || away === void 0 ? void 0 : away.score) !== null && _e !== void 0 ? _e : 0}`,
+                status: (_f = comp === null || comp === void 0 ? void 0 : comp.status.type.name) !== null && _f !== void 0 ? _f : '?',
+                detail: (_g = comp === null || comp === void 0 ? void 0 : comp.status.type.detail) !== null && _g !== void 0 ? _g : '',
+            };
+        }),
+    }, { merge: true });
+    if (events.length === 0) {
+        console.log(`No ESPN WC events for ${dateStr}.`);
         return;
     }
-    console.log(`Found ${apiMatches.length} WC matches for ${dateStr}.`);
+    console.log(`ESPN: ${events.length} WC events for ${dateStr}.`);
     const teamPairIndex = buildTeamPairIndex();
-    const kickoffIndex = buildKickoffIndex(); // fallback for knockout matches (TBD teams)
+    const kickoffIndex = buildKickoffIndex();
     const batch = db.batch();
     let updateCount = 0;
-    for (const m of apiMatches) {
-        const homeNorm = normalise(m.home.name);
-        const awayNorm = normalise(m.away.name);
-        // Primary lookup: team-name pair (works for all group-stage matches)
+    for (const ev of events) {
+        const comp = (_b = ev.competitions) === null || _b === void 0 ? void 0 : _b[0];
+        if (!comp)
+            continue;
+        const homeComp = comp.competitors.find((c) => c.homeAway === 'home');
+        const awayComp = comp.competitors.find((c) => c.homeAway === 'away');
+        if (!homeComp || !awayComp)
+            continue;
+        const homeNorm = normalise(homeComp.team.displayName);
+        const awayNorm = normalise(awayComp.team.displayName);
+        // Primary lookup by team-name pair
         let matchId = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
-        // Fallback for knockout matches whose slots have blank home/away in the schedule:
-        // match by kickoff time (each knockout slot has a unique UTC kickoff minute).
+        // Fallback for knockout slots: match by kickoff time
         if (!matchId) {
-            const apiKickoff = m.status.utcTime
-                ? new Date(m.status.utcTime).toISOString().slice(0, 16)
+            const kickoffStr = (_d = (_c = comp.date) !== null && _c !== void 0 ? _c : ev.date) !== null && _d !== void 0 ? _d : '';
+            const apiKickoff = kickoffStr
+                ? new Date(kickoffStr).toISOString().slice(0, 16)
                 : null;
             if (apiKickoff)
                 matchId = kickoffIndex.get(apiKickoff);
             if (matchId) {
-                console.log(`  Knockout slot via kickoff ${apiKickoff} → ${matchId} (${homeNorm} vs ${awayNorm})`);
+                console.log(`  Knockout via kickoff ${apiKickoff} → ${matchId} (${homeNorm} vs ${awayNorm})`);
             }
         }
         if (!matchId) {
             console.warn(`No schedule entry for "${homeNorm} vs ${awayNorm}" — skipping.`);
             continue;
         }
-        const appStatus = toAppStatus(m);
-        const docRef = db.collection('matches').doc(matchId);
-        const update = {
-            homeScore: m.home.score,
-            awayScore: m.away.score,
+        const appStatus = espnToAppStatus(comp.status);
+        const homeScore = parseInt(homeComp.score, 10);
+        const awayScore = parseInt(awayComp.score, 10);
+        batch.set(db.collection('matches').doc(matchId), {
+            homeScore,
+            awayScore,
             status: appStatus,
             lastSyncAt: admin.firestore.FieldValue.serverTimestamp(),
-            apiMatchId: m.id,
-        };
-        // Include penalty scores when present
-        if (m.home.penScore !== undefined)
-            update.homePenScore = m.home.penScore;
-        if (m.away.penScore !== undefined)
-            update.awayPenScore = m.away.penScore;
-        batch.set(docRef, update, { merge: true });
+            espnEventId: ev.id,
+        }, { merge: true });
         updateCount++;
-        console.log(`  ${matchId}: ${homeNorm} ${m.home.score}–${m.away.score} ${awayNorm} [${appStatus}]`);
+        console.log(`  ${matchId}: ${homeNorm} ${homeScore}–${awayScore} ${awayNorm} [${appStatus}]`);
     }
     if (updateCount > 0) {
         await batch.commit();
         console.log(`Committed ${updateCount} match updates.`);
     }
-    // ── Fetch match details to extract goal scorers ───────────────────────
-    // For every live or finished match that has an API match ID, call
-    // football-get-match-details and write goalScorerEvents to the match doc.
-    // Runs concurrently (Promise.allSettled) so one failure doesn't block others.
-    const liveOrDone = apiMatches.filter(m => {
-        const s = toAppStatus(m);
-        return s === 'live' || s === 'halftime' || s === 'extratime' ||
-            s === 'penalties' || s === 'finished';
+    // ── Goal scorers via ESPN summary ─────────────────────────────────────
+    // For every live or finished event, call the ESPN summary endpoint to
+    // extract goal scorers and write them to the match doc.
+    const liveOrDone = events.filter((ev) => {
+        var _a, _b;
+        const comp = (_a = ev.competitions) === null || _a === void 0 ? void 0 : _a[0];
+        const state = (_b = comp === null || comp === void 0 ? void 0 : comp.status.type.state) !== null && _b !== void 0 ? _b : 'pre';
+        return state === 'in' || state === 'post';
     });
     if (liveOrDone.length === 0)
         return;
-    let detailsLogged = false; // log raw response once per poll for debugging
-    await Promise.allSettled(liveOrDone.map(async (m) => {
-        var _a, _b, _c;
-        const homeNorm = normalise(m.home.name);
-        const awayNorm = normalise(m.away.name);
+    await Promise.allSettled(liveOrDone.map(async (ev) => {
+        var _a, _b, _c, _d, _e;
+        const comp = (_a = ev.competitions) === null || _a === void 0 ? void 0 : _a[0];
+        const homeComp = comp === null || comp === void 0 ? void 0 : comp.competitors.find((c) => c.homeAway === 'home');
+        const awayComp = comp === null || comp === void 0 ? void 0 : comp.competitors.find((c) => c.homeAway === 'away');
+        if (!homeComp || !awayComp)
+            return;
+        const homeNorm = normalise(homeComp.team.displayName);
+        const awayNorm = normalise(awayComp.team.displayName);
         let matchId = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
         if (!matchId) {
-            // Same kickoff-time fallback as the score-update loop above
-            const apiKickoff = m.status.utcTime
-                ? new Date(m.status.utcTime).toISOString().slice(0, 16)
+            const kickoffStr = (_c = (_b = comp === null || comp === void 0 ? void 0 : comp.date) !== null && _b !== void 0 ? _b : ev.date) !== null && _c !== void 0 ? _c : '';
+            const apiKickoff = kickoffStr
+                ? new Date(kickoffStr).toISOString().slice(0, 16)
                 : null;
             if (apiKickoff)
                 matchId = kickoffIndex.get(apiKickoff);
         }
         if (!matchId)
             return;
-        const homeCode = (_a = TEAM_NAME_TO_CODE[homeNorm]) !== null && _a !== void 0 ? _a : homeNorm.slice(0, 3).toUpperCase();
-        const awayCode = (_b = TEAM_NAME_TO_CODE[awayNorm]) !== null && _b !== void 0 ? _b : awayNorm.slice(0, 3).toUpperCase();
-        const detailUrl = `https://${RAPIDAPI_HOST}/football-get-match-details?match_id=${m.id}`;
-        let detailsJson;
+        const homeCode = (_d = TEAM_NAME_TO_CODE[homeNorm]) !== null && _d !== void 0 ? _d : homeNorm.slice(0, 3).toUpperCase();
+        const awayCode = (_e = TEAM_NAME_TO_CODE[awayNorm]) !== null && _e !== void 0 ? _e : awayNorm.slice(0, 3).toUpperCase();
         try {
-            const res = await (0, node_fetch_1.default)(detailUrl, {
-                headers: {
-                    'x-rapidapi-host': RAPIDAPI_HOST,
-                    'x-rapidapi-key': key,
-                },
-            });
-            if (!res.ok) {
-                console.warn(`match-details HTTP ${res.status} for ${matchId} (apiId=${m.id})`);
+            const summaryRes = await (0, node_fetch_1.default)(`${ESPN_WC_SUMMARY}?event=${ev.id}`);
+            if (!summaryRes.ok)
                 return;
+            const summary = await summaryRes.json();
+            const scorers = extractEspnScorers(summary, homeCode, awayCode);
+            // Derive flat scorer name arrays for calcPoints / MatchCard scoring logic
+            const homeScorers = scorers
+                .filter((s) => s.teamCode === homeCode)
+                .map((s) => s.player);
+            const awayScorers = scorers
+                .filter((s) => s.teamCode === awayCode)
+                .map((s) => s.player);
+            await db.collection('matches').doc(matchId).set({ goalScorerEvents: scorers, homeScorers, awayScorers }, { merge: true });
+            if (scorers.length > 0) {
+                console.log(`  Goal scorers ${matchId}: ` +
+                    scorers.map((s) => `${s.player}(${s.teamCode})×${s.goals}`).join(', '));
             }
-            detailsJson = await res.json();
         }
         catch (err) {
-            console.error(`match-details fetch failed for ${matchId}:`, err);
-            return;
-        }
-        // Log the raw structure once per poll run so we can verify field paths
-        if (!detailsLogged) {
-            detailsLogged = true;
-            console.log(`match-details sample (${matchId}):`, JSON.stringify(detailsJson).slice(0, 1500));
-        }
-        // Unwrap response envelope if present
-        const envelope = detailsJson;
-        const details = (_c = envelope.response) !== null && _c !== void 0 ? _c : detailsJson;
-        const scorers = extractGoalScorers(details, homeCode, awayCode);
-        // Always write (even if empty) so UI knows we've checked
-        await db.collection('matches').doc(matchId).set({ goalScorerEvents: scorers }, { merge: true });
-        if (scorers.length > 0) {
-            console.log(`  Goal scorers ${matchId}: ` +
-                scorers.map(s => `${s.player}(${s.teamCode})×${s.goals}`).join(', '));
+            console.warn(`ESPN summary failed for ${matchId} (espnId=${ev.id}):`, err);
         }
     }));
 });

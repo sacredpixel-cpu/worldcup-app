@@ -22,13 +22,9 @@
 import * as admin from 'firebase-admin';
 import { onSchedule }         from 'firebase-functions/v2/scheduler';
 import { onDocumentUpdated }  from 'firebase-functions/v2/firestore';
-import { defineSecret }       from 'firebase-functions/params';
 import type { MulticastMessage } from 'firebase-admin/messaging';
 import fetch                  from 'node-fetch';
 import { MATCH_SCHEDULE }     from './schedule';
-
-// Firebase Secret — set with: firebase functions:secrets:set RAPIDAPI_KEY
-const RAPIDAPI_KEY = defineSecret('RAPIDAPI_KEY');
 
 admin.initializeApp();
 
@@ -477,11 +473,129 @@ export const morningResultsDigest = onSchedule(
 // ─── 3. Live Score Poller ─────────────────────────────────────────────────────
 
 /**
- * WC 2026 league ID in the "Free API Live Football Data" (RapidAPI / FotMob).
- * Confirmed by querying /football-get-matches-by-date for June 11 2026.
+ * ESPN public scoreboard API for the FIFA World Cup.
+ * No API key required; returns all WC group-stage and knockout matches
+ * with live scores, statuses, and kickoff times.
+ *
+ * NOTE: The original RapidAPI / FotMob endpoint (league ID 914609) only
+ * covers pre-tournament warm-up friendlies and is NOT used for live scores.
  */
-const WC_LEAGUE_ID = 914609;
-const RAPIDAPI_HOST = 'free-api-live-football-data.p.rapidapi.com';
+const ESPN_WC_SCOREBOARD =
+  'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+const ESPN_WC_SUMMARY =
+  'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary';
+
+// ── ESPN response types ───────────────────────────────────────────────────────
+
+interface EspnCompetitor {
+  homeAway: 'home' | 'away';
+  score:    string;
+  team: { displayName: string; abbreviation: string };
+}
+
+interface EspnCompetitionStatus {
+  clock?:        number;
+  displayClock?: string;
+  period?:       number;
+  type: {
+    name:      string;  // e.g. "STATUS_IN_PROGRESS", "STATUS_FINAL"
+    state:     string;  // "pre" | "in" | "post"
+    completed: boolean;
+    detail?:   string;  // "55'" or "Half Time" etc.
+  };
+}
+
+interface EspnCompetition {
+  id:          string;
+  date?:       string;   // ISO kickoff time
+  competitors: EspnCompetitor[];
+  status:      EspnCompetitionStatus;
+}
+
+interface EspnEvent {
+  id:           string;
+  date?:        string;  // ISO kickoff time (top-level)
+  competitions: EspnCompetition[];
+}
+
+interface EspnScoreboardResponse {
+  events?: EspnEvent[];
+}
+
+/** Maps ESPN status → our Firestore status string. */
+function espnToAppStatus(status: EspnCompetitionStatus): string {
+  const { name, state, completed } = status.type;
+  if (state === 'pre')                                                return 'upcoming';
+  if (state === 'post' || completed)                                  return 'finished';
+  if (name === 'STATUS_HALFTIME')                                     return 'halftime';
+  if (name === 'STATUS_OVERTIME' || name === 'STATUS_END_OVERTIME')   return 'extratime';
+  if (name === 'STATUS_SHOOTOUT' || name === 'STATUS_PENALTY')        return 'penalties';
+  return 'live';
+}
+
+// ── ESPN goal-scorer helpers ──────────────────────────────────────────────────
+
+interface EspnSummaryResponse {
+  keyEvents?: EspnKeyEvent[];
+  scoring?:   EspnScoringPlay[];
+}
+interface EspnKeyEvent {
+  type?:      { text?: string };
+  text?:      string;
+  homeAway?:  string;
+  athlete?:   { displayName?: string };
+  period?:    { number?: number };
+}
+interface EspnScoringPlay {
+  type?:      { text?: string };
+  text?:      string;
+  homeAway?:  string;
+  participants?: Array<{ athlete?: { displayName?: string } }>;
+  period?:    { number?: number };
+}
+
+function extractEspnScorers(
+  summary: EspnSummaryResponse,
+  homeCode: string,
+  awayCode: string,
+): GoalScorerEvent[] {
+  const map = new Map<string, GoalScorerEvent>();
+
+  const add = (player: string, teamCode: string) => {
+    if (!player) return;
+    const key = `${player}::${teamCode}`;
+    const entry = map.get(key) ?? { player, teamCode, goals: 0 };
+    entry.goals++;
+    map.set(key, entry);
+  };
+
+  // ESPN keyEvents
+  for (const ev of summary.keyEvents ?? []) {
+    const typeText = (ev.type?.text ?? '').toLowerCase();
+    if (!typeText.includes('goal')) continue;
+    // Skip OG and penalties (shootout)
+    if (typeText.includes('own') || typeText.includes('penalty')) continue;
+    if ((ev.period?.number ?? 0) > 4) continue; // period 5+ = shootout
+    const name     = ev.athlete?.displayName ?? ev.text ?? '';
+    const teamCode = ev.homeAway === 'home' ? homeCode : awayCode;
+    add(name, teamCode);
+  }
+
+  // Fallback: scoring plays
+  if (map.size === 0) {
+    for (const sp of summary.scoring ?? []) {
+      const typeText = (sp.type?.text ?? '').toLowerCase();
+      if (!typeText.includes('goal')) continue;
+      if (typeText.includes('own') || typeText.includes('penalty')) continue;
+      if ((sp.period?.number ?? 0) > 4) continue;
+      const name     = sp.participants?.[0]?.athlete?.displayName ?? sp.text ?? '';
+      const teamCode = sp.homeAway === 'home' ? homeCode : awayCode;
+      add(name, teamCode);
+    }
+  }
+
+  return Array.from(map.values());
+}
 
 /**
  * Maps common API name variants → our canonical schedule names.
@@ -553,77 +667,6 @@ function buildKickoffIndex(): Map<string, string> {
   return idx;
 }
 
-interface ApiMatch {
-  id: number;
-  leagueId: number;
-  home: { name: string; score: number; penScore?: number };
-  away: { name: string; score: number; penScore?: number };
-  statusId: number;
-  status: {
-    started: boolean;
-    finished: boolean;
-    utcTime: string;
-    reason?: { short: string };
-  };
-}
-
-/**
- * Maps FotMob statusId to our Firestore status string.
- *  1  = Not started
- *  2  = First half
- *  3  = Half time
- *  4  = Second half
- *  5  = Full time (regular)
- *  6  = Extra time
- *  7  = Extra time (second half)
- *  8  = Penalty shootout
- * 13  = Full time after extra/pens
- */
-function toAppStatus(m: ApiMatch): string {
-  if (!m.status.started)  return 'upcoming';
-  if (m.status.finished)  return 'finished';
-  const sid = m.statusId;
-  if (sid === 3)          return 'halftime';
-  if (sid === 6 || sid === 7) return 'extratime';
-  if (sid === 8)          return 'penalties';
-  return 'live';
-}
-
-// ─── Match-details types + goal scorer extraction ────────────────────────────
-
-interface ShotEvent {
-  playerName?:  string;
-  firstName?:   string;
-  lastName?:    string;
-  teamId?:      number;
-  eventType?:   string;   // "Goal" | "AttemptSaved" | "Block" | "Miss" | ...
-  isOwnGoal?:   boolean;
-  period?:      string;   // "FirstHalf" | "SecondHalf" | "ExtraTimeFirstHalf" | "Penalties" | ...
-}
-
-interface MatchEventEntry {
-  type?:       string | { id?: string };
-  player?:     { name?: string; id?: number };
-  teamId?:     number;
-  isHome?:     boolean;
-  isOwnGoal?:  boolean;
-  period?:     string | number;
-}
-
-interface MatchDetailsResponse {
-  header?: {
-    teams?: Array<{ id?: number; name?: string }>;
-  };
-  content?: {
-    shotmap?: { shots?: ShotEvent[] };
-    matchFacts?: {
-      events?: {
-        events?: MatchEventEntry[];
-      };
-    };
-  };
-}
-
 export interface GoalScorerEvent {
   player:   string;
   teamCode: string;
@@ -631,86 +674,22 @@ export interface GoalScorerEvent {
 }
 
 /**
- * Extracts goal scorers from a FotMob match-details response.
- * Excludes own goals and penalty-shootout goals (per Golden Boot rules).
- *
- * Tries two data sources in order:
- *   1. content.shotmap.shots  — most reliable (per-shot granularity)
- *   2. content.matchFacts.events.events — fallback event list
- */
-function extractGoalScorers(
-  details: MatchDetailsResponse,
-  homeCode: string,
-  awayCode: string,
-): GoalScorerEvent[] {
-  const homeTeamId = details.header?.teams?.[0]?.id;
-  const awayTeamId = details.header?.teams?.[1]?.id;
-
-  const map = new Map<string, GoalScorerEvent>();
-
-  const add = (playerName: string, teamCode: string) => {
-    if (!playerName) return;
-    const key = `${playerName}::${teamCode}`;
-    const entry = map.get(key) ?? { player: playerName, teamCode, goals: 0 };
-    entry.goals++;
-    map.set(key, entry);
-  };
-
-  const resolveTeam = (teamId: number | undefined, isHome?: boolean): string => {
-    if (isHome !== undefined) return isHome ? homeCode : awayCode;
-    if (homeTeamId && teamId === homeTeamId) return homeCode;
-    if (awayTeamId && teamId === awayTeamId) return awayCode;
-    return homeCode; // fallback
-  };
-
-  // Method 1: shotmap
-  const shots = details.content?.shotmap?.shots ?? [];
-  for (const s of shots) {
-    if (s.eventType !== 'Goal') continue;
-    if (s.isOwnGoal) continue;
-    if (String(s.period ?? '').toLowerCase().includes('penalt')) continue;
-
-    const name = s.playerName || `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim();
-    add(name, resolveTeam(s.teamId));
-  }
-
-  // Method 2: matchFacts events (fallback if shotmap empty)
-  if (map.size === 0) {
-    const events = details.content?.matchFacts?.events?.events ?? [];
-    for (const ev of events) {
-      const typeId = typeof ev.type === 'string' ? ev.type : ev.type?.id ?? '';
-      if (typeId !== 'Goal' && typeId !== 'PenGoal') continue;
-      if (ev.isOwnGoal) continue;
-      if (String(ev.period ?? '').toLowerCase().includes('penalt')) continue;
-
-      const name = ev.player?.name ?? '';
-      add(name, resolveTeam(ev.teamId, ev.isHome));
-    }
-  }
-
-  return Array.from(map.values());
-}
-
-/**
- * Polls the RapidAPI live football data for today's World Cup matches
+ * Polls the ESPN public scoreboard for today's World Cup matches every 2 min
  * and writes updated scores + status to Firestore.
+ * No API key required — ESPN serves WC data publicly.
  *
- * Runs every 2 minutes. Only active during the tournament window
- * (Jun 11 – Jul 19 2026) to avoid burning API quota.
- *
- * The onMatchStatusChange trigger above then fires notifications
- * automatically whenever status or scores change in Firestore.
+ * The onMatchStatusChange trigger fires notifications automatically whenever
+ * status or scores change in Firestore.
  */
 export const pollLiveScores = onSchedule(
   {
     schedule: 'every 2 minutes',
-    secrets: [RAPIDAPI_KEY],
     timeoutSeconds: 60,
     memory: '256MiB',
   },
   async () => {
     // Only run during the tournament window
-    const now = new Date();
+    const now   = new Date();
     const start = new Date('2026-06-11T00:00:00Z');
     const end   = new Date('2026-07-20T00:00:00Z');
     if (now < start || now > end) {
@@ -718,66 +697,87 @@ export const pollLiveScores = onSchedule(
       return;
     }
 
-    // .trim() strips any accidental trailing newline from the secret value
-    const key = RAPIDAPI_KEY.value().trim();
-    if (!key) {
-      console.error('RAPIDAPI_KEY secret not set.');
-      return;
-    }
-
-    // Fetch today's matches from the API (YYYYMMDD format)
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const url = `https://${RAPIDAPI_HOST}/football-get-matches-by-date?date=${dateStr}`;
+    const url     = `${ESPN_WC_SCOREBOARD}?dates=${dateStr}`;
 
-    let apiMatches: ApiMatch[] = [];
+    let events: EspnEvent[] = [];
     try {
-      const res = await fetch(url, {
-        headers: {
-          'x-rapidapi-host': RAPIDAPI_HOST,
-          'x-rapidapi-key':  key,
-        },
-      });
-      const json = await res.json() as { status: string; response?: { matches?: ApiMatch[] } };
-      if (json.status !== 'success') {
-        console.error('API returned non-success:', JSON.stringify(json));
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.error(`ESPN API HTTP ${res.status}`);
+        await db.doc('pollDiagnostics/latest').set({
+          checkedAt: admin.firestore.FieldValue.serverTimestamp(),
+          source: 'espn', date: dateStr, httpStatus: res.status,
+        }, { merge: true });
         return;
       }
-      apiMatches = (json.response?.matches ?? []).filter(
-        (m) => m.leagueId === WC_LEAGUE_ID
-      );
+      const json = await res.json() as EspnScoreboardResponse;
+      events = json.events ?? [];
     } catch (err) {
-      console.error('Failed to fetch live scores:', err);
+      console.error('ESPN fetch failed:', err);
+      await db.doc('pollDiagnostics/latest').set({
+        checkedAt: admin.firestore.FieldValue.serverTimestamp(),
+        source: 'espn', date: dateStr, error: String(err),
+      }, { merge: true });
       return;
     }
 
-    if (apiMatches.length === 0) {
-      console.log(`No WC matches found for date ${dateStr}.`);
+    // Write diagnostic — useful for verifying team names and statuses
+    await db.doc('pollDiagnostics/latest').set({
+      checkedAt:    admin.firestore.FieldValue.serverTimestamp(),
+      source:       'espn',
+      date:         dateStr,
+      totalEvents:  events.length,
+      sampleEvents: events.slice(0, 8).map((ev) => {
+        const comp = ev.competitions?.[0];
+        const home = comp?.competitors.find((c) => c.homeAway === 'home');
+        const away = comp?.competitors.find((c) => c.homeAway === 'away');
+        return {
+          id:      ev.id,
+          home:    home?.team.displayName ?? '?',
+          away:    away?.team.displayName ?? '?',
+          score:   `${home?.score ?? 0}-${away?.score ?? 0}`,
+          status:  comp?.status.type.name ?? '?',
+          detail:  comp?.status.type.detail ?? '',
+        };
+      }),
+    }, { merge: true });
+
+    if (events.length === 0) {
+      console.log(`No ESPN WC events for ${dateStr}.`);
       return;
     }
 
-    console.log(`Found ${apiMatches.length} WC matches for ${dateStr}.`);
+    console.log(`ESPN: ${events.length} WC events for ${dateStr}.`);
 
     const teamPairIndex = buildTeamPairIndex();
-    const kickoffIndex  = buildKickoffIndex(); // fallback for knockout matches (TBD teams)
-    const batch = db.batch();
-    let updateCount = 0;
+    const kickoffIndex  = buildKickoffIndex();
+    const batch         = db.batch();
+    let   updateCount   = 0;
 
-    for (const m of apiMatches) {
-      const homeNorm = normalise(m.home.name);
-      const awayNorm = normalise(m.away.name);
+    for (const ev of events) {
+      const comp = ev.competitions?.[0];
+      if (!comp) continue;
 
-      // Primary lookup: team-name pair (works for all group-stage matches)
+      const homeComp = comp.competitors.find((c) => c.homeAway === 'home');
+      const awayComp = comp.competitors.find((c) => c.homeAway === 'away');
+      if (!homeComp || !awayComp) continue;
+
+      const homeNorm = normalise(homeComp.team.displayName);
+      const awayNorm = normalise(awayComp.team.displayName);
+
+      // Primary lookup by team-name pair
       let matchId: string | undefined = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
 
-      // Fallback for knockout matches whose slots have blank home/away in the schedule:
-      // match by kickoff time (each knockout slot has a unique UTC kickoff minute).
+      // Fallback for knockout slots: match by kickoff time
       if (!matchId) {
-        const apiKickoff = m.status.utcTime
-          ? new Date(m.status.utcTime).toISOString().slice(0, 16)
+        const kickoffStr = comp.date ?? ev.date ?? '';
+        const apiKickoff = kickoffStr
+          ? new Date(kickoffStr).toISOString().slice(0, 16)
           : null;
         if (apiKickoff) matchId = kickoffIndex.get(apiKickoff);
         if (matchId) {
-          console.log(`  Knockout slot via kickoff ${apiKickoff} → ${matchId} (${homeNorm} vs ${awayNorm})`);
+          console.log(`  Knockout via kickoff ${apiKickoff} → ${matchId} (${homeNorm} vs ${awayNorm})`);
         }
       }
 
@@ -786,26 +786,23 @@ export const pollLiveScores = onSchedule(
         continue;
       }
 
-      const appStatus = toAppStatus(m);
-      const docRef    = db.collection('matches').doc(matchId);
+      const appStatus = espnToAppStatus(comp.status);
+      const homeScore = parseInt(homeComp.score, 10);
+      const awayScore = parseInt(awayComp.score, 10);
 
-      const update: Record<string, unknown> = {
-        homeScore:  m.home.score,
-        awayScore:  m.away.score,
-        status:     appStatus,
-        lastSyncAt: admin.firestore.FieldValue.serverTimestamp(),
-        apiMatchId: m.id,
-      };
-
-      // Include penalty scores when present
-      if (m.home.penScore !== undefined) update.homePenScore = m.home.penScore;
-      if (m.away.penScore !== undefined) update.awayPenScore = m.away.penScore;
-
-      batch.set(docRef, update, { merge: true });
-      updateCount++;
-      console.log(
-        `  ${matchId}: ${homeNorm} ${m.home.score}–${m.away.score} ${awayNorm} [${appStatus}]`
+      batch.set(
+        db.collection('matches').doc(matchId),
+        {
+          homeScore,
+          awayScore,
+          status:      appStatus,
+          lastSyncAt:  admin.firestore.FieldValue.serverTimestamp(),
+          espnEventId: ev.id,
+        },
+        { merge: true },
       );
+      updateCount++;
+      console.log(`  ${matchId}: ${homeNorm} ${homeScore}–${awayScore} ${awayNorm} [${appStatus}]`);
     }
 
     if (updateCount > 0) {
@@ -813,30 +810,32 @@ export const pollLiveScores = onSchedule(
       console.log(`Committed ${updateCount} match updates.`);
     }
 
-    // ── Fetch match details to extract goal scorers ───────────────────────
-    // For every live or finished match that has an API match ID, call
-    // football-get-match-details and write goalScorerEvents to the match doc.
-    // Runs concurrently (Promise.allSettled) so one failure doesn't block others.
+    // ── Goal scorers via ESPN summary ─────────────────────────────────────
+    // For every live or finished event, call the ESPN summary endpoint to
+    // extract goal scorers and write them to the match doc.
 
-    const liveOrDone = apiMatches.filter(m => {
-      const s = toAppStatus(m);
-      return s === 'live' || s === 'halftime' || s === 'extratime' ||
-             s === 'penalties' || s === 'finished';
+    const liveOrDone = events.filter((ev) => {
+      const comp   = ev.competitions?.[0];
+      const state  = comp?.status.type.state ?? 'pre';
+      return state === 'in' || state === 'post';
     });
 
     if (liveOrDone.length === 0) return;
 
-    let detailsLogged = false; // log raw response once per poll for debugging
+    await Promise.allSettled(liveOrDone.map(async (ev) => {
+      const comp     = ev.competitions?.[0];
+      const homeComp = comp?.competitors.find((c) => c.homeAway === 'home');
+      const awayComp = comp?.competitors.find((c) => c.homeAway === 'away');
+      if (!homeComp || !awayComp) return;
 
-    await Promise.allSettled(liveOrDone.map(async (m) => {
-      const homeNorm = normalise(m.home.name);
-      const awayNorm = normalise(m.away.name);
+      const homeNorm = normalise(homeComp.team.displayName);
+      const awayNorm = normalise(awayComp.team.displayName);
 
       let matchId: string | undefined = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
       if (!matchId) {
-        // Same kickoff-time fallback as the score-update loop above
-        const apiKickoff = m.status.utcTime
-          ? new Date(m.status.utcTime).toISOString().slice(0, 16)
+        const kickoffStr = comp?.date ?? ev.date ?? '';
+        const apiKickoff = kickoffStr
+          ? new Date(kickoffStr).toISOString().slice(0, 16)
           : null;
         if (apiKickoff) matchId = kickoffIndex.get(apiKickoff);
       }
@@ -845,54 +844,33 @@ export const pollLiveScores = onSchedule(
       const homeCode = TEAM_NAME_TO_CODE[homeNorm] ?? homeNorm.slice(0, 3).toUpperCase();
       const awayCode = TEAM_NAME_TO_CODE[awayNorm] ?? awayNorm.slice(0, 3).toUpperCase();
 
-      const detailUrl =
-        `https://${RAPIDAPI_HOST}/football-get-match-details?match_id=${m.id}`;
-
-      let detailsJson: unknown;
       try {
-        const res = await fetch(detailUrl, {
-          headers: {
-            'x-rapidapi-host': RAPIDAPI_HOST,
-            'x-rapidapi-key':  key,
-          },
-        });
-        if (!res.ok) {
-          console.warn(`match-details HTTP ${res.status} for ${matchId} (apiId=${m.id})`);
-          return;
+        const summaryRes = await fetch(`${ESPN_WC_SUMMARY}?event=${ev.id}`);
+        if (!summaryRes.ok) return;
+        const summary = await summaryRes.json() as EspnSummaryResponse;
+        const scorers = extractEspnScorers(summary, homeCode, awayCode);
+
+        // Derive flat scorer name arrays for calcPoints / MatchCard scoring logic
+        const homeScorers = scorers
+          .filter((s) => s.teamCode === homeCode)
+          .map((s) => s.player);
+        const awayScorers = scorers
+          .filter((s) => s.teamCode === awayCode)
+          .map((s) => s.player);
+
+        await db.collection('matches').doc(matchId).set(
+          { goalScorerEvents: scorers, homeScorers, awayScorers },
+          { merge: true },
+        );
+
+        if (scorers.length > 0) {
+          console.log(
+            `  Goal scorers ${matchId}: ` +
+            scorers.map((s) => `${s.player}(${s.teamCode})×${s.goals}`).join(', '),
+          );
         }
-        detailsJson = await res.json();
       } catch (err) {
-        console.error(`match-details fetch failed for ${matchId}:`, err);
-        return;
-      }
-
-      // Log the raw structure once per poll run so we can verify field paths
-      if (!detailsLogged) {
-        detailsLogged = true;
-        console.log(
-          `match-details sample (${matchId}):`,
-          JSON.stringify(detailsJson).slice(0, 1500),
-        );
-      }
-
-      // Unwrap response envelope if present
-      const envelope = detailsJson as { status?: string; response?: MatchDetailsResponse };
-      const details: MatchDetailsResponse =
-        envelope.response ?? (detailsJson as MatchDetailsResponse);
-
-      const scorers = extractGoalScorers(details, homeCode, awayCode);
-
-      // Always write (even if empty) so UI knows we've checked
-      await db.collection('matches').doc(matchId).set(
-        { goalScorerEvents: scorers },
-        { merge: true },
-      );
-
-      if (scorers.length > 0) {
-        console.log(
-          `  Goal scorers ${matchId}: ` +
-          scorers.map(s => `${s.player}(${s.teamCode})×${s.goals}`).join(', '),
-        );
+        console.warn(`ESPN summary failed for ${matchId} (espnId=${ev.id}):`, err);
       }
     }));
   }
