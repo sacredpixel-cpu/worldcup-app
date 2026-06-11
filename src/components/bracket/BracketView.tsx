@@ -359,17 +359,23 @@ export function BracketView() {
   const [scale, setScale] = useState(1);
   const scaleRef = useRef(1);          // mirror for use inside event closures
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastTapRef = useRef(0);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    // Explicit non-null cast so TypeScript retains the type inside closures
+    const container: HTMLDivElement = el;
 
-    let startDist = 0;
+    let startDist  = 0;
     let startScale = 1;
+    let startSL    = 0; // scrollLeft at pinch start
+    let startST    = 0; // scrollTop at pinch start
+    let midX       = 0; // pinch midpoint X relative to container left edge
+    let midY       = 0; // pinch midpoint Y relative to container top edge
     let isPinching = false;
+    let lastTouchEnd = 0;
 
-    function getTouchDist(e: TouchEvent): number {
+    function dist(e: TouchEvent) {
       return Math.hypot(
         e.touches[1].clientX - e.touches[0].clientX,
         e.touches[1].clientY - e.touches[0].clientY,
@@ -378,43 +384,63 @@ export function BracketView() {
 
     function onStart(e: TouchEvent) {
       if (e.touches.length === 2) {
+        e.preventDefault();
         isPinching = true;
-        startDist = getTouchDist(e);
+        startDist  = dist(e);
         startScale = scaleRef.current;
-        e.preventDefault(); // prevent browser page-zoom
+        startSL    = container.scrollLeft;
+        startST    = container.scrollTop;
+        const rect = container.getBoundingClientRect();
+        midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
       }
     }
 
     function onMove(e: TouchEvent) {
       if (!isPinching || e.touches.length !== 2) return;
-      const newScale = Math.min(Math.max(startScale * (getTouchDist(e) / startDist), 0.5), 3.5);
-      scaleRef.current = newScale;
-      setScale(newScale);
       e.preventDefault();
+      const newScale = Math.min(Math.max(startScale * (dist(e) / startDist), 0.5), 3.5);
+      const ratio    = newScale / startScale;
+      // Scroll so the content point under the pinch midpoint stays fixed on screen:
+      //   newScrollLeft = (startSL + midX) * ratio - midX
+      container.scrollLeft  = (startSL + midX) * ratio - midX;
+      container.scrollTop   = (startST + midY) * ratio - midY;
+      scaleRef.current      = newScale;
+      setScale(newScale);
     }
 
     function onEnd(e: TouchEvent) {
       if (e.touches.length < 2) isPinching = false;
+      // Double-tap (single finger, no fingers remaining) resets zoom
+      if (e.changedTouches.length === 1 && e.touches.length === 0) {
+        const now = Date.now();
+        if (now - lastTouchEnd < 300) {
+          scaleRef.current   = 1;
+          setScale(1);
+          container.scrollLeft = 0;
+          container.scrollTop  = 0;
+        }
+        lastTouchEnd = now;
+      }
     }
 
-    el.addEventListener('touchstart', onStart, { passive: false });
-    el.addEventListener('touchmove',  onMove,  { passive: false });
-    el.addEventListener('touchend',   onEnd);
+    container.addEventListener('touchstart', onStart, { passive: false });
+    container.addEventListener('touchmove',  onMove,  { passive: false });
+    container.addEventListener('touchend',   onEnd);
     return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchmove',  onMove);
-      el.removeEventListener('touchend',   onEnd);
+      container.removeEventListener('touchstart', onStart);
+      container.removeEventListener('touchmove',  onMove);
+      container.removeEventListener('touchend',   onEnd);
     };
   }, []);
 
-  // Double-tap anywhere on the bracket to reset zoom
-  function handleDoubleTap() {
-    const now = Date.now();
-    if (now - lastTapRef.current < 300) {
-      scaleRef.current = 1;
-      setScale(1);
+  function resetZoom() {
+    scaleRef.current = 1;
+    setScale(1);
+    if (containerRef.current) {
+      containerRef.current.scrollLeft = 0;
+      containerRef.current.scrollTop  = 0;
     }
-    lastTapRef.current = now;
   }
 
   // Compute which teams advance to knockout rounds based on group results
@@ -467,17 +493,25 @@ export function BracketView() {
     }
   }
 
+  // Natural content dimensions — used to size the scroll-area spacer at each scale level.
+  // These are derived from the same layout constants used to render the bracket below,
+  // so the spacer always matches the actual rendered content.
+  const GROUP_COL_H_TOTAL = 12 * (GRP_HDR_H + 6 * CARD_H + 5 * MATCH_WITHIN_GAP) + 11 * GROUP_GAP;
+  const NATURAL_CONTENT_W = 16 + CARD_W + COL_GAP + KO_W + 16;
+  // 32 = column-header row + marginBottom; 4 = paddingBottom; 130 = 3rd-place section + extra
+  const NATURAL_CONTENT_H = 32 + Math.max(GROUP_COL_H_TOTAL, KO_H) + 4 + (thirdPlace ? 130 : 0) + 20;
+
   const scalePct = Math.round(scale * 100);
 
   return (
-    <div ref={containerRef} style={{ paddingBottom: 24 }} onClick={handleDoubleTap}>
+    <div>
 
-      {/* Zoom indicator — shown whenever scale ≠ 100% */}
+      {/* Controls: zoom hint + reset button */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 8px' }}>
         <span style={{ fontSize: 10, color: '#5A6E94' }}>Pinch to zoom · double-tap to reset</span>
         {scalePct !== 100 && (
           <button
-            onClick={(e) => { e.stopPropagation(); scaleRef.current = 1; setScale(1); }}
+            onClick={resetZoom}
             style={{
               background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700,
@@ -489,9 +523,36 @@ export function BracketView() {
         )}
       </div>
 
-      {/* Zoomable bracket content — CSS zoom expands the scroll area proportionally */}
-      <div style={{ zoom: scale } as React.CSSProperties}>
-      <div style={{ overflowX: 'auto', paddingLeft: 16, paddingRight: 16, paddingBottom: 4 }}>
+      {/* ── Scrollable zoom viewport ──────────────────────────────────────────
+          overflow: auto handles both X and Y panning.
+          A spacer div expands the scroll area to match the scaled content size.
+          The actual content is position:absolute so transform:scale doesn't
+          affect layout (and therefore doesn't fight the spacer). */}
+      <div
+        ref={containerRef}
+        style={{
+          overflow: 'auto',
+          position: 'relative',
+          height: 'calc(100svh - 220px)',
+          minHeight: 420,
+        }}
+      >
+        {/* Spacer: sets the scrollable area to NATURAL_CONTENT × scale */}
+        <div
+          aria-hidden="true"
+          style={{ width: NATURAL_CONTENT_W * scale, height: NATURAL_CONTENT_H * scale, pointerEvents: 'none' }}
+        />
+
+        {/* Scaled content — anchored top-left, scaled outward */}
+        <div
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        >
+
+      <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 4 }}>
 
         {/* Column headers */}
         <div style={{ display: 'flex', gap: COL_GAP, marginBottom: 8 }}>
@@ -579,9 +640,11 @@ export function BracketView() {
           />
         </div>
       )}
-      </div>{/* end zoom wrapper */}
 
-      {/* Prediction modal — intentionally outside the zoom div so it renders at full size */}
+        </div>{/* end scaled content */}
+      </div>{/* end scrollable zoom viewport */}
+
+      {/* Prediction modal — outside the scroll container so it renders at full size */}
       {selectedMatch && user && (
         <PredictionModal
           match={selectedMatch}
