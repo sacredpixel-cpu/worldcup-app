@@ -752,6 +752,7 @@ const TEAM_NAME_ALIASES: Record<string, string> = {
   'Czech Republic':                 'Czechia',
   'Bosnia Herzegovina':             'Bosnia & Herzegovina',
   'Bosnia and Herzegovina':         'Bosnia & Herzegovina',
+  'Bosnia-Herzegovina':             'Bosnia & Herzegovina',
   // 'United States' is correct in the schedule — no alias needed.
   // Add 'USA' as defensive alias in case the API returns the abbreviation.
   'USA':                            'United States',
@@ -953,16 +954,11 @@ export const pollLiveScores = onSchedule(
       console.log(`Committed ${updateCount} match updates.`);
     }
 
-    // ── Goal scorers via ESPN summary ─────────────────────────────────────
-    // RapidAPI has no scorer endpoint — use free ESPN summary API instead.
-    // Fetch ESPN scoreboard to get ESPN event IDs, then fetch each summary.
+    // ── ESPN scoreboard — fetch early so we can supplement RapidAPI gaps ─────
+    // RapidAPI sometimes misses matches (e.g. different leagueId per group).
+    // ESPN is free, covers all WC matches, and serves as both a fallback score
+    // source and the canonical scorer/stats source.
 
-    const liveOrDoneMatches = rapidMatches.filter(
-      (m) => m.status.started && !m.status.cancelled,
-    );
-    if (liveOrDoneMatches.length === 0) return;
-
-    // Fetch ESPN scoreboard (both dates) to build matchId → espnEventId map
     const fetchEspnDate = async (ds: string): Promise<EspnEvent[]> => {
       const res = await fetch(`${ESPN_WC_SCOREBOARD}?dates=${ds}`);
       if (!res.ok) return [];
@@ -982,7 +978,6 @@ export const pollLiveScores = onSchedule(
       }
     } catch {
       console.warn('ESPN scoreboard fetch failed — skipping scorer update.');
-      return;
     }
 
     // Build matchId → ESPN event lookup
@@ -998,37 +993,103 @@ export const pollLiveScores = onSchedule(
       if (mid) matchToEspnEvent.set(mid, ev);
     }
 
-    await Promise.allSettled(liveOrDoneMatches.map(async (m) => {
-      const homeNorm = normalise(m.home.longName || m.home.name);
-      const awayNorm = normalise(m.away.longName || m.away.name);
-      let   matchId  = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
-      if (!matchId) {
-        const apiKickoff = m.status.utcTime
-          ? new Date(m.status.utcTime).toISOString().slice(0, 16)
-          : null;
-        if (apiKickoff) matchId = kickoffIndex.get(apiKickoff);
+    // ── ESPN supplementary scores ──────────────────────────────────────────
+    // Write live/finished scores from ESPN for any match that RapidAPI missed.
+    const rapidWrittenIds = new Set<string>();
+    for (const m of rapidMatches) {
+      const hNorm = normalise(m.home.longName || m.home.name);
+      const aNorm = normalise(m.away.longName || m.away.name);
+      const mid   = teamPairIndex.get(`${hNorm}|${aNorm}`);
+      if (mid) rapidWrittenIds.add(mid);
+    }
+
+    const espnOnlyLiveDoneIds = new Set<string>();
+    const espnScoreBatch = db.batch();
+    let espnScoreCount = 0;
+
+    for (const [mid, ev] of matchToEspnEvent) {
+      if (rapidWrittenIds.has(mid)) continue; // RapidAPI already handled this
+      const st = ev.competitions?.[0]?.status?.type;
+      if (!st) continue;
+
+      let appStatus: string | null = null;
+      if (st.completed || st.name === 'STATUS_FINAL' || st.name === 'STATUS_FULL_TIME') {
+        appStatus = 'finished';
+      } else if (st.name === 'STATUS_HALFTIME') {
+        appStatus = 'halftime';
+      } else if (st.state === 'in' || st.name === 'STATUS_IN_PROGRESS' || st.name === 'STATUS_END_PERIOD') {
+        appStatus = 'live';
       }
+      if (!appStatus) continue;
+
+      const comp     = ev.competitions?.[0];
+      const homeComp = comp?.competitors.find((c) => c.homeAway === 'home');
+      const awayComp = comp?.competitors.find((c) => c.homeAway === 'away');
+      if (!homeComp || !awayComp) continue;
+
+      const homeScore = parseInt(homeComp.score ?? '0', 10);
+      const awayScore = parseInt(awayComp.score ?? '0', 10);
+
+      espnScoreBatch.set(
+        db.collection('matches').doc(mid),
+        { homeScore, awayScore, status: appStatus, lastSyncAt: admin.firestore.FieldValue.serverTimestamp() },
+        { merge: true },
+      );
+      espnScoreCount++;
+      espnOnlyLiveDoneIds.add(mid);
+      console.log(`  ESPN supplement: ${mid} ${homeComp.team.displayName} ${homeScore}–${awayScore} ${awayComp.team.displayName} [${appStatus}]`);
+    }
+
+    if (espnScoreCount > 0) {
+      await espnScoreBatch.commit();
+      console.log(`ESPN supplement: committed ${espnScoreCount} score updates.`);
+    }
+
+    // ── Events / stats pipeline ────────────────────────────────────────────
+    // Collect all match IDs that are live or done (from either source).
+    const liveOrDoneMatches = rapidMatches.filter(
+      (m) => m.status.started && !m.status.cancelled,
+    );
+
+    // All IDs to process for goal scorers / match events / stats
+    const allLiveDoneIds = new Set<string>();
+    for (const m of liveOrDoneMatches) {
+      const hNorm = normalise(m.home.longName || m.home.name);
+      const aNorm = normalise(m.away.longName || m.away.name);
+      let mid = teamPairIndex.get(`${hNorm}|${aNorm}`);
+      if (!mid) {
+        const apiKickoff = m.status.utcTime ? new Date(m.status.utcTime).toISOString().slice(0, 16) : null;
+        if (apiKickoff) mid = kickoffIndex.get(apiKickoff);
+      }
+      if (mid && matchToEspnEvent.has(mid)) allLiveDoneIds.add(mid);
+    }
+    for (const mid of espnOnlyLiveDoneIds) {
+      if (matchToEspnEvent.has(mid)) allLiveDoneIds.add(mid);
+    }
+
+    if (allLiveDoneIds.size === 0) return;
+
+    await Promise.allSettled([...allLiveDoneIds].map(async (matchId) => {
       if (!matchId) return;
 
       const espnEvent = matchToEspnEvent.get(matchId);
       if (!espnEvent) return;
 
-      const homeCode = TEAM_NAME_TO_CODE[homeNorm] ?? homeNorm.slice(0, 3).toUpperCase();
-      const awayCode = TEAM_NAME_TO_CODE[awayNorm] ?? awayNorm.slice(0, 3).toUpperCase();
+      // Derive home/away names and codes directly from ESPN data
+      const espnHomeComp = espnEvent.competitions?.[0]?.competitors.find((c) => c.homeAway === 'home');
+      const espnAwayComp = espnEvent.competitions?.[0]?.competitors.find((c) => c.homeAway === 'away');
+      if (!espnHomeComp || !espnAwayComp) return;
 
-      // Use ESPN's own home team name for within-summary lookups so the
-      // name matches exactly what ESPN's boxscore and keyEvents contain,
-      // regardless of whatever name RapidAPI returned for the same team.
-      const espnHomeComp = espnEvent.competitions?.[0]?.competitors.find(
-        (c) => c.homeAway === 'home',
-      );
-      const espnHomeNorm = normalise(espnHomeComp?.team?.displayName ?? '') || homeNorm;
+      const espnHomeNorm = normalise(espnHomeComp.team.displayName);
+      const espnAwayNorm = normalise(espnAwayComp.team.displayName);
+      const homeCode = TEAM_NAME_TO_CODE[espnHomeNorm] ?? espnHomeNorm.slice(0, 3).toUpperCase();
+      const awayCode = TEAM_NAME_TO_CODE[espnAwayNorm] ?? espnAwayNorm.slice(0, 3).toUpperCase();
 
       try {
         const summaryRes = await fetch(`${ESPN_WC_SUMMARY}?event=${espnEvent.id}`);
         if (!summaryRes.ok) return;
         const summary = await summaryRes.json() as EspnSummaryResponse;
-        const scorers = extractEspnScorers(summary, homeCode, awayCode, homeNorm, awayNorm);
+        const scorers = extractEspnScorers(summary, homeCode, awayCode, espnHomeNorm, espnAwayNorm);
 
         // Repeat name once per goal — calcPoints awards 2pts × goals for multi-goal scorers
         const homeScorers = scorers
