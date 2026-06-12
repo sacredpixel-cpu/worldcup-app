@@ -107,15 +107,23 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   const { getLiveMatch } = useMatchesStore();
   const liveMatch = getLiveMatch(match);
   const { community } = usePredictionsStore();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [breakdownOpen, setBreakdownOpen] = useState(false);
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [showFirstPrediction, setShowFirstPrediction] = useState(false);
 
+  // Derive status booleans before useState so they can seed initial state
   const isTbd = liveMatch.homeTeam.id === 'tbd';
   const isLive = liveMatch.status === 'live' || liveMatch.status === 'halftime' ||
                  liveMatch.status === 'extratime' || liveMatch.status === 'penalties';
   const isFinished = liveMatch.status === 'finished';
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  // Stats panel: open by default when live, closed by default when finished
+  const [statsOpen, setStatsOpen] = useState(() => isLive);
+  const [showFirstPrediction, setShowFirstPrediction] = useState(false);
+
+  // Auto-collapse stats when match transitions from live → finished
+  useEffect(() => {
+    if (isFinished) setStatsOpen(false);
+  }, [isFinished]);
   const isLocked = new Date(liveMatch.kickoffAt) <= new Date() || liveMatch.status !== 'upcoming';
   const hasScore = liveMatch.homeScore !== null;
   const hasPrediction = !!userPrediction;
@@ -386,52 +394,9 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
           </div>
         </div>
 
-        {/* Points breakdown — finished matches with a prediction only */}
-        {isFinished && hasPrediction && (
-          <div className="mx-3 mb-3 mt-1.5 overflow-hidden rounded-xl" style={{ background: 'rgba(0,0,0,0.2)' }}>
-            <button
-              className="no-press-ring flex w-full items-center justify-between px-3 py-2.5"
-              onClick={(e) => { e.stopPropagation(); setBreakdownOpen(o => !o); }}
-            >
-              <div className="flex items-center gap-1.5">
-                <svg
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}
-                  className="h-3 w-3 shrink-0 transition-transform"
-                  style={{ color: '#7A91BB', transform: breakdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-                <span className="text-[11px] font-semibold" style={{ color: '#7A91BB' }}>Points breakdown</span>
-              </div>
-              <span
-                className="text-[12px] font-black"
-                style={{ color: totalPts > 0 ? '#FFB020' : totalPts < 0 ? '#FF4DA8' : '#7A91BB' }}
-              >
-                {totalPts > 0 ? '+' : ''}{totalPts} pts
-              </span>
-            </button>
-
-            {breakdownOpen && (
-              <div className="px-3 pb-2.5 flex flex-col gap-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                {breakdownItems.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-1" style={{ borderBottom: i < breakdownItems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
-                    <span className="text-[11px]" style={{ color: item.na ? '#3A4E6E' : '#7A91BB', fontStyle: item.na ? 'italic' : undefined }}>{item.label}</span>
-                    <span
-                      className="text-[11px] font-bold"
-                      style={{ color: item.na ? '#3A4E6E' : item.pts > 0 ? '#00C44F' : item.pts < 0 ? '#FF4DA8' : '#5A6E94' }}
-                    >
-                      {item.na ? '—' : item.pts > 0 ? `+${item.pts}` : item.pts}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Match Stats & Events — live and finished matches */}
+        {/* Match Stats & Events — live and finished matches (above points breakdown) */}
         {(isLive || isFinished) && (liveMatch.matchEvents?.length || liveMatch.matchStats) && (
-          <div className="mx-3 mb-3 mt-1 overflow-hidden rounded-xl" style={{ background: 'rgba(0,0,0,0.2)' }}>
+          <div className="mx-3 mb-0 mt-1 overflow-hidden rounded-xl" style={{ background: 'rgba(0,0,0,0.2)' }}>
             <button
               className="no-press-ring flex w-full items-center justify-between px-3 py-2.5"
               onClick={(e) => { e.stopPropagation(); setStatsOpen(o => !o); }}
@@ -531,6 +496,50 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
             )}
           </div>
         )}
+
+        {/* Points breakdown — finished matches with a prediction only */}
+        {isFinished && hasPrediction && (
+          <div className="mx-3 mb-3 mt-1 overflow-hidden rounded-xl" style={{ background: 'rgba(0,0,0,0.2)' }}>
+            <button
+              className="no-press-ring flex w-full items-center justify-between px-3 py-2.5"
+              onClick={(e) => { e.stopPropagation(); setBreakdownOpen(o => !o); }}
+            >
+              <div className="flex items-center gap-1.5">
+                <svg
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}
+                  className="h-3 w-3 shrink-0 transition-transform"
+                  style={{ color: '#7A91BB', transform: breakdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+                <span className="text-[11px] font-semibold" style={{ color: '#7A91BB' }}>Points breakdown</span>
+              </div>
+              <span
+                className="text-[12px] font-black"
+                style={{ color: totalPts > 0 ? '#FFB020' : totalPts < 0 ? '#FF4DA8' : '#7A91BB' }}
+              >
+                {totalPts > 0 ? '+' : ''}{totalPts} pts
+              </span>
+            </button>
+
+            {breakdownOpen && (
+              <div className="px-3 pb-2.5 flex flex-col gap-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                {breakdownItems.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between py-1" style={{ borderBottom: i < breakdownItems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
+                    <span className="text-[11px]" style={{ color: item.na ? '#3A4E6E' : '#7A91BB', fontStyle: item.na ? 'italic' : undefined }}>{item.label}</span>
+                    <span
+                      className="text-[11px] font-bold"
+                      style={{ color: item.na ? '#3A4E6E' : item.pts > 0 ? '#00C44F' : item.pts < 0 ? '#FF4DA8' : '#5A6E94' }}
+                    >
+                      {item.na ? '—' : item.pts > 0 ? `+${item.pts}` : item.pts}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {!isTbd && isAuthenticated && userId && (
