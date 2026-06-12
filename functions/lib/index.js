@@ -572,7 +572,7 @@ function buildKickoffIndex() {
  * scores change in Firestore.
  */
 exports.pollLiveScores = (0, scheduler_1.onSchedule)({
-    schedule: 'every 2 minutes',
+    schedule: 'every 1 minutes',
     timeoutSeconds: 60,
     memory: '256MiB',
     secrets: [RAPIDAPI_KEY],

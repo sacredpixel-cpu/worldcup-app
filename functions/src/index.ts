@@ -748,7 +748,7 @@ export interface GoalScorerEvent {
  */
 export const pollLiveScores = onSchedule(
   {
-    schedule:       'every 2 minutes',
+    schedule:       'every 1 minutes',
     timeoutSeconds: 60,
     memory:         '256MiB',
     secrets:        [RAPIDAPI_KEY],
