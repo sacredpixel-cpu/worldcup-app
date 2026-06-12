@@ -86,14 +86,21 @@ export const usePredictionsStore = create<PredictionsState>()(
 
       getAllSaved: () => Object.values(get().saved),
 
-      // Upload all locally saved predictions to Firestore (one-time sync for existing users)
+      // Upload all locally saved predictions to Firestore (one-time sync on first login).
+      // Re-stamps every prediction with the current userId so guest predictions made
+      // before login get correctly attributed to the logged-in Firebase account.
       syncSavedToFirestore: async (userId) => {
         const { saved, syncedToFirestore } = get();
         if (syncedToFirestore) return;
-        const predictions = Object.values(saved).filter(p => p.userId === userId);
-        if (predictions.length === 0) return;
-        await saveAllPredictionsToFirestore(predictions);
-        set({ syncedToFirestore: true });
+        const allPredictions = Object.values(saved);
+        if (allPredictions.length === 0) { set({ syncedToFirestore: true }); return; }
+        // Re-attribute all predictions to the current userId (handles guest → logged-in migration)
+        const stamped = allPredictions.map(p => ({ ...p, userId }));
+        await saveAllPredictionsToFirestore(stamped);
+        // Update local state so userId is consistent going forward
+        const updated: Record<string, Prediction> = {};
+        stamped.forEach(p => { updated[p.matchId] = p; });
+        set({ saved: { ...get().saved, ...updated }, syncedToFirestore: true });
       },
 
       // Load user's predictions from Firestore into saved state (restores after logout/new device)
