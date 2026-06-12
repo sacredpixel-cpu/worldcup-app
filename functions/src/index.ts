@@ -22,9 +22,12 @@
 import * as admin from 'firebase-admin';
 import { onSchedule }         from 'firebase-functions/v2/scheduler';
 import { onDocumentUpdated }  from 'firebase-functions/v2/firestore';
+import { defineSecret }       from 'firebase-functions/params';
 import type { MulticastMessage } from 'firebase-admin/messaging';
 import fetch                  from 'node-fetch';
 import { MATCH_SCHEDULE }     from './schedule';
+
+const RAPIDAPI_KEY = defineSecret('RAPIDAPI_KEY');
 
 admin.initializeApp();
 
@@ -473,17 +476,63 @@ export const morningResultsDigest = onSchedule(
 // ─── 3. Live Score Poller ─────────────────────────────────────────────────────
 
 /**
- * ESPN public scoreboard API for the FIFA World Cup.
- * No API key required; returns all WC group-stage and knockout matches
- * with live scores, statuses, and kickoff times.
- *
- * NOTE: The original RapidAPI / FotMob endpoint (league ID 914609) only
- * covers pre-tournament warm-up friendlies and is NOT used for live scores.
+ * RapidAPI "Free API Live Football Data" — used for scores & status.
+ * WC 2026 group stage is leagueId 894790.
+ * Endpoint: football-get-matches-by-date?date=YYYYMMDD
+ */
+const RAPIDAPI_HOST    = 'free-api-live-football-data.p.rapidapi.com';
+const RAPIDAPI_BY_DATE = `https://${RAPIDAPI_HOST}/football-get-matches-by-date`;
+const WC_2026_LEAGUE_ID = 894790;
+
+/**
+ * ESPN public scoreboard + summary — used ONLY for goal scorer data.
+ * No API key required.
  */
 const ESPN_WC_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
 const ESPN_WC_SUMMARY =
   'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary';
+
+// ── RapidAPI response types ───────────────────────────────────────────────────
+
+interface RapidMatch {
+  id:       number;
+  leagueId: number;
+  home:     { id: number; name: string; longName: string; score: number };
+  away:     { id: number; name: string; longName: string; score: number };
+  status: {
+    utcTime:   string;
+    started:   boolean;
+    finished:  boolean;
+    cancelled: boolean;
+    awarded:   boolean;
+    reason?: {
+      short:    string;  // "FT" | "HT" | "AET" | "Pen" | "Live" | "Sched" …
+      shortKey: string;
+      long:     string;
+      longKey:  string;
+    };
+  };
+  statusId: number;
+}
+
+interface RapidMatchesResponse {
+  status:   number;
+  response: { matches: RapidMatch[] };
+}
+
+/** Maps a RapidAPI match status → our Firestore status string. */
+function rapidToAppStatus(m: RapidMatch): string {
+  const { started, finished, cancelled, reason } = m.status;
+  if (cancelled)                              return 'upcoming'; // treat as not started
+  if (!started)                               return 'upcoming';
+  if (finished)                               return 'finished';
+  const short = (reason?.short ?? '').toUpperCase();
+  if (short === 'HT')                         return 'halftime';
+  if (short === 'AET' || short === 'ET')      return 'extratime';
+  if (short === 'PEN' || short === 'PENS')    return 'penalties';
+  return 'live';
+}
 
 // ── ESPN response types ───────────────────────────────────────────────────────
 
@@ -522,16 +571,8 @@ interface EspnScoreboardResponse {
   events?: EspnEvent[];
 }
 
-/** Maps ESPN status → our Firestore status string. */
-function espnToAppStatus(status: EspnCompetitionStatus): string {
-  const { name, state, completed } = status.type;
-  if (state === 'pre')                                                return 'upcoming';
-  if (state === 'post' || completed)                                  return 'finished';
-  if (name === 'STATUS_HALFTIME')                                     return 'halftime';
-  if (name === 'STATUS_OVERTIME' || name === 'STATUS_END_OVERTIME')   return 'extratime';
-  if (name === 'STATUS_SHOOTOUT' || name === 'STATUS_PENALTY')        return 'penalties';
-  return 'live';
-}
+// espnToAppStatus is no longer used for scores (RapidAPI is the score source)
+// but kept for reference in case ESPN is needed as a fallback in future.
 
 // ── ESPN goal-scorer helpers ──────────────────────────────────────────────────
 
@@ -699,18 +740,18 @@ export interface GoalScorerEvent {
 }
 
 /**
- * Polls the ESPN public scoreboard for today's World Cup matches every 2 min
- * and writes updated scores + status to Firestore.
- * No API key required — ESPN serves WC data publicly.
+ * Polls RapidAPI for today's World Cup scores every 2 min and writes to
+ * Firestore. Goal scorers are fetched separately from ESPN (free, no key).
  *
- * The onMatchStatusChange trigger fires notifications automatically whenever
- * status or scores change in Firestore.
+ * The onMatchStatusChange trigger fires notifications whenever status or
+ * scores change in Firestore.
  */
 export const pollLiveScores = onSchedule(
   {
-    schedule: 'every 2 minutes',
+    schedule:       'every 2 minutes',
     timeoutSeconds: 60,
-    memory: '256MiB',
+    memory:         '256MiB',
+    secrets:        [RAPIDAPI_KEY],
   },
   async () => {
     // Only run during the tournament window
@@ -724,92 +765,86 @@ export const pollLiveScores = onSchedule(
 
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
 
-    // ESPN stores matches under the LOCAL venue date (US timezones), so a
-    // match kicking off at e.g. 02:00 UTC on the 12th may be listed under the
-    // 11th. Query both today and yesterday and de-duplicate by event id.
+    // RapidAPI uses local venue dates (US timezones). A match at 02:00 UTC on
+    // the 12th may be listed under the 11th. Query both today and yesterday.
     const yesterday = new Date(now);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     const yDateStr = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
 
-    const fetchDate = async (ds: string): Promise<EspnEvent[]> => {
-      const res = await fetch(`${ESPN_WC_SCOREBOARD}?dates=${ds}`);
+    const apiKey = RAPIDAPI_KEY.value();
+
+    const fetchRapidDate = async (ds: string): Promise<RapidMatch[]> => {
+      const res = await fetch(`${RAPIDAPI_BY_DATE}?date=${ds}`, {
+        headers: {
+          'x-rapidapi-key':  apiKey,
+          'x-rapidapi-host': RAPIDAPI_HOST,
+        },
+      });
       if (!res.ok) return [];
-      const json = await res.json() as EspnScoreboardResponse;
-      return json.events ?? [];
+      const json = await res.json() as RapidMatchesResponse;
+      const all  = json?.response?.matches ?? [];
+      // Filter to WC 2026 group stage only
+      return all.filter((m) => m.leagueId === WC_2026_LEAGUE_ID);
     };
 
-    let events: EspnEvent[] = [];
+    let rapidMatches: RapidMatch[] = [];
     try {
-      const [todayEvents, ydayEvents] = await Promise.all([
-        fetchDate(dateStr),
-        fetchDate(yDateStr),
+      const [todayMatches, ydayMatches] = await Promise.all([
+        fetchRapidDate(dateStr),
+        fetchRapidDate(yDateStr),
       ]);
-      // Merge and de-duplicate by event id
-      const seen = new Set<string>();
-      for (const ev of [...todayEvents, ...ydayEvents]) {
-        if (!seen.has(ev.id)) { seen.add(ev.id); events.push(ev); }
+      // De-duplicate by match id
+      const seen = new Set<number>();
+      for (const m of [...todayMatches, ...ydayMatches]) {
+        if (!seen.has(m.id)) { seen.add(m.id); rapidMatches.push(m); }
       }
     } catch (err) {
-      console.error('ESPN fetch failed:', err);
+      console.error('RapidAPI fetch failed:', err);
       await db.doc('pollDiagnostics/latest').set({
         checkedAt: admin.firestore.FieldValue.serverTimestamp(),
-        source: 'espn', date: dateStr, error: String(err),
+        source: 'rapidapi', date: dateStr, error: String(err),
       }, { merge: true });
       return;
     }
 
-    // Write diagnostic — useful for verifying team names and statuses
+    // Write diagnostic
     await db.doc('pollDiagnostics/latest').set({
       checkedAt:    admin.firestore.FieldValue.serverTimestamp(),
-      source:       'espn',
+      source:       'rapidapi',
       date:         dateStr,
-      totalEvents:  events.length,
-      sampleEvents: events.slice(0, 8).map((ev) => {
-        const comp = ev.competitions?.[0];
-        const home = comp?.competitors.find((c) => c.homeAway === 'home');
-        const away = comp?.competitors.find((c) => c.homeAway === 'away');
-        return {
-          id:      ev.id,
-          home:    home?.team.displayName ?? '?',
-          away:    away?.team.displayName ?? '?',
-          score:   `${home?.score ?? 0}-${away?.score ?? 0}`,
-          status:  comp?.status.type.name ?? '?',
-          detail:  comp?.status.type.detail ?? '',
-        };
-      }),
+      totalMatches: rapidMatches.length,
+      sampleMatches: rapidMatches.slice(0, 8).map((m) => ({
+        id:     m.id,
+        home:   m.home.name,
+        away:   m.away.name,
+        score:  `${m.home.score}-${m.away.score}`,
+        status: m.status.reason?.short ?? (m.status.finished ? 'FT' : m.status.started ? 'Live' : 'Sched'),
+      })),
     }, { merge: true });
 
-    if (events.length === 0) {
-      console.log(`No ESPN WC events for ${dateStr} or ${yDateStr}.`);
+    if (rapidMatches.length === 0) {
+      console.log(`No RapidAPI WC matches for ${dateStr} or ${yDateStr}.`);
       return;
     }
 
-    console.log(`ESPN: ${events.length} WC events for ${dateStr}+${yDateStr}.`);
+    console.log(`RapidAPI: ${rapidMatches.length} WC matches for ${dateStr}+${yDateStr}.`);
 
     const teamPairIndex = buildTeamPairIndex();
     const kickoffIndex  = buildKickoffIndex();
     const batch         = db.batch();
     let   updateCount   = 0;
 
-    for (const ev of events) {
-      const comp = ev.competitions?.[0];
-      if (!comp) continue;
-
-      const homeComp = comp.competitors.find((c) => c.homeAway === 'home');
-      const awayComp = comp.competitors.find((c) => c.homeAway === 'away');
-      if (!homeComp || !awayComp) continue;
-
-      const homeNorm = normalise(homeComp.team.displayName);
-      const awayNorm = normalise(awayComp.team.displayName);
+    for (const m of rapidMatches) {
+      const homeNorm = normalise(m.home.longName || m.home.name);
+      const awayNorm = normalise(m.away.longName || m.away.name);
 
       // Primary lookup by team-name pair
       let matchId: string | undefined = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
 
-      // Fallback for knockout slots: match by kickoff time
+      // Fallback for knockout slots: match by kickoff UTC time
       if (!matchId) {
-        const kickoffStr = comp.date ?? ev.date ?? '';
-        const apiKickoff = kickoffStr
-          ? new Date(kickoffStr).toISOString().slice(0, 16)
+        const apiKickoff = m.status.utcTime
+          ? new Date(m.status.utcTime).toISOString().slice(0, 16)
           : null;
         if (apiKickoff) matchId = kickoffIndex.get(apiKickoff);
         if (matchId) {
@@ -822,18 +857,18 @@ export const pollLiveScores = onSchedule(
         continue;
       }
 
-      const appStatus = espnToAppStatus(comp.status);
-      const homeScore = parseInt(homeComp.score, 10);
-      const awayScore = parseInt(awayComp.score, 10);
+      const appStatus  = rapidToAppStatus(m);
+      const homeScore  = m.home.score ?? 0;
+      const awayScore  = m.away.score ?? 0;
 
       batch.set(
         db.collection('matches').doc(matchId),
         {
           homeScore,
           awayScore,
-          status:      appStatus,
-          lastSyncAt:  admin.firestore.FieldValue.serverTimestamp(),
-          espnEventId: ev.id,
+          status:       appStatus,
+          lastSyncAt:   admin.firestore.FieldValue.serverTimestamp(),
+          rapidMatchId: m.id,
         },
         { merge: true },
       );
@@ -847,46 +882,74 @@ export const pollLiveScores = onSchedule(
     }
 
     // ── Goal scorers via ESPN summary ─────────────────────────────────────
-    // For every live or finished event, call the ESPN summary endpoint to
-    // extract goal scorers and write them to the match doc.
+    // RapidAPI has no scorer endpoint — use free ESPN summary API instead.
+    // Fetch ESPN scoreboard to get ESPN event IDs, then fetch each summary.
 
-    const liveOrDone = events.filter((ev) => {
-      const comp   = ev.competitions?.[0];
-      const state  = comp?.status.type.state ?? 'pre';
-      return state === 'in' || state === 'post';
-    });
+    const liveOrDoneMatches = rapidMatches.filter(
+      (m) => m.status.started && !m.status.cancelled,
+    );
+    if (liveOrDoneMatches.length === 0) return;
 
-    if (liveOrDone.length === 0) return;
+    // Fetch ESPN scoreboard (both dates) to build matchId → espnEventId map
+    const fetchEspnDate = async (ds: string): Promise<EspnEvent[]> => {
+      const res = await fetch(`${ESPN_WC_SCOREBOARD}?dates=${ds}`);
+      if (!res.ok) return [];
+      const json = await res.json() as EspnScoreboardResponse;
+      return json.events ?? [];
+    };
 
-    await Promise.allSettled(liveOrDone.map(async (ev) => {
+    let espnEvents: EspnEvent[] = [];
+    try {
+      const [todayEspn, ydayEspn] = await Promise.all([
+        fetchEspnDate(dateStr),
+        fetchEspnDate(yDateStr),
+      ]);
+      const seenEspn = new Set<string>();
+      for (const ev of [...todayEspn, ...ydayEspn]) {
+        if (!seenEspn.has(ev.id)) { seenEspn.add(ev.id); espnEvents.push(ev); }
+      }
+    } catch {
+      console.warn('ESPN scoreboard fetch failed — skipping scorer update.');
+      return;
+    }
+
+    // Build matchId → ESPN event lookup
+    const matchToEspnEvent = new Map<string, EspnEvent>();
+    for (const ev of espnEvents) {
       const comp     = ev.competitions?.[0];
       const homeComp = comp?.competitors.find((c) => c.homeAway === 'home');
       const awayComp = comp?.competitors.find((c) => c.homeAway === 'away');
-      if (!homeComp || !awayComp) return;
+      if (!homeComp || !awayComp) continue;
+      const hNorm = normalise(homeComp.team.displayName);
+      const aNorm = normalise(awayComp.team.displayName);
+      const mid   = teamPairIndex.get(`${hNorm}|${aNorm}`);
+      if (mid) matchToEspnEvent.set(mid, ev);
+    }
 
-      const homeNorm = normalise(homeComp.team.displayName);
-      const awayNorm = normalise(awayComp.team.displayName);
-
-      let matchId: string | undefined = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
+    await Promise.allSettled(liveOrDoneMatches.map(async (m) => {
+      const homeNorm = normalise(m.home.longName || m.home.name);
+      const awayNorm = normalise(m.away.longName || m.away.name);
+      let   matchId  = teamPairIndex.get(`${homeNorm}|${awayNorm}`);
       if (!matchId) {
-        const kickoffStr = comp?.date ?? ev.date ?? '';
-        const apiKickoff = kickoffStr
-          ? new Date(kickoffStr).toISOString().slice(0, 16)
+        const apiKickoff = m.status.utcTime
+          ? new Date(m.status.utcTime).toISOString().slice(0, 16)
           : null;
         if (apiKickoff) matchId = kickoffIndex.get(apiKickoff);
       }
       if (!matchId) return;
 
+      const espnEvent = matchToEspnEvent.get(matchId);
+      if (!espnEvent) return;
+
       const homeCode = TEAM_NAME_TO_CODE[homeNorm] ?? homeNorm.slice(0, 3).toUpperCase();
       const awayCode = TEAM_NAME_TO_CODE[awayNorm] ?? awayNorm.slice(0, 3).toUpperCase();
 
       try {
-        const summaryRes = await fetch(`${ESPN_WC_SUMMARY}?event=${ev.id}`);
+        const summaryRes = await fetch(`${ESPN_WC_SUMMARY}?event=${espnEvent.id}`);
         if (!summaryRes.ok) return;
         const summary = await summaryRes.json() as EspnSummaryResponse;
         const scorers = extractEspnScorers(summary, homeCode, awayCode, homeNorm, awayNorm);
 
-        // Derive flat scorer name arrays for calcPoints / MatchCard scoring logic
         const homeScorers = scorers
           .filter((s) => s.teamCode === homeCode)
           .map((s) => s.player);
@@ -906,7 +969,7 @@ export const pollLiveScores = onSchedule(
           );
         }
       } catch (err) {
-        console.warn(`ESPN summary failed for ${matchId} (espnId=${ev.id}):`, err);
+        console.warn(`ESPN summary failed for ${matchId} (espnId=${espnEvent.id}):`, err);
       }
     }));
   }
