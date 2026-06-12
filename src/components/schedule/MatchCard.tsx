@@ -169,10 +169,20 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
       ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
       : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
 
-    // Build a goal-count map from a scorers array (duplicates = multi-goal)
+    // Normalise a scorer name for fuzzy matching: strip diacritics, lowercase, trim.
+    // This prevents accent/spelling mismatches between the roster picker and API data
+    // (e.g. "Raúl Jiménez" ↔ "Raul Jimenez", "Julián" ↔ "Julian").
+    const normName = (n: string) =>
+      n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+    // Build a goal-count map from a scorers array (duplicates = multi-goal).
+    // Keys are normalised so lookup is accent-insensitive.
     const buildGoalCounts = (scorers: string[]) => {
       const map = new Map<string, number>();
-      for (const name of scorers) map.set(name, (map.get(name) ?? 0) + 1);
+      for (const name of scorers) {
+        const key = normName(name);
+        map.set(key, (map.get(key) ?? 0) + 1);
+      }
       return map;
     };
 
@@ -184,7 +194,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
     } else {
       for (const pick of homePicks) {
         if (homeGoalCounts) {
-          const goals = homeGoalCounts.get(pick) ?? 0;
+          const goals = homeGoalCounts.get(normName(pick)) ?? 0;
           const pts   = goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
           const label = goals > 1
             ? `Home scorer: ${pick} (${goals} goals)`
@@ -204,7 +214,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
     } else {
       for (const pick of awayPicks) {
         if (awayGoalCounts) {
-          const goals = awayGoalCounts.get(pick) ?? 0;
+          const goals = awayGoalCounts.get(normName(pick)) ?? 0;
           const pts   = goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
           const label = goals > 1
             ? `Away scorer: ${pick} (${goals} goals)`
