@@ -1016,6 +1016,14 @@ export const pollLiveScores = onSchedule(
       const homeCode = TEAM_NAME_TO_CODE[homeNorm] ?? homeNorm.slice(0, 3).toUpperCase();
       const awayCode = TEAM_NAME_TO_CODE[awayNorm] ?? awayNorm.slice(0, 3).toUpperCase();
 
+      // Use ESPN's own home team name for within-summary lookups so the
+      // name matches exactly what ESPN's boxscore and keyEvents contain,
+      // regardless of whatever name RapidAPI returned for the same team.
+      const espnHomeComp = espnEvent.competitions?.[0]?.competitors.find(
+        (c) => c.homeAway === 'home',
+      );
+      const espnHomeNorm = normalise(espnHomeComp?.team?.displayName ?? '') || homeNorm;
+
       try {
         const summaryRes = await fetch(`${ESPN_WC_SUMMARY}?event=${espnEvent.id}`);
         if (!summaryRes.ok) return;
@@ -1030,8 +1038,11 @@ export const pollLiveScores = onSchedule(
           .filter((s) => s.teamCode === awayCode)
           .flatMap((s) => Array<string>(s.goals).fill(s.player));
 
-        const matchEvents = extractMatchEvents(summary, homeNorm);
-        const matchStats  = extractMatchStats(summary, homeNorm);
+        // Use espnHomeNorm (from ESPN's own data) so extractMatchEvents /
+        // extractMatchStats can find the home team in the boxscore without
+        // relying on RapidAPI's potentially different spelling.
+        const matchEvents = extractMatchEvents(summary, espnHomeNorm);
+        const matchStats  = extractMatchStats(summary, espnHomeNorm);
 
         await db.collection('matches').doc(matchId).set(
           {
