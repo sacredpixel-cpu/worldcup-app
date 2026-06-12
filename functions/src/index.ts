@@ -540,11 +540,17 @@ interface EspnSummaryResponse {
   scoring?:   EspnScoringPlay[];
 }
 interface EspnKeyEvent {
-  type?:      { text?: string };
-  text?:      string;
-  homeAway?:  string;
-  athlete?:   { displayName?: string };
-  period?:    { number?: number };
+  type?:         { text?: string; type?: string };
+  text?:         string;
+  shortText?:    string;
+  homeAway?:     string;
+  scoringPlay?:  boolean;
+  /** Team that scored — present on scoring key events */
+  team?:         { id?: string; displayName?: string };
+  /** Primary participant is the goal scorer */
+  participants?: Array<{ athlete?: { id?: string; displayName?: string } }>;
+  athlete?:      { displayName?: string };
+  period?:       { number?: number };
 }
 interface EspnScoringPlay {
   type?:      { text?: string };
@@ -558,6 +564,8 @@ function extractEspnScorers(
   summary: EspnSummaryResponse,
   homeCode: string,
   awayCode: string,
+  homeNorm?: string,
+  awayNorm?: string,
 ): GoalScorerEvent[] {
   const map = new Map<string, GoalScorerEvent>();
 
@@ -569,19 +577,36 @@ function extractEspnScorers(
     map.set(key, entry);
   };
 
-  // ESPN keyEvents
+  // Resolve teamCode from an event's team.displayName (if available),
+  // falling back to homeAway string, then defaulting to awayCode.
+  const resolveTeamCode = (ev: EspnKeyEvent): string => {
+    if (ev.team?.displayName && homeNorm) {
+      return normalise(ev.team.displayName) === homeNorm ? homeCode : awayCode;
+    }
+    if (ev.homeAway === 'home') return homeCode;
+    if (ev.homeAway === 'away') return awayCode;
+    return awayCode;
+  };
+
+  // ESPN keyEvents — scoring plays carry scoringPlay:true and
+  // have the scorer in participants[0].athlete.displayName
   for (const ev of summary.keyEvents ?? []) {
+    if (!ev.scoringPlay) continue;
     const typeText = (ev.type?.text ?? '').toLowerCase();
     if (!typeText.includes('goal')) continue;
-    // Skip OG and penalties (shootout)
-    if (typeText.includes('own') || typeText.includes('penalty')) continue;
+    // Skip own goals and penalty shootout goals
+    if (typeText.includes('own') || ev.type?.type?.includes('own')) continue;
     if ((ev.period?.number ?? 0) > 4) continue; // period 5+ = shootout
-    const name     = ev.athlete?.displayName ?? ev.text ?? '';
-    const teamCode = ev.homeAway === 'home' ? homeCode : awayCode;
+    // Scorer is first participant; fall back to shortText name or full text
+    const name =
+      ev.participants?.[0]?.athlete?.displayName ??
+      ev.athlete?.displayName ??
+      '';
+    const teamCode = resolveTeamCode(ev);
     add(name, teamCode);
   }
 
-  // Fallback: scoring plays
+  // Fallback: summary.scoring array (some ESPN leagues use this instead)
   if (map.size === 0) {
     for (const sp of summary.scoring ?? []) {
       const typeText = (sp.type?.text ?? '').toLowerCase();
@@ -698,21 +723,32 @@ export const pollLiveScores = onSchedule(
     }
 
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-    const url     = `${ESPN_WC_SCOREBOARD}?dates=${dateStr}`;
+
+    // ESPN stores matches under the LOCAL venue date (US timezones), so a
+    // match kicking off at e.g. 02:00 UTC on the 12th may be listed under the
+    // 11th. Query both today and yesterday and de-duplicate by event id.
+    const yesterday = new Date(now);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yDateStr = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
+
+    const fetchDate = async (ds: string): Promise<EspnEvent[]> => {
+      const res = await fetch(`${ESPN_WC_SCOREBOARD}?dates=${ds}`);
+      if (!res.ok) return [];
+      const json = await res.json() as EspnScoreboardResponse;
+      return json.events ?? [];
+    };
 
     let events: EspnEvent[] = [];
     try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        console.error(`ESPN API HTTP ${res.status}`);
-        await db.doc('pollDiagnostics/latest').set({
-          checkedAt: admin.firestore.FieldValue.serverTimestamp(),
-          source: 'espn', date: dateStr, httpStatus: res.status,
-        }, { merge: true });
-        return;
+      const [todayEvents, ydayEvents] = await Promise.all([
+        fetchDate(dateStr),
+        fetchDate(yDateStr),
+      ]);
+      // Merge and de-duplicate by event id
+      const seen = new Set<string>();
+      for (const ev of [...todayEvents, ...ydayEvents]) {
+        if (!seen.has(ev.id)) { seen.add(ev.id); events.push(ev); }
       }
-      const json = await res.json() as EspnScoreboardResponse;
-      events = json.events ?? [];
     } catch (err) {
       console.error('ESPN fetch failed:', err);
       await db.doc('pollDiagnostics/latest').set({
@@ -744,11 +780,11 @@ export const pollLiveScores = onSchedule(
     }, { merge: true });
 
     if (events.length === 0) {
-      console.log(`No ESPN WC events for ${dateStr}.`);
+      console.log(`No ESPN WC events for ${dateStr} or ${yDateStr}.`);
       return;
     }
 
-    console.log(`ESPN: ${events.length} WC events for ${dateStr}.`);
+    console.log(`ESPN: ${events.length} WC events for ${dateStr}+${yDateStr}.`);
 
     const teamPairIndex = buildTeamPairIndex();
     const kickoffIndex  = buildKickoffIndex();
@@ -848,7 +884,7 @@ export const pollLiveScores = onSchedule(
         const summaryRes = await fetch(`${ESPN_WC_SUMMARY}?event=${ev.id}`);
         if (!summaryRes.ok) return;
         const summary = await summaryRes.json() as EspnSummaryResponse;
-        const scorers = extractEspnScorers(summary, homeCode, awayCode);
+        const scorers = extractEspnScorers(summary, homeCode, awayCode, homeNorm, awayNorm);
 
         // Derive flat scorer name arrays for calcPoints / MatchCard scoring logic
         const homeScorers = scorers
