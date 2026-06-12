@@ -950,12 +950,13 @@ export const pollLiveScores = onSchedule(
         const summary = await summaryRes.json() as EspnSummaryResponse;
         const scorers = extractEspnScorers(summary, homeCode, awayCode, homeNorm, awayNorm);
 
+        // Repeat name once per goal — calcPoints awards 2pts × goals for multi-goal scorers
         const homeScorers = scorers
           .filter((s) => s.teamCode === homeCode)
-          .map((s) => s.player);
+          .flatMap((s) => Array<string>(s.goals).fill(s.player));
         const awayScorers = scorers
           .filter((s) => s.teamCode === awayCode)
-          .map((s) => s.player);
+          .flatMap((s) => Array<string>(s.goals).fill(s.player));
 
         await db.collection('matches').doc(matchId).set(
           { goalScorerEvents: scorers, homeScorers, awayScorers },

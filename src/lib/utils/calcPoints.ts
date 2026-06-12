@@ -20,19 +20,23 @@ export function calcPoints(
     pts += SCORING.WRONG_OUTCOME;     // -2 wrong outcome
   }
 
-  // +1 per correct scorer pick, -1 per incorrect pick (only when actual scorers are known)
-  if (actual.homeScorers) {
-    const actualSet = new Set(actual.homeScorers);
-    for (const pick of (prediction.homeScorerPicks ?? [])) {
-      pts += actualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
+  // +2 per goal scored by picked player (×goals if player scored multiple times)
+  // -1 if picked player did not score at all
+  // Only applied once actual scorers are known (post-match)
+  const scorerPoints = (picks: string[], actualScorers: string[]) => {
+    // Count how many goals each player scored (array may contain duplicates for multi-goal)
+    const goalCounts = new Map<string, number>();
+    for (const name of actualScorers) {
+      goalCounts.set(name, (goalCounts.get(name) ?? 0) + 1);
     }
-  }
-  if (actual.awayScorers) {
-    const actualSet = new Set(actual.awayScorers);
-    for (const pick of (prediction.awayScorerPicks ?? [])) {
-      pts += actualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
+    for (const pick of picks) {
+      const goals = goalCounts.get(pick) ?? 0;
+      pts += goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
     }
-  }
+  };
+
+  if (actual.homeScorers) scorerPoints(prediction.homeScorerPicks ?? [], actual.homeScorers);
+  if (actual.awayScorers) scorerPoints(prediction.awayScorerPicks ?? [], actual.awayScorers);
 
   return pts;
 }

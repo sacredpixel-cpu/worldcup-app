@@ -157,18 +157,27 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
       ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
       : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
 
+    // Build a goal-count map from a scorers array (duplicates = multi-goal)
+    const buildGoalCounts = (scorers: string[]) => {
+      const map = new Map<string, number>();
+      for (const name of scorers) map.set(name, (map.get(name) ?? 0) + 1);
+      return map;
+    };
+
     // ── 3. Home scorer picks — always shown (0 if no pick made) ─────────────
     const homePicks = pred.homeScorerPicks ?? [];
-    const homeActualSet = liveMatch.homeScorers ? new Set(liveMatch.homeScorers) : null;
+    const homeGoalCounts = liveMatch.homeScorers ? buildGoalCounts(liveMatch.homeScorers) : null;
     if (homePicks.length === 0) {
       items.push({ label: 'Home scorer(s) — no pick', pts: 0 });
     } else {
       for (const pick of homePicks) {
-        if (homeActualSet) {
-          items.push({
-            label: `Home scorer(s): ${pick}`,
-            pts: homeActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER,
-          });
+        if (homeGoalCounts) {
+          const goals = homeGoalCounts.get(pick) ?? 0;
+          const pts   = goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
+          const label = goals > 1
+            ? `Home scorer: ${pick} (${goals} goals)`
+            : `Home scorer: ${pick}`;
+          items.push({ label, pts });
         } else {
           items.push({ label: `Home scorer: ${pick} — pending`, pts: 0, na: true });
         }
@@ -177,16 +186,18 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
 
     // ── 4. Away scorer picks — always shown (0 if no pick made) ─────────────
     const awayPicks = pred.awayScorerPicks ?? [];
-    const awayActualSet = liveMatch.awayScorers ? new Set(liveMatch.awayScorers) : null;
+    const awayGoalCounts = liveMatch.awayScorers ? buildGoalCounts(liveMatch.awayScorers) : null;
     if (awayPicks.length === 0) {
       items.push({ label: 'Away scorer(s) — no pick', pts: 0 });
     } else {
       for (const pick of awayPicks) {
-        if (awayActualSet) {
-          items.push({
-            label: `Away scorer(s): ${pick}`,
-            pts: awayActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER,
-          });
+        if (awayGoalCounts) {
+          const goals = awayGoalCounts.get(pick) ?? 0;
+          const pts   = goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
+          const label = goals > 1
+            ? `Away scorer: ${pick} (${goals} goals)`
+            : `Away scorer: ${pick}`;
+          items.push({ label, pts });
         } else {
           items.push({ label: `Away scorer: ${pick} — pending`, pts: 0, na: true });
         }

@@ -766,12 +766,13 @@ exports.pollLiveScores = (0, scheduler_1.onSchedule)({
                 return;
             const summary = await summaryRes.json();
             const scorers = extractEspnScorers(summary, homeCode, awayCode, homeNorm, awayNorm);
+            // Repeat name once per goal — calcPoints awards 2pts × goals for multi-goal scorers
             const homeScorers = scorers
                 .filter((s) => s.teamCode === homeCode)
-                .map((s) => s.player);
+                .flatMap((s) => Array(s.goals).fill(s.player));
             const awayScorers = scorers
                 .filter((s) => s.teamCode === awayCode)
-                .map((s) => s.player);
+                .flatMap((s) => Array(s.goals).fill(s.player));
             await db.collection('matches').doc(matchId).set({ goalScorerEvents: scorers, homeScorers, awayScorers }, { merge: true });
             if (scorers.length > 0) {
                 console.log(`  Goal scorers ${matchId}: ` +
