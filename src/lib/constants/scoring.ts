@@ -2,7 +2,7 @@
 
 export const SCORING = {
   CORRECT_OUTCOME: 3,         // right winner / draw
-  WRONG_OUTCOME: -2,          // wrong winner / draw when neither score exact
+  WRONG_OUTCOME: 0,           // wrong winner / draw — no deduction
   CORRECT_SCORE_PER_TEAM: 3,  // exact score for one team (max 6 if both correct)
   CORRECT_FINALIST: 4,        // picked a finalist
   CORRECT_CHAMPION: 10,       // picked the champion
