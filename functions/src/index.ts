@@ -843,7 +843,7 @@ export const pollLiveScores = onSchedule(
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     const yDateStr = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
 
-    const apiKey = RAPIDAPI_KEY.value();
+    const apiKey = RAPIDAPI_KEY.value().trim(); // trim newline that may be appended by secret manager
 
     const fetchRapidDate = async (ds: string): Promise<RapidMatch[]> => {
       const res = await fetch(`${RAPIDAPI_BY_DATE}?date=${ds}`, {

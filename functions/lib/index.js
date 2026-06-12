@@ -660,7 +660,7 @@ exports.pollLiveScores = (0, scheduler_1.onSchedule)({
     const yesterday = new Date(now);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     const yDateStr = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
-    const apiKey = RAPIDAPI_KEY.value();
+    const apiKey = RAPIDAPI_KEY.value().trim(); // trim newline that may be appended by secret manager
     const fetchRapidDate = async (ds) => {
         var _a, _b;
         const res = await (0, node_fetch_1.default)(`${RAPIDAPI_BY_DATE}?date=${ds}`, {
