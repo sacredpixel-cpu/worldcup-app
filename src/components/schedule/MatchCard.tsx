@@ -122,6 +122,9 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
 
   // Auto-collapse stats when match transitions from live → finished
   useEffect(() => {
+    if (isLive) setStatsOpen(true);
+  }, [isLive]);
+  useEffect(() => {
     if (isFinished) setStatsOpen(false);
   }, [isFinished]);
   const isLocked = new Date(liveMatch.kickoffAt) <= new Date() || liveMatch.status !== 'upcoming';
