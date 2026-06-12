@@ -150,16 +150,12 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
       pts: awayExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0,
     });
 
-    // ── 2. Result (W/D/L) — always shown ────────────────────────────────────
-    if (!homeExact && !awayExact) {
-      const predOut = Math.sign(pred.homeScore - pred.awayScore);
-      const actOut  = Math.sign(actual.homeScore - actual.awayScore);
-      items.push(predOut === actOut
-        ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
-        : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
-    } else {
-      items.push({ label: 'Result (W/D/L) — covered by exact score', pts: 0, na: true });
-    }
+    // ── 2. Result (W/D/L) — always applied, stacks with exact score ────────────
+    const predOut = Math.sign(pred.homeScore - pred.awayScore);
+    const actOut  = Math.sign(actual.homeScore - actual.awayScore);
+    items.push(predOut === actOut
+      ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
+      : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
 
     // ── 3. Home scorer picks — always shown (0 if no pick made) ─────────────
     const homePicks = pred.homeScorerPicks ?? [];
