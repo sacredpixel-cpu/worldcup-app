@@ -1,5 +1,6 @@
 import { doc, setDoc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 import { db } from './firebase';
+import type { MatchEvent, MatchStats } from '@/types/match';
 
 export interface GoalScorerEvent {
   player: string;
@@ -13,18 +14,20 @@ export interface MatchScoreUpdate {
   /** Score at 90 minutes — only set for knockout matches that went to ET/penalties */
   regularTimeHomeScore?: number | null;
   regularTimeAwayScore?: number | null;
-  status: 'upcoming' | 'live' | 'finished';
+  status: 'upcoming' | 'live' | 'halftime' | 'extratime' | 'penalties' | 'finished';
   homeScorers?: string[];
   awayScorers?: string[];
   /** Per-match goal scorer events written by the live-score poller */
   goalScorerEvents?: GoalScorerEvent[];
+  matchEvents?: MatchEvent[];
+  matchStats?: MatchStats;
 }
 
 export async function updateMatchScore(
   matchId: string,
   homeScore: number,
   awayScore: number,
-  status: 'upcoming' | 'live' | 'finished',
+  status: 'upcoming' | 'live' | 'halftime' | 'extratime' | 'penalties' | 'finished',
   homeScorers?: string[],
   awayScorers?: string[],
   regularTimeHomeScore?: number | null,
@@ -97,6 +100,8 @@ export function subscribeToMatchUpdates(
         homeScorers: data.homeScorers,
         awayScorers: data.awayScorers,
         goalScorerEvents: data.goalScorerEvents,
+        matchEvents: data.matchEvents,
+        matchStats: data.matchStats,
       };
     });
     cb(updates);

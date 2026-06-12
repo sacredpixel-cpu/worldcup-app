@@ -497,6 +497,74 @@ function extractEspnScorers(summary, homeCode, awayCode, homeNorm, awayNorm) {
     }
     return Array.from(map.values());
 }
+function extractMatchEvents(summary, homeNorm) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
+    const events = [];
+    for (const ev of (_a = summary.keyEvents) !== null && _a !== void 0 ? _a : []) {
+        const typeType = (_c = (_b = ev.type) === null || _b === void 0 ? void 0 : _b.type) !== null && _c !== void 0 ? _c : '';
+        if (!typeType.includes('goal') && typeType !== 'yellow-card' && typeType !== 'red-card')
+            continue;
+        if (typeType.includes('goal') && ((_e = (_d = ev.period) === null || _d === void 0 ? void 0 : _d.number) !== null && _e !== void 0 ? _e : 0) > 4)
+            continue; // no shootout goals
+        const minute = (_g = (_f = ev.clock) === null || _f === void 0 ? void 0 : _f.displayValue) !== null && _g !== void 0 ? _g : '';
+        const minuteSort = (_j = (_h = ev.clock) === null || _h === void 0 ? void 0 : _h.value) !== null && _j !== void 0 ? _j : 0;
+        const teamName = (_l = (_k = ev.team) === null || _k === void 0 ? void 0 : _k.displayName) !== null && _l !== void 0 ? _l : '';
+        const teamSide = normalise(teamName) === homeNorm ? 'home' : 'away';
+        let eventType;
+        let player;
+        if (typeType.includes('goal')) {
+            if (typeType.includes('own'))
+                continue; // skip own goals for now
+            eventType = 'goal';
+            player = (_q = (_p = (_o = (_m = ev.participants) === null || _m === void 0 ? void 0 : _m[0]) === null || _o === void 0 ? void 0 : _o.athlete) === null || _p === void 0 ? void 0 : _p.displayName) !== null && _q !== void 0 ? _q : ((_r = ev.shortText) !== null && _r !== void 0 ? _r : '').replace(/ Goal.*$/i, '').trim();
+        }
+        else if (typeType === 'yellow-card') {
+            eventType = 'yellow-card';
+            player = ((_s = ev.shortText) !== null && _s !== void 0 ? _s : '').replace(/ Yellow Card$/i, '').trim();
+        }
+        else {
+            eventType = 'red-card';
+            player = ((_t = ev.shortText) !== null && _t !== void 0 ? _t : '').replace(/ Red Card$/i, '').trim();
+        }
+        if (!player)
+            continue;
+        events.push({ type: eventType, player, teamSide, minute, minuteSort });
+    }
+    return events.sort((a, b) => a.minuteSort - b.minuteSort);
+}
+function extractMatchStats(summary, homeNorm) {
+    var _a, _b;
+    const teams = (_b = (_a = summary.boxscore) === null || _a === void 0 ? void 0 : _a.teams) !== null && _b !== void 0 ? _b : [];
+    if (teams.length < 2)
+        return null;
+    const homeTeam = teams.find((t) => { var _a, _b; return normalise((_b = (_a = t.team) === null || _a === void 0 ? void 0 : _a.displayName) !== null && _b !== void 0 ? _b : '') === homeNorm; });
+    const awayTeam = teams.find((t) => { var _a, _b; return normalise((_b = (_a = t.team) === null || _a === void 0 ? void 0 : _a.displayName) !== null && _b !== void 0 ? _b : '') !== homeNorm; });
+    if (!homeTeam || !awayTeam)
+        return null;
+    const getStat = (teamData, name) => {
+        var _a, _b;
+        const stat = (_a = teamData === null || teamData === void 0 ? void 0 : teamData.statistics) === null || _a === void 0 ? void 0 : _a.find((s) => s.name === name);
+        return parseFloat((_b = stat === null || stat === void 0 ? void 0 : stat.displayValue) !== null && _b !== void 0 ? _b : '0') || 0;
+    };
+    return {
+        homePossession: getStat(homeTeam, 'possessionPct'),
+        awayPossession: getStat(awayTeam, 'possessionPct'),
+        homeShots: getStat(homeTeam, 'totalShots'),
+        awayShots: getStat(awayTeam, 'totalShots'),
+        homeShotsOnTarget: getStat(homeTeam, 'shotsOnTarget'),
+        awayShotsOnTarget: getStat(awayTeam, 'shotsOnTarget'),
+        homeCorners: getStat(homeTeam, 'wonCorners'),
+        awayCorners: getStat(awayTeam, 'wonCorners'),
+        homeFouls: getStat(homeTeam, 'foulsCommitted'),
+        awayFouls: getStat(awayTeam, 'foulsCommitted'),
+        homeYellows: getStat(homeTeam, 'yellowCards'),
+        awayYellows: getStat(awayTeam, 'yellowCards'),
+        homeReds: getStat(homeTeam, 'redCards'),
+        awayReds: getStat(awayTeam, 'redCards'),
+        homeOffsides: getStat(homeTeam, 'offsides'),
+        awayOffsides: getStat(awayTeam, 'offsides'),
+    };
+}
 /**
  * Maps common API name variants → our canonical schedule names.
  * Add entries here if the API returns a different spelling.
@@ -773,7 +841,11 @@ exports.pollLiveScores = (0, scheduler_1.onSchedule)({
             const awayScorers = scorers
                 .filter((s) => s.teamCode === awayCode)
                 .flatMap((s) => Array(s.goals).fill(s.player));
-            await db.collection('matches').doc(matchId).set({ goalScorerEvents: scorers, homeScorers, awayScorers }, { merge: true });
+            const matchEvents = extractMatchEvents(summary, homeNorm);
+            const matchStats = extractMatchStats(summary, homeNorm);
+            await db.collection('matches').doc(matchId).set(Object.assign({ goalScorerEvents: scorers, homeScorers,
+                awayScorers,
+                matchEvents }, (matchStats ? { matchStats } : {})), { merge: true });
             if (scorers.length > 0) {
                 console.log(`  Goal scorers ${matchId}: ` +
                     scorers.map((s) => `${s.player}(${s.teamCode})×${s.goals}`).join(', '));

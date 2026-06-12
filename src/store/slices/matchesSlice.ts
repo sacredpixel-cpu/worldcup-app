@@ -1,17 +1,19 @@
 'use client';
 
 import { create } from 'zustand';
-import type { Match } from '@/types/match';
+import type { Match, MatchEvent, MatchStats } from '@/types/match';
 import { subscribeToMatchUpdates } from '@/lib/matchesService';
 import type { GoalScorerEvent } from '@/lib/matchesService';
 
 interface MatchUpdate {
   homeScore: number | null;
   awayScore: number | null;
-  status: 'upcoming' | 'live' | 'finished';
+  status: 'upcoming' | 'live' | 'halftime' | 'extratime' | 'penalties' | 'finished';
   homeScorers?: string[];
   awayScorers?: string[];
   goalScorerEvents?: GoalScorerEvent[];
+  matchEvents?: MatchEvent[];
+  matchStats?: MatchStats;
 }
 
 interface MatchesState {
@@ -40,6 +42,8 @@ export const useMatchesStore = create<MatchesState>()((set, get) => ({
       homeScorers: update.homeScorers,
       awayScorers: update.awayScorers,
       goalScorerEvents: update.goalScorerEvents,
+      matchEvents: update.matchEvents,
+      matchStats: update.matchStats,
     };
   },
 }));

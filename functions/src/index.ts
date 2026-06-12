@@ -579,6 +579,12 @@ interface EspnScoreboardResponse {
 interface EspnSummaryResponse {
   keyEvents?: EspnKeyEvent[];
   scoring?:   EspnScoringPlay[];
+  boxscore?: {
+    teams?: Array<{
+      team?: { displayName?: string };
+      statistics?: Array<{ name?: string; displayValue?: string }>;
+    }>;
+  };
 }
 interface EspnKeyEvent {
   type?:         { text?: string; type?: string };
@@ -592,6 +598,7 @@ interface EspnKeyEvent {
   participants?: Array<{ athlete?: { id?: string; displayName?: string } }>;
   athlete?:      { displayName?: string };
   period?:       { number?: number };
+  clock?:        { value?: number; displayValue?: string };
 }
 interface EspnScoringPlay {
   type?:      { text?: string };
@@ -661,6 +668,71 @@ function extractEspnScorers(
   }
 
   return Array.from(map.values());
+}
+
+function extractMatchEvents(
+  summary: EspnSummaryResponse,
+  homeNorm: string,
+): Array<{ type: string; player: string; teamSide: string; minute: string; minuteSort: number }> {
+  const events: Array<{ type: string; player: string; teamSide: string; minute: string; minuteSort: number }> = [];
+  for (const ev of summary.keyEvents ?? []) {
+    const typeType = ev.type?.type ?? '';
+    if (!typeType.includes('goal') && typeType !== 'yellow-card' && typeType !== 'red-card') continue;
+    if (typeType.includes('goal') && (ev.period?.number ?? 0) > 4) continue; // no shootout goals
+    const minute = ev.clock?.displayValue ?? '';
+    const minuteSort = ev.clock?.value ?? 0;
+    const teamName = ev.team?.displayName ?? '';
+    const teamSide = normalise(teamName) === homeNorm ? 'home' : 'away';
+    let eventType: string;
+    let player: string;
+    if (typeType.includes('goal')) {
+      if (typeType.includes('own')) continue; // skip own goals for now
+      eventType = 'goal';
+      player = ev.participants?.[0]?.athlete?.displayName ?? (ev.shortText ?? '').replace(/ Goal.*$/i, '').trim();
+    } else if (typeType === 'yellow-card') {
+      eventType = 'yellow-card';
+      player = (ev.shortText ?? '').replace(/ Yellow Card$/i, '').trim();
+    } else {
+      eventType = 'red-card';
+      player = (ev.shortText ?? '').replace(/ Red Card$/i, '').trim();
+    }
+    if (!player) continue;
+    events.push({ type: eventType, player, teamSide, minute, minuteSort });
+  }
+  return events.sort((a, b) => a.minuteSort - b.minuteSort);
+}
+
+function extractMatchStats(
+  summary: EspnSummaryResponse,
+  homeNorm: string,
+): Record<string, number> | null {
+  const teams = summary.boxscore?.teams ?? [];
+  if (teams.length < 2) return null;
+  const homeTeam = teams.find((t) => normalise(t.team?.displayName ?? '') === homeNorm);
+  const awayTeam = teams.find((t) => normalise(t.team?.displayName ?? '') !== homeNorm);
+  if (!homeTeam || !awayTeam) return null;
+  const getStat = (teamData: typeof homeTeam, name: string): number => {
+    const stat = teamData?.statistics?.find((s) => s.name === name);
+    return parseFloat(stat?.displayValue ?? '0') || 0;
+  };
+  return {
+    homePossession: getStat(homeTeam, 'possessionPct'),
+    awayPossession: getStat(awayTeam, 'possessionPct'),
+    homeShots: getStat(homeTeam, 'totalShots'),
+    awayShots: getStat(awayTeam, 'totalShots'),
+    homeShotsOnTarget: getStat(homeTeam, 'shotsOnTarget'),
+    awayShotsOnTarget: getStat(awayTeam, 'shotsOnTarget'),
+    homeCorners: getStat(homeTeam, 'wonCorners'),
+    awayCorners: getStat(awayTeam, 'wonCorners'),
+    homeFouls: getStat(homeTeam, 'foulsCommitted'),
+    awayFouls: getStat(awayTeam, 'foulsCommitted'),
+    homeYellows: getStat(homeTeam, 'yellowCards'),
+    awayYellows: getStat(awayTeam, 'yellowCards'),
+    homeReds: getStat(homeTeam, 'redCards'),
+    awayReds: getStat(awayTeam, 'redCards'),
+    homeOffsides: getStat(homeTeam, 'offsides'),
+    awayOffsides: getStat(awayTeam, 'offsides'),
+  };
 }
 
 /**
@@ -958,8 +1030,17 @@ export const pollLiveScores = onSchedule(
           .filter((s) => s.teamCode === awayCode)
           .flatMap((s) => Array<string>(s.goals).fill(s.player));
 
+        const matchEvents = extractMatchEvents(summary, homeNorm);
+        const matchStats  = extractMatchStats(summary, homeNorm);
+
         await db.collection('matches').doc(matchId).set(
-          { goalScorerEvents: scorers, homeScorers, awayScorers },
+          {
+            goalScorerEvents: scorers,
+            homeScorers,
+            awayScorers,
+            matchEvents,
+            ...(matchStats ? { matchStats } : {}),
+          },
           { merge: true },
         );
 
