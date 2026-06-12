@@ -126,6 +126,10 @@ function TeamRow({ standing, rank, advancesThird = false, correct }: {
   );
 }
 
+// Strip diacritics, lowercase, trim — so "Raúl Jiménez" matches "Raul Jimenez" etc.
+const normScorer = (n: string) =>
+  n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
 function matchBreakdown(pred: Prediction, m: Match): { label: string; pts: number; na?: boolean }[] {
   const isFinished = m.status === 'finished' && m.homeScore !== null;
   const items: { label: string; pts: number; na?: boolean }[] = [];
@@ -142,35 +146,32 @@ function matchBreakdown(pred: Prediction, m: Match): { label: string; pts: numbe
     const awayExact = pred.awayScore === actual.awayScore;
     items.push({ label: `Home score — you: ${pred.homeScore} · result: ${actual.homeScore}`, pts: homeExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0 });
     items.push({ label: `Away score — you: ${pred.awayScore} · result: ${actual.awayScore}`, pts: awayExact ? SCORING.CORRECT_SCORE_PER_TEAM : 0 });
-    if (!homeExact && !awayExact) {
-      const predOut = Math.sign(pred.homeScore - pred.awayScore);
-      const actOut  = Math.sign(actual.homeScore - actual.awayScore);
-      items.push(predOut === actOut
-        ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
-        : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
-    } else {
-      items.push({ label: 'Result (W/D/L) — covered by exact score', pts: 0, na: true });
-    }
+    // Outcome always stacks with exact score (matches calcPoints logic)
+    const predOut = Math.sign(pred.homeScore - pred.awayScore);
+    const actOut  = Math.sign(actual.homeScore - actual.awayScore);
+    items.push(predOut === actOut
+      ? { label: 'Correct result (W/D/L)', pts: SCORING.CORRECT_OUTCOME }
+      : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
   }
 
-  // Scorer picks
+  // Scorer picks — accent-insensitive matching (API names may differ from roster names)
   const homePicks = pred.homeScorerPicks ?? [];
-  const homeActualSet = m.homeScorers ? new Set(m.homeScorers) : null;
+  const homeNormSet = m.homeScorers ? new Set(m.homeScorers.map(normScorer)) : null;
   if (homePicks.length === 0) {
     items.push({ label: 'Home scorer(s) — no pick', pts: 0 });
   } else {
     for (const pick of homePicks) {
-      if (homeActualSet) items.push({ label: `Home scorer(s): ${pick}`, pts: homeActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+      if (homeNormSet) items.push({ label: `Home scorer(s): ${pick}`, pts: homeNormSet.has(normScorer(pick)) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
       else items.push({ label: `Home scorer(s): ${pick}`, pts: 0, na: true });
     }
   }
   const awayPicks = pred.awayScorerPicks ?? [];
-  const awayActualSet = m.awayScorers ? new Set(m.awayScorers) : null;
+  const awayNormSet = m.awayScorers ? new Set(m.awayScorers.map(normScorer)) : null;
   if (awayPicks.length === 0) {
     items.push({ label: 'Away scorer(s) — no pick', pts: 0 });
   } else {
     for (const pick of awayPicks) {
-      if (awayActualSet) items.push({ label: `Away scorer(s): ${pick}`, pts: awayActualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
+      if (awayNormSet) items.push({ label: `Away scorer(s): ${pick}`, pts: awayNormSet.has(normScorer(pick)) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
       else items.push({ label: `Away scorer(s): ${pick}`, pts: 0, na: true });
     }
   }

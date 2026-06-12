@@ -23,14 +23,17 @@ export function calcPoints(
   // +2 per goal scored by picked player (×goals if player scored multiple times)
   // -1 if picked player did not score at all
   // Only applied once actual scorers are known (post-match)
+  // Accent-insensitive: "Raúl Jiménez" matches "Raul Jimenez" etc.
+  const norm = (n: string) => n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const scorerPoints = (picks: string[], actualScorers: string[]) => {
     // Count how many goals each player scored (array may contain duplicates for multi-goal)
     const goalCounts = new Map<string, number>();
     for (const name of actualScorers) {
-      goalCounts.set(name, (goalCounts.get(name) ?? 0) + 1);
+      const key = norm(name);
+      goalCounts.set(key, (goalCounts.get(key) ?? 0) + 1);
     }
     for (const pick of picks) {
-      const goals = goalCounts.get(pick) ?? 0;
+      const goals = goalCounts.get(norm(pick)) ?? 0;
       pts += goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
     }
   };
