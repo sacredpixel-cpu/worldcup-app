@@ -637,13 +637,17 @@ function extractEspnScorers(
   };
 
   // ESPN keyEvents — scoring plays carry scoringPlay:true and
-  // have the scorer in participants[0].athlete.displayName
+  // have the scorer in participants[0].athlete.displayName.
+  // Penalty goals have type.type="penalty---scored" (not "goal"), so we include them explicitly.
   for (const ev of summary.keyEvents ?? []) {
     if (!ev.scoringPlay) continue;
     const typeText = (ev.type?.text ?? '').toLowerCase();
-    if (!typeText.includes('goal')) continue;
+    const typeType = (ev.type?.type ?? '').toLowerCase();
+    const isGoal    = typeText.includes('goal') || typeType.includes('goal');
+    const isPenalty = typeType === 'penalty---scored';
+    if (!isGoal && !isPenalty) continue;
     // Skip own goals and penalty shootout goals
-    if (typeText.includes('own') || ev.type?.type?.includes('own')) continue;
+    if (typeText.includes('own') || typeType.includes('own')) continue;
     if ((ev.period?.number ?? 0) > 4) continue; // period 5+ = shootout
     // Scorer is first participant; fall back to shortText name or full text
     const name =
@@ -659,7 +663,7 @@ function extractEspnScorers(
     for (const sp of summary.scoring ?? []) {
       const typeText = (sp.type?.text ?? '').toLowerCase();
       if (!typeText.includes('goal')) continue;
-      if (typeText.includes('own') || typeText.includes('penalty')) continue;
+      if (typeText.includes('own')) continue;
       if ((sp.period?.number ?? 0) > 4) continue;
       const name     = sp.participants?.[0]?.athlete?.displayName ?? sp.text ?? '';
       const teamCode = sp.homeAway === 'home' ? homeCode : awayCode;
@@ -677,19 +681,26 @@ function extractMatchEvents(
   const events: Array<{ type: string; player: string; teamSide: string; minute: string; minuteSort: number }> = [];
   for (const ev of summary.keyEvents ?? []) {
     const typeType = ev.type?.type ?? '';
-    if (!typeType.includes('goal') && typeType !== 'yellow-card' && typeType !== 'red-card') continue;
-    if (typeType.includes('goal') && (ev.period?.number ?? 0) > 4) continue; // no shootout goals
+    const isPenaltyGoal = typeType === 'penalty---scored';
+    const isGoal   = typeType.includes('goal') || isPenaltyGoal;
+    const isYellow = typeType === 'yellow-card';
+    const isRed    = typeType === 'red-card';
+    if (!isGoal && !isYellow && !isRed) continue;
+    if (isGoal && (ev.period?.number ?? 0) > 4) continue; // no shootout goals
+    if (typeType.includes('own')) continue; // skip own goals
     const minute = ev.clock?.displayValue ?? '';
     const minuteSort = ev.clock?.value ?? 0;
     const teamName = ev.team?.displayName ?? '';
     const teamSide = normalise(teamName) === homeNorm ? 'home' : 'away';
     let eventType: string;
     let player: string;
-    if (typeType.includes('goal')) {
-      if (typeType.includes('own')) continue; // skip own goals for now
+    if (isGoal) {
       eventType = 'goal';
-      player = ev.participants?.[0]?.athlete?.displayName ?? (ev.shortText ?? '').replace(/ Goal.*$/i, '').trim();
-    } else if (typeType === 'yellow-card') {
+      const rawName = ev.participants?.[0]?.athlete?.displayName
+        ?? (ev.shortText ?? '').replace(/ (Goal|Penalty).*$/i, '').trim();
+      // Tag penalty goals with (P) so the UI can display it distinctly
+      player = isPenaltyGoal ? `${rawName} (P)` : rawName;
+    } else if (isYellow) {
       eventType = 'yellow-card';
       player = (ev.shortText ?? '').replace(/ Yellow Card$/i, '').trim();
     } else {

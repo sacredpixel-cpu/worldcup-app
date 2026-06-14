@@ -463,15 +463,19 @@ function extractEspnScorers(summary, homeCode, awayCode, homeNorm, awayNorm) {
         return awayCode;
     };
     // ESPN keyEvents — scoring plays carry scoringPlay:true and
-    // have the scorer in participants[0].athlete.displayName
+    // have the scorer in participants[0].athlete.displayName.
+    // Penalty goals have type.type="penalty---scored" (not "goal"), so we include them explicitly.
     for (const ev of (_a = summary.keyEvents) !== null && _a !== void 0 ? _a : []) {
         if (!ev.scoringPlay)
             continue;
         const typeText = ((_c = (_b = ev.type) === null || _b === void 0 ? void 0 : _b.text) !== null && _c !== void 0 ? _c : '').toLowerCase();
-        if (!typeText.includes('goal'))
+        const typeType = ((_e = (_d = ev.type) === null || _d === void 0 ? void 0 : _d.type) !== null && _e !== void 0 ? _e : '').toLowerCase();
+        const isGoal = typeText.includes('goal') || typeType.includes('goal');
+        const isPenalty = typeType === 'penalty---scored';
+        if (!isGoal && !isPenalty)
             continue;
         // Skip own goals and penalty shootout goals
-        if (typeText.includes('own') || ((_e = (_d = ev.type) === null || _d === void 0 ? void 0 : _d.type) === null || _e === void 0 ? void 0 : _e.includes('own')))
+        if (typeText.includes('own') || typeType.includes('own'))
             continue;
         if (((_g = (_f = ev.period) === null || _f === void 0 ? void 0 : _f.number) !== null && _g !== void 0 ? _g : 0) > 4)
             continue; // period 5+ = shootout
@@ -486,7 +490,7 @@ function extractEspnScorers(summary, homeCode, awayCode, homeNorm, awayNorm) {
             const typeText = ((_r = (_q = sp.type) === null || _q === void 0 ? void 0 : _q.text) !== null && _r !== void 0 ? _r : '').toLowerCase();
             if (!typeText.includes('goal'))
                 continue;
-            if (typeText.includes('own') || typeText.includes('penalty'))
+            if (typeText.includes('own'))
                 continue;
             if (((_t = (_s = sp.period) === null || _s === void 0 ? void 0 : _s.number) !== null && _t !== void 0 ? _t : 0) > 4)
                 continue;
@@ -502,23 +506,29 @@ function extractMatchEvents(summary, homeNorm) {
     const events = [];
     for (const ev of (_a = summary.keyEvents) !== null && _a !== void 0 ? _a : []) {
         const typeType = (_c = (_b = ev.type) === null || _b === void 0 ? void 0 : _b.type) !== null && _c !== void 0 ? _c : '';
-        if (!typeType.includes('goal') && typeType !== 'yellow-card' && typeType !== 'red-card')
+        const isPenaltyGoal = typeType === 'penalty---scored';
+        const isGoal = typeType.includes('goal') || isPenaltyGoal;
+        const isYellow = typeType === 'yellow-card';
+        const isRed = typeType === 'red-card';
+        if (!isGoal && !isYellow && !isRed)
             continue;
-        if (typeType.includes('goal') && ((_e = (_d = ev.period) === null || _d === void 0 ? void 0 : _d.number) !== null && _e !== void 0 ? _e : 0) > 4)
+        if (isGoal && ((_e = (_d = ev.period) === null || _d === void 0 ? void 0 : _d.number) !== null && _e !== void 0 ? _e : 0) > 4)
             continue; // no shootout goals
+        if (typeType.includes('own'))
+            continue; // skip own goals
         const minute = (_g = (_f = ev.clock) === null || _f === void 0 ? void 0 : _f.displayValue) !== null && _g !== void 0 ? _g : '';
         const minuteSort = (_j = (_h = ev.clock) === null || _h === void 0 ? void 0 : _h.value) !== null && _j !== void 0 ? _j : 0;
         const teamName = (_l = (_k = ev.team) === null || _k === void 0 ? void 0 : _k.displayName) !== null && _l !== void 0 ? _l : '';
         const teamSide = normalise(teamName) === homeNorm ? 'home' : 'away';
         let eventType;
         let player;
-        if (typeType.includes('goal')) {
-            if (typeType.includes('own'))
-                continue; // skip own goals for now
+        if (isGoal) {
             eventType = 'goal';
-            player = (_q = (_p = (_o = (_m = ev.participants) === null || _m === void 0 ? void 0 : _m[0]) === null || _o === void 0 ? void 0 : _o.athlete) === null || _p === void 0 ? void 0 : _p.displayName) !== null && _q !== void 0 ? _q : ((_r = ev.shortText) !== null && _r !== void 0 ? _r : '').replace(/ Goal.*$/i, '').trim();
+            const rawName = (_q = (_p = (_o = (_m = ev.participants) === null || _m === void 0 ? void 0 : _m[0]) === null || _o === void 0 ? void 0 : _o.athlete) === null || _p === void 0 ? void 0 : _p.displayName) !== null && _q !== void 0 ? _q : ((_r = ev.shortText) !== null && _r !== void 0 ? _r : '').replace(/ (Goal|Penalty).*$/i, '').trim();
+            // Tag penalty goals with (P) so the UI can display it distinctly
+            player = isPenaltyGoal ? `${rawName} (P)` : rawName;
         }
-        else if (typeType === 'yellow-card') {
+        else if (isYellow) {
             eventType = 'yellow-card';
             player = ((_s = ev.shortText) !== null && _s !== void 0 ? _s : '').replace(/ Yellow Card$/i, '').trim();
         }
