@@ -682,24 +682,30 @@ function extractMatchEvents(
   for (const ev of summary.keyEvents ?? []) {
     const typeType = ev.type?.type ?? '';
     const isPenaltyGoal = typeType === 'penalty---scored';
+    const isOwnGoal = typeType === 'own-goal';
     const isGoal   = typeType.includes('goal') || isPenaltyGoal;
     const isYellow = typeType === 'yellow-card';
     const isRed    = typeType === 'red-card';
     if (!isGoal && !isYellow && !isRed) continue;
     if (isGoal && (ev.period?.number ?? 0) > 4) continue; // no shootout goals
-    if (typeType.includes('own')) continue; // skip own goals
     const minute = ev.clock?.displayValue ?? '';
     const minuteSort = ev.clock?.value ?? 0;
     const teamName = ev.team?.displayName ?? '';
+    // For own goals ESPN sets team = the benefiting team, which is correct for display
     const teamSide = normalise(teamName) === homeNorm ? 'home' : 'away';
     let eventType: string;
     let player: string;
     if (isGoal) {
       eventType = 'goal';
       const rawName = ev.participants?.[0]?.athlete?.displayName
-        ?? (ev.shortText ?? '').replace(/ (Goal|Penalty).*$/i, '').trim();
-      // Tag penalty goals with (P) so the UI can display it distinctly
-      player = isPenaltyGoal ? `${rawName} (P)` : rawName;
+        ?? (ev.shortText ?? '').replace(/ (Goal|Penalty|Own Goal).*$/i, '').trim();
+      if (isOwnGoal) {
+        player = `${rawName} (OG)`;
+      } else if (isPenaltyGoal) {
+        player = `${rawName} (P)`;
+      } else {
+        player = rawName;
+      }
     } else if (isYellow) {
       eventType = 'yellow-card';
       player = (ev.shortText ?? '').replace(/ Yellow Card$/i, '').trim();

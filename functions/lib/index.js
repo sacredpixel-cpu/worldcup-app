@@ -507,6 +507,7 @@ function extractMatchEvents(summary, homeNorm) {
     for (const ev of (_a = summary.keyEvents) !== null && _a !== void 0 ? _a : []) {
         const typeType = (_c = (_b = ev.type) === null || _b === void 0 ? void 0 : _b.type) !== null && _c !== void 0 ? _c : '';
         const isPenaltyGoal = typeType === 'penalty---scored';
+        const isOwnGoal = typeType === 'own-goal';
         const isGoal = typeType.includes('goal') || isPenaltyGoal;
         const isYellow = typeType === 'yellow-card';
         const isRed = typeType === 'red-card';
@@ -514,19 +515,25 @@ function extractMatchEvents(summary, homeNorm) {
             continue;
         if (isGoal && ((_e = (_d = ev.period) === null || _d === void 0 ? void 0 : _d.number) !== null && _e !== void 0 ? _e : 0) > 4)
             continue; // no shootout goals
-        if (typeType.includes('own'))
-            continue; // skip own goals
         const minute = (_g = (_f = ev.clock) === null || _f === void 0 ? void 0 : _f.displayValue) !== null && _g !== void 0 ? _g : '';
         const minuteSort = (_j = (_h = ev.clock) === null || _h === void 0 ? void 0 : _h.value) !== null && _j !== void 0 ? _j : 0;
         const teamName = (_l = (_k = ev.team) === null || _k === void 0 ? void 0 : _k.displayName) !== null && _l !== void 0 ? _l : '';
+        // For own goals ESPN sets team = the benefiting team, which is correct for display
         const teamSide = normalise(teamName) === homeNorm ? 'home' : 'away';
         let eventType;
         let player;
         if (isGoal) {
             eventType = 'goal';
-            const rawName = (_q = (_p = (_o = (_m = ev.participants) === null || _m === void 0 ? void 0 : _m[0]) === null || _o === void 0 ? void 0 : _o.athlete) === null || _p === void 0 ? void 0 : _p.displayName) !== null && _q !== void 0 ? _q : ((_r = ev.shortText) !== null && _r !== void 0 ? _r : '').replace(/ (Goal|Penalty).*$/i, '').trim();
-            // Tag penalty goals with (P) so the UI can display it distinctly
-            player = isPenaltyGoal ? `${rawName} (P)` : rawName;
+            const rawName = (_q = (_p = (_o = (_m = ev.participants) === null || _m === void 0 ? void 0 : _m[0]) === null || _o === void 0 ? void 0 : _o.athlete) === null || _p === void 0 ? void 0 : _p.displayName) !== null && _q !== void 0 ? _q : ((_r = ev.shortText) !== null && _r !== void 0 ? _r : '').replace(/ (Goal|Penalty|Own Goal).*$/i, '').trim();
+            if (isOwnGoal) {
+                player = `${rawName} (OG)`;
+            }
+            else if (isPenaltyGoal) {
+                player = `${rawName} (P)`;
+            }
+            else {
+                player = rawName;
+            }
         }
         else if (isYellow) {
             eventType = 'yellow-card';
