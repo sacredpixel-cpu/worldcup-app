@@ -717,13 +717,15 @@ exports.pollLiveScores = (0, scheduler_1.onSchedule)({
             });
         }),
     }, { merge: true });
-    if (rapidMatches.length === 0) {
-        console.log(`No RapidAPI WC matches for ${dateStr} or ${yDateStr}.`);
-        return;
-    }
-    console.log(`RapidAPI: ${rapidMatches.length} WC matches for ${dateStr}+${yDateStr}.`);
+    // Always build indexes — needed by both RapidAPI and ESPN supplementary sections.
     const teamPairIndex = buildTeamPairIndex();
     const kickoffIndex = buildKickoffIndex();
+    if (rapidMatches.length === 0) {
+        console.log(`No RapidAPI WC matches for ${dateStr} or ${yDateStr} — will try ESPN.`);
+    }
+    else {
+        console.log(`RapidAPI: ${rapidMatches.length} WC matches for ${dateStr}+${yDateStr}.`);
+    }
     const batch = db.batch();
     let updateCount = 0;
     for (const m of rapidMatches) {
