@@ -855,11 +855,16 @@ export const pollLiveScores = onSchedule(
 
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
 
-    // RapidAPI uses local venue dates (US timezones). A match at 02:00 UTC on
-    // the 12th may be listed under the 11th. Query both today and yesterday.
+    // RapidAPI/ESPN use local venue dates (US timezones). A match at 02:00 UTC
+    // on the 13th may be listed under the 12th. Query today, yesterday, and the
+    // day before yesterday to avoid missing late-evening US kickoffs.
     const yesterday = new Date(now);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     const yDateStr = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
+
+    const dayBeforeYesterday = new Date(now);
+    dayBeforeYesterday.setUTCDate(dayBeforeYesterday.getUTCDate() - 2);
+    const ddYDateStr = dayBeforeYesterday.toISOString().slice(0, 10).replace(/-/g, '');
 
     const apiKey = RAPIDAPI_KEY.value().trim(); // trim newline that may be appended by secret manager
 
@@ -879,13 +884,14 @@ export const pollLiveScores = onSchedule(
 
     let rapidMatches: RapidMatch[] = [];
     try {
-      const [todayMatches, ydayMatches] = await Promise.all([
+      const [todayMatches, ydayMatches, ddyMatches] = await Promise.all([
         fetchRapidDate(dateStr),
         fetchRapidDate(yDateStr),
+        fetchRapidDate(ddYDateStr),
       ]);
       // De-duplicate by match id
       const seen = new Set<number>();
-      for (const m of [...todayMatches, ...ydayMatches]) {
+      for (const m of [...todayMatches, ...ydayMatches, ...ddyMatches]) {
         if (!seen.has(m.id)) { seen.add(m.id); rapidMatches.push(m); }
       }
     } catch (err) {
@@ -986,12 +992,13 @@ export const pollLiveScores = onSchedule(
 
     let espnEvents: EspnEvent[] = [];
     try {
-      const [todayEspn, ydayEspn] = await Promise.all([
+      const [todayEspn, ydayEspn, ddyEspn] = await Promise.all([
         fetchEspnDate(dateStr),
         fetchEspnDate(yDateStr),
+        fetchEspnDate(ddYDateStr),
       ]);
       const seenEspn = new Set<string>();
-      for (const ev of [...todayEspn, ...ydayEspn]) {
+      for (const ev of [...todayEspn, ...ydayEspn, ...ddyEspn]) {
         if (!seenEspn.has(ev.id)) { seenEspn.add(ev.id); espnEvents.push(ev); }
       }
     } catch {
