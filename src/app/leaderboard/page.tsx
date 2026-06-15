@@ -8,9 +8,11 @@ import { subscribeToCommunityPredictions } from '@/lib/predictionsService';
 import { getAllGroups } from '@/lib/groupsService';
 import type { Group, GroupMember } from '@/types/group';
 import type { Prediction } from '@/types/prediction';
+import type { Match } from '@/types/match';
 import { ALL_MATCHES } from '@/data/matches';
 import { calcPoints } from '@/lib/utils/calcPoints';
 import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
+import { SCORING } from '@/lib/constants/scoring';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -40,6 +42,165 @@ const MOCK_USERS: LeaderboardEntry[] = [
   { userId: 'mock-10', displayName: 'TacticsNerd', avatarUrl: `https://i.pravatar.cc/150?u=10`, totalPoints: 12, correctScores: 0, correctOutcomes: 4, country: 'Japan', countryCode: 'jp' },
 ];
 
+// ─── Last-match prediction modal ─────────────────────────────────────────────
+
+const normName = (n: string) =>
+  n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+function UserPredictionModal({
+  entry, match, pred, profile, onClose,
+}: {
+  entry: LeaderboardEntry;
+  match: Match;
+  pred: Prediction | undefined;
+  profile?: UserProfile;
+  onClose: () => void;
+}) {
+  const avatarUrl = profile?.avatarUrl ?? entry.avatarUrl;
+
+  const breakdown = useMemo(() => {
+    if (!pred || match.homeScore == null || match.awayScore == null) return null;
+    const items: { label: string; pts: number; correct: boolean }[] = [];
+
+    const predOut = Math.sign(pred.homeScore - pred.awayScore);
+    const actOut  = Math.sign(match.homeScore - match.awayScore);
+    const correctOutcome = predOut === actOut;
+    items.push({ label: 'Correct result', pts: correctOutcome ? SCORING.CORRECT_OUTCOME : 0, correct: correctOutcome });
+
+    const correctHome = pred.homeScore === match.homeScore;
+    const correctAway = pred.awayScore === match.awayScore;
+    items.push({ label: `${match.homeTeam.name} exact score`, pts: correctHome ? SCORING.CORRECT_SCORE_PER_TEAM : 0, correct: correctHome });
+    items.push({ label: `${match.awayTeam.name} exact score`, pts: correctAway ? SCORING.CORRECT_SCORE_PER_TEAM : 0, correct: correctAway });
+
+    const allScorers = [...(match.homeScorers ?? []), ...(match.awayScorers ?? [])];
+    const scorerGoals = new Map<string, number>();
+    for (const s of allScorers) {
+      const k = normName(s);
+      scorerGoals.set(k, (scorerGoals.get(k) ?? 0) + 1);
+    }
+
+    for (const pick of [...pred.homeScorerPicks, ...pred.awayScorerPicks]) {
+      const goals = scorerGoals.get(normName(pick)) ?? 0;
+      items.push({ label: pick, pts: goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, correct: goals > 0 });
+    }
+
+    return items;
+  }, [pred, match]);
+
+  const total = breakdown?.reduce((s, i) => s + i.pts, 0) ?? 0;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl"
+        style={{ background: '#0A1128', borderTop: '1px solid rgba(255,255,255,0.08)', maxHeight: '85vh', overflowY: 'auto' }}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-2.5 pb-1">
+          <div className="h-1 w-10 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+        </div>
+
+        {/* User header */}
+        <div className="flex items-center justify-between px-4 pt-1 pb-3">
+          <div className="flex items-center gap-2">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt={entry.displayName} width={28} height={28} className="rounded-full object-cover" unoptimized />
+            ) : (
+              <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold" style={{ background: '#FF1F8E', color: '#06091A' }}>
+                {entry.displayName[0].toUpperCase()}
+              </div>
+            )}
+            <span className="text-sm font-semibold" style={{ color: '#E8F0FF' }}>{entry.displayName}</span>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-lg leading-none" style={{ color: '#7A91BB' }}>✕</button>
+        </div>
+
+        {/* Match header */}
+        <div className="mx-4 mb-3 rounded-xl px-4 py-3" style={{ background: '#0E1535', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="text-center text-[10px] font-semibold mb-2 tracking-widest" style={{ color: '#7A91BB' }}>LAST MATCH</p>
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-col items-center gap-1 w-16">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={match.homeTeam.flagUrl} alt={match.homeTeam.name} className="h-6 w-9 rounded-sm object-cover" />
+              <span className="text-xs font-bold" style={{ color: '#C8D8F0' }}>{match.homeTeam.code}</span>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-black leading-none" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>
+                {match.homeScore} – {match.awayScore}
+              </p>
+              <p className="text-[10px] mt-0.5" style={{ color: '#7A91BB' }}>FINAL</p>
+            </div>
+            <div className="flex flex-col items-center gap-1 w-16">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={match.awayTeam.flagUrl} alt={match.awayTeam.name} className="h-6 w-9 rounded-sm object-cover" />
+              <span className="text-xs font-bold" style={{ color: '#C8D8F0' }}>{match.awayTeam.code}</span>
+            </div>
+          </div>
+        </div>
+
+        {!pred ? (
+          <div className="mx-4 mb-6 rounded-xl py-8 text-center" style={{ background: '#0E1535', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-2xl mb-1">🤐</p>
+            <p className="text-sm" style={{ color: '#7A91BB' }}>No prediction made for this match</p>
+          </div>
+        ) : (
+          <div className="mx-4 mb-6 flex flex-col gap-2">
+            {/* Predicted score */}
+            <div className="flex items-center justify-between rounded-xl px-4 py-2.5" style={{ background: '#0E1535', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <span className="text-sm" style={{ color: '#7A91BB' }}>Their prediction</span>
+              <span className="text-xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: '#E8F0FF' }}>
+                {pred.homeScore} – {pred.awayScore}
+              </span>
+            </div>
+
+            {/* Breakdown rows */}
+            {breakdown && (
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+                {breakdown.map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between px-4 py-2.5"
+                    style={{
+                      background: i % 2 === 0 ? '#0E1535' : 'rgba(255,255,255,0.02)',
+                      borderBottom: i < breakdown.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined,
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{item.correct ? '✅' : '❌'}</span>
+                      <span className="text-sm" style={{ color: item.correct ? '#C8D8F0' : '#7A91BB' }}>{item.label}</span>
+                    </div>
+                    <span
+                      className="text-sm font-bold"
+                      style={{ color: item.pts > 0 ? '#FFB020' : item.pts < 0 ? '#FF6B6B' : '#5A6E94' }}
+                    >
+                      {item.pts > 0 ? `+${item.pts}` : item.pts} pts
+                    </span>
+                  </div>
+                ))}
+
+                {/* Total */}
+                <div
+                  className="flex items-center justify-between px-4 py-3"
+                  style={{ background: total > 0 ? 'rgba(255,176,32,0.08)' : 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <span className="text-sm font-bold" style={{ color: '#E8F0FF' }}>Match total</span>
+                  <span
+                    className="text-2xl font-black"
+                    style={{ fontFamily: 'var(--font-barlow-condensed)', color: total > 0 ? '#FFB020' : '#5A6E94' }}
+                  >
+                    {total > 0 ? `+${total}` : total} pts
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) return <span className="text-xl">🥇</span>;
   if (rank === 2) return <span className="text-xl">🥈</span>;
@@ -47,7 +208,7 @@ function RankBadge({ rank }: { rank: number }) {
   return <span className="w-8 text-center text-sm font-bold" style={{ color: '#7A91BB' }}>{rank}</span>;
 }
 
-function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntry; rank: number; isMe: boolean; profile?: UserProfile }) {
+function LeaderboardRow({ entry, rank, isMe, profile, onClick }: { entry: LeaderboardEntry; rank: number; isMe: boolean; profile?: UserProfile; onClick?: () => void }) {
   const location = profile?.countryCode
     ? `${profile.countryCode === 'us' && profile.state ? profile.state + ', ' : ''}${profile.country}`
     : null;
@@ -56,7 +217,8 @@ function LeaderboardRow({ entry, rank, isMe, profile }: { entry: LeaderboardEntr
 
   return (
     <div
-      className="flex items-center gap-3 rounded-xl px-4 py-3"
+      className="flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer active:opacity-75 transition-opacity"
+      onClick={onClick}
       style={isMe
         ? { border: '1px solid rgba(255,31,142,0.3)', background: 'rgba(255,31,142,0.08)' }
         : { background: '#0E1535', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -169,6 +331,7 @@ function LeaderboardContent() {
   const [boardLoading, setBoardLoading] = useState(true);
   const [allGroups, setAllGroups] = useState<Group[]>([]);
   const [allGroupsLoading, setAllGroupsLoading] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<LeaderboardEntry | null>(null);
 
   useEffect(() => {
     const unsub = subscribeToUserProfiles(setUserProfiles);
@@ -216,6 +379,32 @@ function LeaderboardContent() {
     return { userId: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, totalPoints: pts, correctScores: exact, correctOutcomes: correct };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, saved, updates]);
+
+  // Most recently completed match — used for the tap-to-preview modal
+  const lastFinishedMatch = useMemo(() => {
+    const finished = ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore != null);
+    return finished.length > 0 ? finished[finished.length - 1] : null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updates]);
+
+  // Index all Firestore predictions by userId for quick lookup in the modal
+  const predsByUserIndex = useMemo(() => {
+    const idx: Record<string, Record<string, Prediction>> = {};
+    for (const pred of allPredictions) {
+      if (!idx[pred.userId]) idx[pred.userId] = {};
+      idx[pred.userId][pred.matchId] = pred;
+    }
+    return idx;
+  }, [allPredictions]);
+
+  // Derive the selected user's prediction for the last finished match
+  const selectedPred = useMemo(() => {
+    if (!selectedEntry || !lastFinishedMatch) return undefined;
+    const userPreds = selectedEntry.userId === user?.id
+      ? saved
+      : (predsByUserIndex[selectedEntry.userId] ?? {});
+    return userPreds[lastFinishedMatch.id];
+  }, [selectedEntry, lastFinishedMatch, predsByUserIndex, saved, user?.id]);
 
   const globalBoard = useMemo(() => {
     // Use live Firestore match data (scores + scorers written by Cloud Functions)
@@ -431,9 +620,19 @@ function LeaderboardContent() {
               rank={i + 1}
               isMe={entry.userId === user?.id}
               profile={userProfiles[entry.userId]}
+              onClick={lastFinishedMatch ? () => setSelectedEntry(entry) : undefined}
             />
           ))}
         </div>
+      )}
+      {selectedEntry && lastFinishedMatch && (
+        <UserPredictionModal
+          entry={selectedEntry}
+          match={lastFinishedMatch}
+          pred={selectedPred}
+          profile={userProfiles[selectedEntry.userId]}
+          onClose={() => setSelectedEntry(null)}
+        />
       )}
     </div>
   );
