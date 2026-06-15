@@ -79,7 +79,7 @@ function UserPredictionModal({
       scorerGoals.set(k, (scorerGoals.get(k) ?? 0) + 1);
     }
 
-    for (const pick of [...pred.homeScorerPicks, ...pred.awayScorerPicks]) {
+    for (const pick of [...(pred.homeScorerPicks ?? []), ...(pred.awayScorerPicks ?? [])]) {
       const goals = scorerGoals.get(normName(pick)) ?? 0;
       items.push({ label: pick, pts: goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, correct: goals > 0 });
     }
