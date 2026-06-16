@@ -5,13 +5,14 @@ import { ClientOnly } from '@/components/ui/ClientOnly';
 import { ALL_MATCHES } from '@/data/matches';
 import { calcPoints } from '@/lib/utils/calcPoints';
 import { calcGroupPoints } from '@/lib/utils/calcGroupPoints';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { uploadAvatar } from '@/lib/uploadService';
 import { COUNTRIES, US_STATES } from '@/data/countries';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { requestAndSaveToken, isNotificationSupported, needsPWAInstall } from '@/lib/notifications';
 
 function ProfileContent() {
   const { user, clearAuth, updateAvatar, updateLocation } = useAuthStore();
@@ -19,6 +20,30 @@ function ProfileContent() {
   const { groups } = useGroupsStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+
+  type NotifStatus = 'loading' | 'unsupported' | 'pwa-required' | 'default' | 'granted' | 'denied';
+  const [notifStatus, setNotifStatus] = useState<NotifStatus>('loading');
+  const [enabling, setEnabling] = useState(false);
+  const [synced, setSynced] = useState(false);
+
+  useEffect(() => {
+    if (!isNotificationSupported()) { setNotifStatus('unsupported'); return; }
+    if (needsPWAInstall())          { setNotifStatus('pwa-required'); return; }
+    setNotifStatus(Notification.permission as 'default' | 'granted' | 'denied');
+  }, []);
+
+  async function handleEnableNotifications() {
+    if (!user) return;
+    setEnabling(true);
+    setSynced(false);
+    try {
+      const token = await requestAndSaveToken(user.id);
+      setNotifStatus(Notification.permission as 'default' | 'granted' | 'denied');
+      if (token) setSynced(true);
+    } finally {
+      setEnabling(false);
+    }
+  }
 
   const stats = useMemo(() => {
     if (!user) return null;
@@ -168,6 +193,43 @@ function ProfileContent() {
                 <span className="text-xs" style={{ color: '#7A91BB' }}>{g.members.length} members →</span>
               </Link>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notifications */}
+      {notifStatus !== 'loading' && notifStatus !== 'unsupported' && (
+        <div className="mx-4 mb-4 rounded-xl px-4 py-3.5" style={{ background: '#0E1535', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Notifications</h2>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{ background: notifStatus === 'granted' ? 'rgba(0,196,79,0.12)' : 'rgba(255,255,255,0.06)', border: `1px solid ${notifStatus === 'granted' ? 'rgba(0,196,79,0.25)' : 'rgba(255,255,255,0.08)'}` }}
+            >
+              <span className="text-base">{notifStatus === 'granted' ? '🔔' : '🔕'}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold" style={{ color: '#E8F0FF' }}>Match Alerts</p>
+              <p className="text-xs" style={{ color: '#7A91BB' }}>
+                {notifStatus === 'granted' && synced  ? 'Enabled and synced ✓' :
+                 notifStatus === 'granted'            ? 'Enabled — tap Re-sync to refresh token' :
+                 notifStatus === 'denied'             ? 'Blocked — enable in browser Settings' :
+                 notifStatus === 'pwa-required'       ? 'Add to Home Screen first (iOS)' :
+                 'Get notified for goals, kickoffs & results'}
+              </p>
+            </div>
+            {(notifStatus === 'default' || notifStatus === 'granted') && (
+              <button
+                onClick={handleEnableNotifications}
+                disabled={enabling || synced}
+                className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-opacity active:opacity-70"
+                style={notifStatus === 'granted'
+                  ? { background: synced ? 'rgba(0,196,79,0.15)' : 'rgba(255,255,255,0.08)', color: synced ? '#00C44F' : '#C8D8F0', border: '1px solid rgba(255,255,255,0.1)' }
+                  : { background: '#FF1F8E', color: '#06091A' }}
+              >
+                {enabling ? '…' : notifStatus === 'granted' ? (synced ? 'Synced ✓' : 'Re-sync') : 'Enable'}
+              </button>
+            )}
           </div>
         </div>
       )}
