@@ -107,7 +107,7 @@ export const GROUP_STAGE_MATCHES: Match[] = [
   m('GS-I-6', 'group', SEN, IRQ, '2026-06-26T19:00:00Z', 'BMO Field',                'Toronto, Canada'),
 
   // ── Group J: Argentina, Algeria, Austria, Jordan ──
-  m('GS-J-1', 'group', AUT, JOR, '2026-06-16T04:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
+  m('GS-J-1', 'group', AUT, JOR, '2026-06-17T04:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
   m('GS-J-2', 'group', ARG, DZA, '2026-06-17T01:00:00Z', 'Arrowhead Stadium',        'Kansas City, MO'),
   m('GS-J-3', 'group', ARG, AUT, '2026-06-22T17:00:00Z', 'AT&T Stadium',             'Arlington, TX'),
   m('GS-J-4', 'group', JOR, DZA, '2026-06-23T03:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
