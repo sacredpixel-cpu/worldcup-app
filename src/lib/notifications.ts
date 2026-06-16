@@ -78,9 +78,14 @@ export async function requestAndSaveToken(userId: string): Promise<string | null
   }
 
   try {
+    // Explicitly register the Firebase messaging SW so getToken() always binds
+    // to the right worker. Relying on navigator.serviceWorker.ready can hang
+    // indefinitely or return a different SW (e.g. a Next.js SW), causing
+    // getToken() to fail silently and produce no token.
+    const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: await navigator.serviceWorker.ready,
+      serviceWorkerRegistration: swReg,
     });
 
     if (token) {

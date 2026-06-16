@@ -68,7 +68,7 @@ admin.initializeApp();
 const db = admin.firestore();
 const fcm = admin.messaging();
 // Base URL of the deployed web app
-const APP_URL = 'https://worldcup-2026-43ab4.web.app';
+const APP_URL = 'https://www.myworldcupschedule.com';
 const ICON = `${APP_URL}/mexillicious-logo.png`;
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 /** Fetches all enabled FCM tokens from Firestore. */
