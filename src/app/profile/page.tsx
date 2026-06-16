@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuthStore, usePredictionsStore, useGroupsStore } from '@/store';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
 import { ClientOnly } from '@/components/ui/ClientOnly';
 import { ALL_MATCHES } from '@/data/matches';
 import { calcPoints } from '@/lib/utils/calcPoints';
@@ -18,6 +19,7 @@ function ProfileContent() {
   const { user, clearAuth, updateAvatar, updateLocation } = useAuthStore();
   const { saved } = usePredictionsStore();
   const { groups } = useGroupsStore();
+  const { getLiveMatch, updates } = useMatchesStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -48,22 +50,27 @@ function ProfileContent() {
   const stats = useMemo(() => {
     if (!user) return null;
     const preds = Object.values(saved);
-    const finished = ALL_MATCHES.filter(m => m.status === 'finished' && m.homeScore !== null);
+    const finished = ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore !== null);
     let pts = 0, exact = 0, correct = 0;
     finished.forEach(m => {
       const p = saved[m.id];
       if (!p) return;
-      const earned = calcPoints(p, { homeScore: m.homeScore!, awayScore: m.awayScore! });
+      const earned = calcPoints(p, {
+        homeScore: m.homeScore!,
+        awayScore: m.awayScore!,
+        homeScorers: m.homeScorers,
+        awayScorers: m.awayScorers,
+      });
       pts += earned;
-      if (earned === 6) exact++;
-      if (earned >= 3) correct++;
+      if (p.homeScore === m.homeScore && p.awayScore === m.awayScore) exact++;
+      if (earned > 0) correct++;
     });
-    // Add group-advancement prediction points (+3 winner, +2 runner-up, +1 third)
-    pts += calcGroupPoints(saved).total;
+    pts += calcGroupPoints(saved, updates).total;
     const totalPredictions = preds.length;
     const accuracy = totalPredictions > 0 ? Math.round((correct / Math.max(finished.length, 1)) * 100) : 0;
     return { pts, exact, correct, totalPredictions, accuracy };
-  }, [user, saved]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, saved, updates]);
 
   const myGroups = groups.filter(g => user && g.members.some(m => m.userId === user.id));
 
