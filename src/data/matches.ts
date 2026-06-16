@@ -78,7 +78,7 @@ export const GROUP_STAGE_MATCHES: Match[] = [
   m('GS-F-1', 'group', NLD, JPN, '2026-06-14T20:00:00Z', 'AT&T Stadium',             'Arlington, TX'),
   m('GS-F-2', 'group', SWE, TUN, '2026-06-15T02:00:00Z', 'Estadio BBVA',             'Monterrey, Mexico'),
   m('GS-F-3', 'group', NLD, SWE, '2026-06-20T17:00:00Z', 'NRG Stadium',              'Houston, TX'),
-  m('GS-F-4', 'group', TUN, JPN, '2026-06-20T04:00:00Z', 'Estadio BBVA',             'Monterrey, Mexico'),
+  m('GS-F-4', 'group', TUN, JPN, '2026-06-21T04:00:00Z', 'Estadio BBVA',             'Monterrey, Mexico'),
   m('GS-F-5', 'group', JPN, SWE, '2026-06-25T23:00:00Z', 'AT&T Stadium',             'Arlington, TX'),
   m('GS-F-6', 'group', TUN, NLD, '2026-06-25T23:00:00Z', 'Arrowhead Stadium',        'Kansas City, MO'),
 

@@ -60,7 +60,7 @@ function UserPredictionModal({
 
   const breakdown = useMemo(() => {
     if (!pred || match.homeScore == null || match.awayScore == null) return null;
-    const items: { label: string; pts: number; correct: boolean }[] = [];
+    const items: { label: string; pts: number; correct: boolean; placeholder?: boolean }[] = [];
 
     const predOut = Math.sign(pred.homeScore - pred.awayScore);
     const actOut  = Math.sign(match.homeScore - match.awayScore);
@@ -79,9 +79,14 @@ function UserPredictionModal({
       scorerGoals.set(k, (scorerGoals.get(k) ?? 0) + 1);
     }
 
-    for (const pick of [...(pred.homeScorerPicks ?? []), ...(pred.awayScorerPicks ?? [])]) {
-      const goals = scorerGoals.get(normName(pick)) ?? 0;
-      items.push({ label: pick, pts: goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, correct: goals > 0 });
+    const scorerPicks = [...(pred.homeScorerPicks ?? []), ...(pred.awayScorerPicks ?? [])];
+    if (scorerPicks.length === 0) {
+      items.push({ label: 'No scorer picks made', pts: 0, correct: false, placeholder: true });
+    } else {
+      for (const pick of scorerPicks) {
+        const goals = scorerGoals.get(normName(pick)) ?? 0;
+        items.push({ label: pick, pts: goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, correct: goals > 0 });
+      }
     }
 
     return items;
@@ -167,15 +172,17 @@ function UserPredictionModal({
                     }}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-sm">{item.correct ? '✅' : '❌'}</span>
-                      <span className="text-sm" style={{ color: item.correct ? '#C8D8F0' : '#7A91BB' }}>{item.label}</span>
+                      {!item.placeholder && <span className="text-sm">{item.correct ? '✅' : '❌'}</span>}
+                      <span className="text-sm" style={{ color: item.placeholder ? '#5A6E94' : item.correct ? '#C8D8F0' : '#7A91BB' }}>{item.label}</span>
                     </div>
-                    <span
-                      className="text-sm font-bold"
-                      style={{ color: item.pts > 0 ? '#FFB020' : item.pts < 0 ? '#FF6B6B' : '#5A6E94' }}
-                    >
-                      {item.pts > 0 ? `+${item.pts}` : item.pts} pts
-                    </span>
+                    {!item.placeholder && (
+                      <span
+                        className="text-sm font-bold"
+                        style={{ color: item.pts > 0 ? '#FFB020' : item.pts < 0 ? '#FF6B6B' : '#5A6E94' }}
+                      >
+                        {item.pts > 0 ? `+${item.pts}` : item.pts} pts
+                      </span>
+                    )}
                   </div>
                 ))}
 
