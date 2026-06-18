@@ -59,42 +59,56 @@ export function needsPWAInstall(): boolean {
  *
  * Returns the token on success, null if permission was denied or unsupported.
  */
+/**
+ * Runs all prerequisite checks and returns a human-readable failure reason,
+ * or null when everything looks fine. Used to surface problems in the UI.
+ */
+export async function diagnoseNotifications(): Promise<string | null> {
+  if (!isNotificationSupported()) return 'Browser does not support notifications (missing Notification API or serviceWorker)';
+  if (needsPWAInstall())          return 'iOS requires the app to be installed as a PWA (Add to Home Screen) first';
+  if (Notification.permission === 'denied') return 'Permission was blocked — re-enable in browser/system Settings';
+  const messaging = await getMessagingInstance();
+  if (!messaging) return 'Firebase Messaging is not supported in this browser (try Chrome or Edge)';
+  if (!VAPID_KEY) return 'VAPID key is not configured in this build';
+  return null;
+}
+
 export async function requestAndSaveToken(userId: string): Promise<string | null> {
-  if (!isNotificationSupported()) return null;
-  if (needsPWAInstall()) return null;
+  if (!isNotificationSupported()) { console.warn('[WC2026] Not supported'); return null; }
+  if (needsPWAInstall())          { console.warn('[WC2026] iOS PWA required'); return null; }
 
   const permission = await Notification.requestPermission();
+  console.log('[WC2026] Permission:', permission);
   if (permission !== 'granted') return null;
 
   const messaging = await getMessagingInstance();
+  console.log('[WC2026] Messaging:', messaging ? 'OK' : 'null (FCM not supported)');
   if (!messaging) return null;
 
-  if (!VAPID_KEY) {
-    console.warn(
-      '[WC2026 Notifications] NEXT_PUBLIC_FIREBASE_VAPID_KEY is not set. ' +
-      'Get it from Firebase Console → Project Settings → Cloud Messaging → Web Push certificates.'
-    );
-    return null;
-  }
+  console.log('[WC2026] VAPID key:', VAPID_KEY ? 'set (' + VAPID_KEY.slice(0, 8) + '…)' : 'MISSING');
+  if (!VAPID_KEY) return null;
 
   try {
-    // Explicitly register the Firebase messaging SW so getToken() always binds
-    // to the right worker. Relying on navigator.serviceWorker.ready can hang
-    // indefinitely or return a different SW (e.g. a Next.js SW), causing
-    // getToken() to fail silently and produce no token.
+    console.log('[WC2026] Registering SW…');
     const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const swState = swReg.active?.state ?? swReg.installing?.state ?? swReg.waiting?.state ?? 'unknown';
+    console.log('[WC2026] SW state:', swState, swReg);
+
+    console.log('[WC2026] Calling getToken…');
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: swReg,
     });
+    console.log('[WC2026] Token:', token ? token.slice(0, 20) + '…' : 'null (getToken returned empty)');
 
     if (token) {
       await saveToken(userId, token);
       return token;
     }
+    console.warn('[WC2026] getToken returned null — check VAPID key matches Firebase project push cert');
     return null;
   } catch (err) {
-    console.error('[WC2026 Notifications] Failed to get FCM token:', err);
+    console.error('[WC2026] Failed to get FCM token:', err);
     return null;
   }
 }

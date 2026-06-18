@@ -13,7 +13,7 @@ import { uploadAvatar } from '@/lib/uploadService';
 import { COUNTRIES, US_STATES } from '@/data/countries';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { requestAndSaveToken, isNotificationSupported, needsPWAInstall } from '@/lib/notifications';
+import { requestAndSaveToken, diagnoseNotifications, isNotificationSupported, needsPWAInstall } from '@/lib/notifications';
 
 function ProfileContent() {
   const { user, clearAuth, updateAvatar, updateLocation } = useAuthStore();
@@ -27,6 +27,7 @@ function ProfileContent() {
   const [notifStatus, setNotifStatus] = useState<NotifStatus>('loading');
   const [enabling, setEnabling] = useState(false);
   const [synced, setSynced] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isNotificationSupported()) { setNotifStatus('unsupported'); return; }
@@ -38,10 +39,17 @@ function ProfileContent() {
     if (!user) return;
     setEnabling(true);
     setSynced(false);
+    setSyncError(null);
     try {
+      const diagProblem = await diagnoseNotifications();
+      if (diagProblem) { setSyncError(diagProblem); return; }
       const token = await requestAndSaveToken(user.id);
       setNotifStatus(Notification.permission as 'default' | 'granted' | 'denied');
-      if (token) setSynced(true);
+      if (token) {
+        setSynced(true);
+      } else {
+        setSyncError('Token not returned — check browser console (F12) for details');
+      }
     } finally {
       setEnabling(false);
     }
@@ -261,6 +269,9 @@ function ProfileContent() {
             >
               Send test notification
             </button>
+          )}
+          {syncError && (
+            <p className="mt-2 text-xs leading-snug" style={{ color: '#FF6B6B' }}>⚠ {syncError}</p>
           )}
         </div>
       )}
