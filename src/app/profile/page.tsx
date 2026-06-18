@@ -47,6 +47,21 @@ function ProfileContent() {
     }
   }
 
+  async function handleTestNotification() {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+      if (!reg) { alert('Service worker not registered. Try Re-sync first.'); return; }
+      await reg.showNotification('⚽ Test — World Cup 2026', {
+        body: 'Notifications are working on this device!',
+        icon: '/mexillicious-logo.png',
+        badge: '/mexillicious-logo.png',
+        tag: 'wc2026-test',
+      });
+    } catch (e) {
+      alert('Could not show test notification: ' + String(e));
+    }
+  }
+
   const stats = useMemo(() => {
     if (!user) return null;
     const preds = Object.values(saved);
@@ -238,6 +253,15 @@ function ProfileContent() {
               </button>
             )}
           </div>
+          {notifStatus === 'granted' && synced && (
+            <button
+              onClick={handleTestNotification}
+              className="mt-2.5 w-full rounded-lg py-2 text-xs font-semibold text-center transition-opacity active:opacity-70"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#7A91BB' }}
+            >
+              Send test notification
+            </button>
+          )}
         </div>
       )}
 
