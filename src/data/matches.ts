@@ -62,7 +62,7 @@ export const GROUP_STAGE_MATCHES: Match[] = [
   m('GS-D-1', 'group', USA, PRY, '2026-06-13T01:00:00Z', 'SoFi Stadium',             'Inglewood, CA'),
   m('GS-D-2', 'group', AUS, TUR, '2026-06-14T04:00:00Z', 'BC Place',                 'Vancouver, Canada'),
   m('GS-D-3', 'group', USA, AUS, '2026-06-19T19:00:00Z', 'Lumen Field',              'Seattle, WA'),
-  m('GS-D-4', 'group', TUR, PRY, '2026-06-19T04:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
+  m('GS-D-4', 'group', TUR, PRY, '2026-06-20T03:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
   m('GS-D-5', 'group', TUR, USA, '2026-06-26T02:00:00Z', 'SoFi Stadium',             'Inglewood, CA'),
   m('GS-D-6', 'group', PRY, AUS, '2026-06-26T02:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
 
