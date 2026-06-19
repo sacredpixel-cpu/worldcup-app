@@ -60,7 +60,7 @@ export const GROUP_STAGE_MATCHES: Match[] = [
 
   // ── Group D: United States, Paraguay, Australia, Türkiye ──
   m('GS-D-1', 'group', USA, PRY, '2026-06-13T01:00:00Z', 'SoFi Stadium',             'Inglewood, CA'),
-  m('GS-D-2', 'group', AUS, TUR, '2026-06-14T04:00:00Z', 'BC Place',                 'Vancouver, Canada'),
+  m('GS-D-2', 'group', AUS, TUR, '2026-06-15T03:00:00Z', 'BC Place',                 'Vancouver, Canada'),
   m('GS-D-3', 'group', USA, AUS, '2026-06-19T19:00:00Z', 'Lumen Field',              'Seattle, WA'),
   m('GS-D-4', 'group', TUR, PRY, '2026-06-20T03:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
   m('GS-D-5', 'group', TUR, USA, '2026-06-26T02:00:00Z', 'SoFi Stadium',             'Inglewood, CA'),
@@ -78,7 +78,7 @@ export const GROUP_STAGE_MATCHES: Match[] = [
   m('GS-F-1', 'group', NLD, JPN, '2026-06-14T20:00:00Z', 'AT&T Stadium',             'Arlington, TX'),
   m('GS-F-2', 'group', SWE, TUN, '2026-06-15T02:00:00Z', 'Estadio BBVA',             'Monterrey, Mexico'),
   m('GS-F-3', 'group', NLD, SWE, '2026-06-20T17:00:00Z', 'NRG Stadium',              'Houston, TX'),
-  m('GS-F-4', 'group', TUN, JPN, '2026-06-21T04:00:00Z', 'Estadio BBVA',             'Monterrey, Mexico'),
+  m('GS-F-4', 'group', TUN, JPN, '2026-06-22T03:00:00Z', 'Estadio BBVA',             'Monterrey, Mexico'),
   m('GS-F-5', 'group', JPN, SWE, '2026-06-25T23:00:00Z', 'AT&T Stadium',             'Arlington, TX'),
   m('GS-F-6', 'group', TUN, NLD, '2026-06-25T23:00:00Z', 'Arrowhead Stadium',        'Kansas City, MO'),
 
@@ -107,7 +107,7 @@ export const GROUP_STAGE_MATCHES: Match[] = [
   m('GS-I-6', 'group', SEN, IRQ, '2026-06-26T19:00:00Z', 'BMO Field',                'Toronto, Canada'),
 
   // ── Group J: Argentina, Algeria, Austria, Jordan ──
-  m('GS-J-1', 'group', AUT, JOR, '2026-06-17T04:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
+  m('GS-J-1', 'group', AUT, JOR, '2026-06-18T03:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
   m('GS-J-2', 'group', ARG, DZA, '2026-06-17T01:00:00Z', 'Arrowhead Stadium',        'Kansas City, MO'),
   m('GS-J-3', 'group', ARG, AUT, '2026-06-22T17:00:00Z', 'AT&T Stadium',             'Arlington, TX'),
   m('GS-J-4', 'group', JOR, DZA, '2026-06-23T03:00:00Z', "Levi's Stadium",           'Santa Clara, CA'),
