@@ -426,9 +426,9 @@ export const ROSTERS: Record<string, TeamRoster> = {
     history: { appearances: 19, passed_group_stage: 13, quarter_finals: 9, semi_finals: 6, finals: 6, wins: 3 },
     squad: {
       goalkeepers: ["Emiliano Martínez", "Franco Armani", "Gerónimo Rulli"],
-      defenders: ["Nahuel Molina", "Cristian Romero", "Nicolás Otamendi", "Lisandro Martínez", "Marcos Acuña", "Nicolás Tagliafico", "Gonzalo Montiel", "Germán Pezzella"],
-      midfielders: ["Rodrigo De Paul", "Leandro Paredes", "Enzo Fernández", "Giovani Lo Celso", "Alexis Mac Allister", "Exequiel Palacios", "Thiago Almada", "Valentín Carboni"],
-      forwards: ["Lionel Messi", "Ángel Di María", "Lautaro Martínez", "Julián Álvarez", "Nicolás González", "Paulo Dybala"],
+      defenders: ["Nahuel Molina", "Cristian Romero", "Nicolás Otamendi", "Lisandro Martínez", "Marcos Acuña", "Nicolás Tagliafico", "Gonzalo Montiel"],
+      midfielders: ["Rodrigo De Paul", "Leandro Paredes", "Enzo Fernández", "Giovani Lo Celso", "Alexis Mac Allister", "Exequiel Palacios", "Thiago Almada", "Nico Paz"],
+      forwards: ["Lionel Messi", "Lautaro Martínez", "Julián Álvarez", "Nicolás González", "Paulo Dybala", "Giuliano Simeone", "Valentín Carboni", "Alejandro Garnacho"],
     },
   },
   dza: {
