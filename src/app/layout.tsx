@@ -47,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-[#06091A] text-[#E8F0FF]">
         <Providers>
           {/* Mobile frame wrapper */}
-          <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-[#06091A]">
+          <div className="mx-auto flex h-dvh max-w-[430px] flex-col bg-[#06091A]">
             <UpdateBanner />
             <FirebaseAuthSync />
             <PredictionsSync />
