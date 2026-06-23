@@ -6,6 +6,7 @@ export interface GoalScorerEvent {
   player: string;
   teamCode: string;
   goals: number;
+  penaltyGoals?: number;
 }
 
 export interface MatchScoreUpdate {

@@ -62,7 +62,7 @@ export interface Match {
   homeScorers?: string[];  // actual goal scorers, set when finished
   awayScorers?: string[];
   /** Structured per-match goal scorer events written by the live-score poller */
-  goalScorerEvents?: Array<{ player: string; teamCode: string; goals: number }>;
+  goalScorerEvents?: Array<{ player: string; teamCode: string; goals: number; penaltyGoals?: number }>;
   matchEvents?: MatchEvent[];
   matchStats?: MatchStats;
 }

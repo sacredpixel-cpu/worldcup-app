@@ -27,6 +27,8 @@ export const FLAG_CDN: Record<string, string> = {
   // Group L
   ENG: 'gb-eng', HRV: 'hr', GHA: 'gh', PAN: 'pa',
   TBD: '',
+  // Historical teams (not in 2026 WC) — used by all-time scorers list
+  GER: 'de', HUN: 'hu', PER: 'pe', POL: 'pl', POR: 'pt',
 };
 
 function flagUrl(code: string): string {
