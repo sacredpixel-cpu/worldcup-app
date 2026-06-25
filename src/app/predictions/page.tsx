@@ -154,25 +154,46 @@ function matchBreakdown(pred: Prediction, m: Match): { label: string; pts: numbe
       : { label: 'Wrong result',           pts: SCORING.WRONG_OUTCOME });
   }
 
-  // Scorer picks — accent-insensitive matching (API names may differ from roster names)
+  // Scorer picks — accent-insensitive matching, multi-goal aware
+  const buildGoalCounts = (scorers: string[]) => {
+    const map = new Map<string, number>();
+    for (const name of scorers) {
+      const key = normScorer(name);
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return map;
+  };
+
   const homePicks = pred.homeScorerPicks ?? [];
-  const homeNormSet = m.homeScorers ? new Set(m.homeScorers.map(normScorer)) : null;
+  const homeGoalCounts = m.homeScorers ? buildGoalCounts(m.homeScorers) : null;
   if (homePicks.length === 0) {
     items.push({ label: 'Home scorer(s) — no pick', pts: 0 });
   } else {
     for (const pick of homePicks) {
-      if (homeNormSet) items.push({ label: `Home scorer(s): ${pick}`, pts: homeNormSet.has(normScorer(pick)) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
-      else items.push({ label: `Home scorer(s): ${pick}`, pts: 0, na: true });
+      if (homeGoalCounts) {
+        const goals = homeGoalCounts.get(normScorer(pick)) ?? 0;
+        const pts = goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
+        const label = goals > 1 ? `Home scorer(s): ${pick} (${goals} goals)` : `Home scorer(s): ${pick}`;
+        items.push({ label, pts });
+      } else {
+        items.push({ label: `Home scorer(s): ${pick}`, pts: 0, na: true });
+      }
     }
   }
   const awayPicks = pred.awayScorerPicks ?? [];
-  const awayNormSet = m.awayScorers ? new Set(m.awayScorers.map(normScorer)) : null;
+  const awayGoalCounts = m.awayScorers ? buildGoalCounts(m.awayScorers) : null;
   if (awayPicks.length === 0) {
     items.push({ label: 'Away scorer(s) — no pick', pts: 0 });
   } else {
     for (const pick of awayPicks) {
-      if (awayNormSet) items.push({ label: `Away scorer(s): ${pick}`, pts: awayNormSet.has(normScorer(pick)) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER });
-      else items.push({ label: `Away scorer(s): ${pick}`, pts: 0, na: true });
+      if (awayGoalCounts) {
+        const goals = awayGoalCounts.get(normScorer(pick)) ?? 0;
+        const pts = goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER;
+        const label = goals > 1 ? `Away scorer(s): ${pick} (${goals} goals)` : `Away scorer(s): ${pick}`;
+        items.push({ label, pts });
+      } else {
+        items.push({ label: `Away scorer(s): ${pick}`, pts: 0, na: true });
+      }
     }
   }
   return items;
@@ -185,6 +206,8 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
   advancingThirdIds: Set<string>;
 }) {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+  const { user } = useAuthStore();
   const { updates, getLiveMatch } = useMatchesStore();
 
   const { standings, complete, predictedCount, totalMatches } = useMemo(
@@ -248,16 +271,20 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
               const isOpen = expandedMatch === m.id;
               const breakdown = pred ? matchBreakdown(pred, m) : [];
               const breakdownTotal = breakdown.filter(i => !i.na).reduce((s, i) => s + i.pts, 0);
+              const isMatchLocked = new Date(m.kickoffAt) <= new Date() || m.status !== 'upcoming';
+              const canEdit = !!pred && !isMatchLocked && !!user;
 
               return (
                 <div key={m.id} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                  {/* Row — tappable */}
+                  {/* Row — edit for upcoming, expand for locked/finished */}
                   <button
                     className="no-press-ring w-full flex items-center gap-1.5 px-3 py-1.5 text-left"
-                    onClick={() => setExpandedMatch(isOpen ? null : m.id)}
+                    onClick={() => canEdit ? setEditingMatchId(m.id) : setExpandedMatch(isOpen ? null : m.id)}
                   >
-                    {/* Chevron */}
-                    <span className="shrink-0 text-[9px]" style={{ color: '#3A4E6E' }}>{isOpen ? '▲' : '▾'}</span>
+                    {/* Chevron or edit pencil */}
+                    <span className="shrink-0 text-[9px]" style={{ color: canEdit ? '#FF4DA8' : '#3A4E6E' }}>
+                      {canEdit ? '✎' : isOpen ? '▲' : '▾'}
+                    </span>
                     {/* Date */}
                     <span className="w-9 shrink-0 text-[10px]" style={{ color: '#5A6E94' }}>{fmtDate(m.kickoffAt)}</span>
                     {/* Home team */}
@@ -349,6 +376,21 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
           </div>
         </div>
       )}
+
+      {/* Edit modal for upcoming matches with existing predictions */}
+      {user && editingMatchId && (() => {
+        const editMatch = groupMatches.find(m => m.id === editingMatchId);
+        if (!editMatch) return null;
+        return (
+          <PredictionModal
+            match={editMatch}
+            userId={user.id}
+            existing={saved[editingMatchId]}
+            open
+            onClose={() => setEditingMatchId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -489,15 +531,28 @@ function buildBreakdown(prediction: Prediction, match: Match): BreakdownItem[] {
     items.push({ label: `Outcome (${outcomeLabel})`, pts: outcomeHit ? SCORING.CORRECT_OUTCOME : SCORING.WRONG_OUTCOME, hit: outcomeHit });
   }
 
+  const buildGoalCountsRaw = (scorers: string[]) => {
+    const map = new Map<string, number>();
+    for (const name of scorers) {
+      const key = normScorer(name);
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return map;
+  };
+
   if (match.homeScorers !== undefined) {
-    const actualSet = new Set(match.homeScorers);
-    for (const pick of (prediction.homeScorerPicks ?? []))
-      items.push({ label: pick, pts: actualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, hit: actualSet.has(pick) });
+    const goalCounts = buildGoalCountsRaw(match.homeScorers);
+    for (const pick of (prediction.homeScorerPicks ?? [])) {
+      const goals = goalCounts.get(normScorer(pick)) ?? 0;
+      items.push({ label: goals > 1 ? `${pick} (${goals} goals)` : pick, pts: goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, hit: goals > 0 });
+    }
   }
   if (match.awayScorers !== undefined) {
-    const actualSet = new Set(match.awayScorers);
-    for (const pick of (prediction.awayScorerPicks ?? []))
-      items.push({ label: pick, pts: actualSet.has(pick) ? SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, hit: actualSet.has(pick) });
+    const goalCounts = buildGoalCountsRaw(match.awayScorers);
+    for (const pick of (prediction.awayScorerPicks ?? [])) {
+      const goals = goalCounts.get(normScorer(pick)) ?? 0;
+      items.push({ label: goals > 1 ? `${pick} (${goals} goals)` : pick, pts: goals > 0 ? goals * SCORING.CORRECT_SCORER : SCORING.WRONG_SCORER, hit: goals > 0 });
+    }
   }
 
   return items;

@@ -116,15 +116,15 @@ function ScheduleContent() {
       </div>
 
       {/* Tabs */}
-      <div className="no-scrollbar flex gap-1 overflow-x-auto px-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="no-scrollbar flex gap-1 overflow-x-auto px-4 py-3">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className="flex-shrink-0 px-3 py-2.5 text-sm font-semibold transition-colors"
+            className="no-press-ring flex-shrink-0 whitespace-nowrap"
             style={tab === t.id
-              ? { borderBottom: '2px solid #FF4DA8', color: '#FF4DA8' }
-              : { borderBottom: '2px solid transparent', color: '#7A91BB' }}
+              ? { fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,31,142,0.12)', border: '1px solid rgba(255,31,142,0.35)', color: '#FF4DA8', cursor: 'pointer' }
+              : { fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#7A91BB', cursor: 'pointer' }}
           >
             {t.label}
           </button>

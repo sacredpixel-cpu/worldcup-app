@@ -18,7 +18,9 @@ import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db, getMessagingInstance } from './firebase';
 
 const _RAW_VAPID = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
-// Treat the placeholder value as "not set" so we don't pass garbage to getToken()
+// Treat the placeholder value as "not set" so we don't pass garbage to getToken().
+// Key must be the Web Push certificate key pair from Firebase Console →
+// Project Settings → Cloud Messaging → Web Push certificates → Key pair.
 const VAPID_KEY = _RAW_VAPID && _RAW_VAPID !== 'REPLACE_WITH_YOUR_VAPID_KEY'
   ? _RAW_VAPID
   : undefined;
@@ -73,41 +75,68 @@ export async function diagnoseNotifications(): Promise<string | null> {
   return null;
 }
 
+// Last error from requestAndSaveToken — readable by callers after a null return.
+let _lastTokenError: string | null = null;
+export function getLastTokenError(): string | null { return _lastTokenError; }
+
+/** Waits for a service worker registration to have an active worker (max 8 s). */
+async function waitForSWActive(reg: ServiceWorkerRegistration): Promise<void> {
+  if (reg.active) return;
+  const sw = reg.installing ?? reg.waiting;
+  if (!sw) return;
+  await new Promise<void>((resolve) => {
+    const handler = () => {
+      if ((sw as ServiceWorker).state === 'activated') {
+        sw.removeEventListener('statechange', handler);
+        resolve();
+      }
+    };
+    sw.addEventListener('statechange', handler);
+    setTimeout(resolve, 8000); // safety timeout — don't hang forever
+  });
+}
+
 export async function requestAndSaveToken(userId: string): Promise<string | null> {
-  if (!isNotificationSupported()) { console.warn('[WC2026] Not supported'); return null; }
-  if (needsPWAInstall())          { console.warn('[WC2026] iOS PWA required'); return null; }
+  _lastTokenError = null;
+
+  if (!isNotificationSupported()) { _lastTokenError = 'Notification API not available in this browser'; return null; }
+  if (needsPWAInstall())          { _lastTokenError = 'iOS requires Add to Home Screen first'; return null; }
 
   const permission = await Notification.requestPermission();
   console.log('[WC2026] Permission:', permission);
-  if (permission !== 'granted') return null;
+  if (permission !== 'granted') { _lastTokenError = `Permission ${permission}`; return null; }
 
   const messaging = await getMessagingInstance();
-  console.log('[WC2026] Messaging:', messaging ? 'OK' : 'null (FCM not supported)');
-  if (!messaging) return null;
+  console.log('[WC2026] Messaging:', messaging ? 'OK' : 'null');
+  if (!messaging) { _lastTokenError = 'Firebase Messaging not supported (try Chrome or Edge)'; return null; }
 
-  console.log('[WC2026] VAPID key:', VAPID_KEY ? 'set (' + VAPID_KEY.slice(0, 8) + '…)' : 'MISSING');
-  if (!VAPID_KEY) return null;
+  console.log('[WC2026] VAPID key:', VAPID_KEY ? VAPID_KEY.slice(0, 8) + '…' : 'MISSING');
+  if (!VAPID_KEY) { _lastTokenError = 'VAPID key missing from build'; return null; }
 
   try {
     console.log('[WC2026] Registering SW…');
     const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    const swState = swReg.active?.state ?? swReg.installing?.state ?? swReg.waiting?.state ?? 'unknown';
-    console.log('[WC2026] SW state:', swState, swReg);
+    console.log('[WC2026] SW before wait — active:', swReg.active?.state, 'installing:', swReg.installing?.state, 'waiting:', swReg.waiting?.state);
+
+    await waitForSWActive(swReg);
+    console.log('[WC2026] SW after wait — active:', swReg.active?.state);
 
     console.log('[WC2026] Calling getToken…');
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: swReg,
     });
-    console.log('[WC2026] Token:', token ? token.slice(0, 20) + '…' : 'null (getToken returned empty)');
+    console.log('[WC2026] Token:', token ? token.slice(0, 20) + '…' : 'null');
 
     if (token) {
       await saveToken(userId, token);
       return token;
     }
-    console.warn('[WC2026] getToken returned null — check VAPID key matches Firebase project push cert');
+    _lastTokenError = 'getToken returned empty — VAPID key may not match Firebase push certificate';
+    console.warn('[WC2026]', _lastTokenError);
     return null;
   } catch (err) {
+    _lastTokenError = `getToken error: ${String(err)}`;
     console.error('[WC2026] Failed to get FCM token:', err);
     return null;
   }

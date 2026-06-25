@@ -2,6 +2,21 @@
 // Receives push notifications when the app is in the background or closed.
 // The Firebase config here must match src/lib/firebase.ts — it cannot use env vars.
 
+// Always activate this SW immediately so navigation-fetch changes take effect without waiting.
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
+
+// Intercept HTML navigation requests (page loads) and bypass the browser/iOS cache.
+// Without this, iOS PWA caches the HTML file and old JS bundles keep running even after
+// a new deploy — making update detection and version checks completely ineffective.
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).catch(() => caches.match(event.request))
+    );
+  }
+});
+
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 

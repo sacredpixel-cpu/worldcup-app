@@ -17,7 +17,7 @@ import type { Match, Team } from '@/types/match';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface GroupStanding {
+export interface GroupStanding {
   team: Team;
   pts: number;
   gf: number;
@@ -50,12 +50,12 @@ export interface KnockoutTeamMap {
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-type MatchUpdateRecord = Record<
+export type MatchUpdateRecord = Record<
   string,
   { homeScore: number | null; awayScore: number | null; status: string }
 >;
 
-function buildGroupStandings(
+export function buildGroupStandings(
   groupLetter: string,
   updates: MatchUpdateRecord,
 ): { standings: GroupStanding[]; complete: boolean } {
@@ -131,7 +131,7 @@ const BEST3RD_IDX: Record<string, number> = {
 // ─── R16–Final feeder mapping ─────────────────────────────────────────────────
 // "W:<matchId>" = winner of that match, "L:<matchId>" = loser (3rd-place only)
 
-const KNOCKOUT_FEEDERS: Record<string, [string, string]> = {
+export const KNOCKOUT_FEEDERS: Record<string, [string, string]> = {
   'R16-01': ['W:R32-02', 'W:R32-05'],
   'R16-02': ['W:R32-01', 'W:R32-03'],
   'R16-03': ['W:R32-04', 'W:R32-06'],

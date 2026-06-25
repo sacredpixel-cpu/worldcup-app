@@ -34,13 +34,31 @@ export const useMatchesStore = create<MatchesState>()((set, get) => ({
   getLiveMatch: (match: Match): Match => {
     const update = get().updates[match.id];
     if (!update) return match;
+
+    // Derive homeScorers/awayScorers from goalScorerEvents when present.
+    // goalScorerEvents stores { player, teamCode, goals } correctly (e.g. goals:2 for a brace),
+    // while homeScorers may only contain one entry per player. Expanding here ensures every
+    // consumer (calcPoints, MatchCard, leaderboard, profile) sees the correct goal count.
+    let homeScorers = update.homeScorers;
+    let awayScorers = update.awayScorers;
+    if (update.goalScorerEvents && update.goalScorerEvents.length > 0) {
+      const home: string[] = [];
+      const away: string[] = [];
+      for (const ev of update.goalScorerEvents) {
+        const list = ev.teamCode === match.homeTeam.code ? home : away;
+        for (let i = 0; i < ev.goals; i++) list.push(ev.player);
+      }
+      if (home.length > 0) homeScorers = home;
+      if (away.length > 0) awayScorers = away;
+    }
+
     return {
       ...match,
       homeScore: update.homeScore,
       awayScore: update.awayScore,
       status: update.status,
-      homeScorers: update.homeScorers,
-      awayScorers: update.awayScorers,
+      homeScorers,
+      awayScorers,
       goalScorerEvents: update.goalScorerEvents,
       matchEvents: update.matchEvents,
       matchStats: update.matchStats,

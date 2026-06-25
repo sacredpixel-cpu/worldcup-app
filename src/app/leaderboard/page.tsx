@@ -387,9 +387,13 @@ function LeaderboardContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, saved, updates]);
 
-  // Most recently completed match — used for the tap-to-preview modal
+  // Most recently completed match — used for the tap-to-preview modal.
+  // Sort by kickoff time (ALL_MATCHES is ordered by group, not date).
   const lastFinishedMatch = useMemo(() => {
-    const finished = ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore != null);
+    const finished = ALL_MATCHES
+      .map(getLiveMatch)
+      .filter(m => m.status === 'finished' && m.homeScore != null)
+      .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime());
     return finished.length > 0 ? finished[finished.length - 1] : null;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updates]);
@@ -548,25 +552,22 @@ function LeaderboardContent() {
       </div>
 
       {/* Tab selector */}
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3">
-        <button
-          onClick={() => setTab('global')}
-          className="no-press-ring flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
-          style={tab === 'global'
-            ? { background: 'rgba(255,255,255,0.85)', color: '#06091A' }
-            : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          Top Fans
-        </button>
-        <button
-          onClick={() => setTab('groups')}
-          className="no-press-ring flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
-          style={tab === 'groups'
-            ? { background: 'rgba(255,255,255,0.85)', color: '#06091A' }
-            : { background: 'rgba(255,255,255,0.05)', color: '#7A91BB', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          Top Groups
-        </button>
+      <div className="no-scrollbar flex gap-1 overflow-x-auto px-4 pb-3">
+        {([
+          { id: 'global' as const, label: 'Top Fans'   },
+          { id: 'groups' as const, label: 'Top Groups' },
+        ]).map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className="no-press-ring flex-shrink-0 whitespace-nowrap"
+            style={tab === t.id
+              ? { fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,31,142,0.12)', border: '1px solid rgba(255,31,142,0.35)', color: '#FF4DA8', cursor: 'pointer' }
+              : { fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#7A91BB', cursor: 'pointer' }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* Your rank summary */}

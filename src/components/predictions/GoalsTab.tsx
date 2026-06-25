@@ -158,13 +158,16 @@ interface AllTimeEntry {
   active?: boolean;
 }
 
+// goals/penaltyGoals = pre-2026 historical totals; active players' 2026 WC goals
+// are added dynamically from Firestore in AllTimeTab
 const ALL_TIME_SCORERS: AllTimeEntry[] = [
   { player: 'Miroslav Klose',    country: 'Germany',   countryCode: 'GER', goals: 16, penaltyGoals: 0, years: '2002–14' },
   { player: 'Ronaldo Nazário',   country: 'Brazil',    countryCode: 'BRA', goals: 15, penaltyGoals: 4, years: '1994–2006' },
   { player: 'Gerd Müller',       country: 'Germany',   countryCode: 'GER', goals: 14, penaltyGoals: 1, years: '1970–74' },
+  { player: 'Lionel Messi',      country: 'Argentina', countryCode: 'ARG', goals: 13, penaltyGoals: 4, years: '2006–26', active: true },
   { player: 'Just Fontaine',     country: 'France',    countryCode: 'FRA', goals: 13, penaltyGoals: 0, years: '1958' },
+  { player: 'Kylian Mbappé',     country: 'France',    countryCode: 'FRA', goals: 12, penaltyGoals: 3, years: '2018–26', active: true },
   { player: 'Pelé',              country: 'Brazil',    countryCode: 'BRA', goals: 12, penaltyGoals: 0, years: '1958–70' },
-  { player: 'Kylian Mbappé',     country: 'France',    countryCode: 'FRA', goals: 12, penaltyGoals: 3, years: '2018–22', active: true },
   { player: 'Sándor Kocsis',     country: 'Hungary',   countryCode: 'HUN', goals: 11, penaltyGoals: 0, years: '1954' },
   { player: 'Jürgen Klinsmann',  country: 'Germany',   countryCode: 'GER', goals: 11, penaltyGoals: 2, years: '1990–98' },
   { player: 'Helmut Rahn',       country: 'Germany',   countryCode: 'GER', goals: 10, penaltyGoals: 0, years: '1950–58' },
@@ -177,7 +180,7 @@ const ALL_TIME_SCORERS: AllTimeEntry[] = [
   { player: 'Uwe Seeler',        country: 'Germany',   countryCode: 'GER', goals:  9, penaltyGoals: 0, years: '1958–70' },
   { player: 'Ademir',            country: 'Brazil',    countryCode: 'BRA', goals:  9, penaltyGoals: 0, years: '1950' },
   { player: 'David Villa',       country: 'Spain',     countryCode: 'ESP', goals:  9, penaltyGoals: 1, years: '2006–14' },
-  { player: 'Cristiano Ronaldo', country: 'Portugal',  countryCode: 'POR', goals:  8, penaltyGoals: 2, years: '2002–22', active: true },
+  { player: 'Cristiano Ronaldo', country: 'Portugal',  countryCode: 'POR', goals:  8, penaltyGoals: 2, years: '2002–26', active: true },
 ];
 
 function AllTimeRow({ entry, rank, isLast }: { entry: AllTimeEntry; rank: number; isLast: boolean }) {
@@ -224,19 +227,45 @@ function AllTimeRow({ entry, rank, isLast }: { entry: AllTimeEntry; rank: number
 }
 
 function AllTimeTab() {
-  // Assign ranks — tied scorers share the same rank
-  let rank = 1;
-  const ranked: Array<{ entry: AllTimeEntry; rank: number }> = [];
-  for (let i = 0; i < ALL_TIME_SCORERS.length; i++) {
-    if (i > 0 && ALL_TIME_SCORERS[i].goals < ALL_TIME_SCORERS[i - 1].goals) rank = i + 1;
-    ranked.push({ entry: ALL_TIME_SCORERS[i], rank });
-  }
+  const { updates } = useMatchesStore();
+
+  // Aggregate 2026 WC goals by player name from live match data
+  const wc2026ByPlayer = useMemo(() => {
+    const map = new Map<string, { goals: number; penaltyGoals: number }>();
+    for (const update of Object.values(updates)) {
+      if (!update.goalScorerEvents) continue;
+      for (const ev of update.goalScorerEvents) {
+        if (!ev.player || ev.goals <= 0) continue;
+        const cur = map.get(ev.player) ?? { goals: 0, penaltyGoals: 0 };
+        cur.goals += ev.goals;
+        cur.penaltyGoals += ev.penaltyGoals ?? 0;
+        map.set(ev.player, cur);
+      }
+    }
+    return map;
+  }, [updates]);
+
+  // Merge historical base with live 2026 goals for active players, then sort
+  const ranked = useMemo(() => {
+    const merged = ALL_TIME_SCORERS.map(entry => {
+      if (!entry.active) return entry;
+      const live = wc2026ByPlayer.get(entry.player);
+      if (!live) return entry;
+      return { ...entry, goals: entry.goals + live.goals, penaltyGoals: entry.penaltyGoals + live.penaltyGoals };
+    }).sort((a, b) => b.goals - a.goals || a.player.localeCompare(b.player));
+
+    let rank = 1;
+    return merged.map((entry, i) => {
+      if (i > 0 && entry.goals < merged[i - 1].goals) rank = i + 1;
+      return { entry, rank };
+    });
+  }, [wc2026ByPlayer]);
 
   return (
     <div style={{ paddingBottom: 24 }}>
       <div style={{ margin: '12px 16px 0', padding: '9px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 12, color: '#7A91BB' }}>All-time World Cup goal scorers</span>
-        <span style={{ fontSize: 10, color: '#5A6E94', flexShrink: 0, marginLeft: 8 }}>through 2022</span>
+        <span style={{ fontSize: 10, color: '#5A6E94', flexShrink: 0, marginLeft: 8 }}>updated June 2026</span>
       </div>
       <div style={{ margin: '12px 16px 0', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)', background: '#0E1535' }}>
         {ranked.map(({ entry, rank }, i) => (
@@ -249,7 +278,7 @@ function AllTimeTab() {
         ))}
       </div>
       <p style={{ margin: '10px 16px 0', fontSize: 11, color: '#5A6E94', lineHeight: 1.5 }}>
-        Penalty shootout goals excluded. "ACTIVE" players are competing in the 2026 World Cup and their totals will increase. Pink "pen" label indicates goals scored from the penalty spot.
+        Penalty shootout goals excluded. "ACTIVE" players' 2026 WC goals update automatically from live match data. Pink "pen" label indicates goals from the penalty spot.
       </p>
     </div>
   );

@@ -8,8 +8,10 @@ import { PredictionModal } from '@/components/predictions/PredictionModal';
 import { FirstPredictionModal } from '@/components/predictions/FirstPredictionModal';
 import { useAuthStore, usePredictionsStore } from '@/store';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
-import { computeKnockoutTeams, resolveMatchTeams } from '@/lib/utils/knockoutAdvancement';
-import type { Match } from '@/types/match';
+import { computeKnockoutTeams, resolveMatchTeams, buildGroupStandings, R32_TEAM_SLOTS, KNOCKOUT_FEEDERS } from '@/lib/utils/knockoutAdvancement';
+import type { GroupStanding } from '@/lib/utils/knockoutAdvancement';
+import type { Match, Team } from '@/types/match';
+import { GROUPS } from '@/data/teams';
 import type { Prediction } from '@/types/prediction';
 
 // ─── Group card dimensions (compact) ─────────────────────────────────────────
@@ -40,6 +42,38 @@ const FIFA_GAME: Record<string, number> = {
   'QF-01':  97,  'QF-02':  98,  'QF-03':  99,  'QF-04': 100,
   'SF-01': 101,  'SF-02': 102,
   '3RD':   103,  'FINAL': 104,
+};
+
+// ─── Official bracket display order ──────────────────────────────────────────
+// FIFA 2026 uses non-sequential cross-pairings. Reorder matches so that each
+// adjacent pair of cards in a column correctly feeds the next round's card above
+// them, matching the yCenter() tree geometry.
+//
+// Pairs (read top-to-bottom within each group of 2):
+//   R32: [02,05]→R16-01(M89)  [01,03]→R16-02(M90)
+//        [11,12]→R16-05(M93)  [09,10]→R16-06(M94)
+//        [04,06]→R16-03(M91)  [07,08]→R16-04(M92)
+//        [14,16]→R16-07(M95)  [13,15]→R16-08(M96)
+//   R16: [01,02]→QF-01(M97)   [05,06]→QF-02(M98)
+//        [03,04]→QF-03(M99)   [07,08]→QF-04(M100)
+//   QF:  [01,02]→SF-01(M101)  [03,04]→SF-02(M102)  (natural order is already correct)
+const BRACKET_DISPLAY_ORDER: Partial<Record<Match['stage'], string[]>> = {
+  'round-of-32': [
+    'R32-02', 'R32-05',  // → R16-01 M89
+    'R32-01', 'R32-03',  // → R16-02 M90
+    'R32-11', 'R32-12',  // → R16-05 M93
+    'R32-09', 'R32-10',  // → R16-06 M94
+    'R32-04', 'R32-06',  // → R16-03 M91
+    'R32-07', 'R32-08',  // → R16-04 M92
+    'R32-14', 'R32-16',  // → R16-07 M95
+    'R32-13', 'R32-15',  // → R16-08 M96
+  ],
+  'round-of-16': [
+    'R16-01', 'R16-02',  // → QF-01 M97
+    'R16-05', 'R16-06',  // → QF-02 M98
+    'R16-03', 'R16-04',  // → QF-03 M99
+    'R16-07', 'R16-08',  // → QF-04 M100
+  ],
 };
 
 // ─── Bracket slot labels (using FIFA game numbers for feeder references) ──────
@@ -99,6 +133,102 @@ const BRACKET_ROUNDS: { stage: Match['stage']; label: string; count: number }[] 
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+// ─── Accordion team candidates ────────────────────────────────────────────────
+
+interface TeamCandidate {
+  team: Team;
+  confidence: 'likely' | 'possible';
+}
+interface CardCandidates {
+  home: TeamCandidate[];
+  away: TeamCandidate[];
+}
+
+function slotKeyCandidates(
+  key: string,
+  groupStandingsMap: Map<string, { standings: GroupStanding[]; complete: boolean }>,
+): TeamCandidate[] {
+  if (key === 'BEST3RD') {
+    const thirds: Array<{ team: Team; pts: number; gd: number; gf: number }> = [];
+    for (const { standings } of groupStandingsMap.values()) {
+      if (standings[2]) {
+        const s = standings[2];
+        thirds.push({ team: s.team, pts: s.pts, gd: s.gf - s.ga, gf: s.gf });
+      }
+    }
+    thirds.sort((a, b) => b.pts !== a.pts ? b.pts - a.pts : b.gd !== a.gd ? b.gd - a.gd : b.gf - a.gf);
+    const hasActivity = thirds.some(t => t.pts > 0 || t.gf > 0);
+    return thirds.slice(0, 4).map((t, i) => ({
+      team: t.team,
+      confidence: (hasActivity && i === 0) ? 'likely' : 'possible',
+    }));
+  }
+
+  const dashIdx   = key.indexOf('-');
+  const posStr    = key.slice(0, dashIdx);
+  const letter    = key.slice(dashIdx + 1);
+  const targetPos = posStr === 'W' ? 0 : 1;
+
+  const result = groupStandingsMap.get(letter);
+  if (!result) return [];
+  const { standings, complete } = result;
+  if (standings.length === 0) return [];
+
+  if (complete) return [{ team: standings[targetPos].team, confidence: 'likely' }];
+
+  const hasActivity = standings.some(s => s.pts > 0 || s.gf > 0 || s.ga > 0);
+  if (!hasActivity) return standings.map(s => ({ team: s.team, confidence: 'possible' as const }));
+
+  return standings.map((s, i) => ({
+    team: s.team,
+    confidence: i === targetPos ? 'likely' : 'possible',
+  }));
+}
+
+function computeR32Candidates(
+  matchId: string,
+  groupStandingsMap: Map<string, { standings: GroupStanding[]; complete: boolean }>,
+): CardCandidates | null {
+  const slots = R32_TEAM_SLOTS[matchId];
+  if (!slots) return null;
+  return {
+    home: slotKeyCandidates(slots[0], groupStandingsMap),
+    away: slotKeyCandidates(slots[1], groupStandingsMap),
+  };
+}
+
+function computeR16Candidates(
+  matchId: string,
+  ktm: ReturnType<typeof computeKnockoutTeams>,
+): CardCandidates | null {
+  const feeders = KNOCKOUT_FEEDERS[matchId];
+  if (!feeders) return null;
+
+  const getFeederCandidates = (feeder: string): TeamCandidate[] => {
+    const r32Id = feeder.slice(2);
+    const winner = ktm.matchWinners.get(feeder);
+    if (winner) {
+      const loser = ktm.matchWinners.get(`L:${r32Id}`);
+      const result: TeamCandidate[] = [{ team: winner, confidence: 'likely' }];
+      if (loser) result.push({ team: loser, confidence: 'possible' });
+      return result;
+    }
+    const r32Teams = ktm.resolvedMatchTeams.get(r32Id);
+    if (r32Teams) {
+      return [
+        { team: r32Teams.homeTeam, confidence: 'possible' },
+        { team: r32Teams.awayTeam, confidence: 'possible' },
+      ];
+    }
+    return [];
+  };
+
+  return {
+    home: getFeederCandidates(feeders[0]),
+    away: getFeederCandidates(feeders[1]),
+  };
 }
 
 // ─── Group match card (compact, vertical) ────────────────────────────────────
@@ -194,13 +324,16 @@ function KnockoutCardInner({
   slotLabels,
   gameNumber,
   onClick,
+  candidates,
 }: {
   match: Match;
   prediction?: Prediction;
   slotLabels?: [string, string];
   gameNumber?: number;
   onClick?: () => void;
+  candidates?: CardCandidates;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const isTbd      = match.homeTeam.id === 'tbd';
   const isFinished = match.status === 'finished' && match.homeScore !== null;
   const isLive     = match.status === 'live';
@@ -220,129 +353,209 @@ function KnockoutCardInner({
     : 'rgba(255,255,255,0.07)';
 
   const TEAM_W = 46;
-  const VS_W   = KO_CARD_W - TEAM_W * 2 - 12 - 8; // 12px side padding, 8px gaps
+  const VS_W   = KO_CARD_W - TEAM_W * 2 - 12 - 8;
 
   return (
-    <div
-      onClick={onClick}
-      style={{
-        width: KO_CARD_W, height: KO_CARD_H,
-        background: 'linear-gradient(160deg, #0E1535 0%, #0A1128 100%)',
-        border: `1px solid ${borderColor}`,
-        borderRadius: 10, overflow: 'hidden',
-        display: 'flex', flexDirection: 'column',
-        cursor: onClick ? 'pointer' : 'default',
-        WebkitTapHighlightColor: 'transparent',
-      }}
-    >
-      {/* Teams + VS/Score */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 6px', gap: 4 }}>
+    <div style={{ width: KO_CARD_W, position: 'relative' }}>
+      <div
+        onClick={onClick}
+        style={{
+          width: KO_CARD_W, height: KO_CARD_H,
+          background: 'linear-gradient(160deg, #0E1535 0%, #0A1128 100%)',
+          border: `1px solid ${borderColor}`,
+          borderRadius: 10, overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
+          cursor: onClick ? 'pointer' : 'default',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        {/* Teams + VS/Score */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 6px', gap: 4 }}>
 
-        {/* Home team */}
-        <div style={{ width: TEAM_W, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <div style={{
-            width: 26, height: 26, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            {isTbd
-              ? <span style={{ fontSize: 6, fontWeight: 700, color: '#7A91BB' }}>TBD</span>
-              : <FlagImage code={match.homeTeam.code} size={17} />
-            }
-          </div>
-          <span style={{
-            fontSize: 8, fontWeight: 800, lineHeight: 1, textAlign: 'center',
-            fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.03em',
-            color: winnerSide === 'away' ? '#4A6090' : '#E8F0FF',
-            width: TEAM_W, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {isTbd ? (slotLabels?.[0] ?? 'TBD') : match.homeTeam.code}
-          </span>
-          <span style={{ fontSize: 7, fontWeight: 600, color: '#00C44F', lineHeight: 1 }}>Home</span>
-        </div>
-
-        {/* VS / Score center box */}
-        <div style={{
-          flex: 1, minWidth: VS_W,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: 7, padding: '4px 3px', gap: 2, alignSelf: 'center',
-          height: KO_CARD_H - 22,
-        }}>
-          {hasScore ? (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-              <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 22, fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
-                {match.homeScore}
-              </span>
-              <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 13, fontWeight: 700, color: '#3A4E6E', lineHeight: 1 }}>:</span>
-              <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 22, fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
-                {match.awayScore}
-              </span>
+          {/* Home team */}
+          <div style={{ width: TEAM_W, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              {isTbd
+                ? <span style={{ fontSize: 6, fontWeight: 700, color: '#7A91BB' }}>TBD</span>
+                : <FlagImage code={match.homeTeam.code} size={17} />
+              }
             </div>
-          ) : hasPrediction && !isLocked ? (
-            <>
-              <span style={{ fontSize: 7, fontWeight: 700, color: '#FF1F8E', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1 }}>Predicted</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,31,142,0.1)', border: '1px solid rgba(255,31,142,0.2)', borderRadius: 10, padding: '2px 5px' }}>
-                <svg viewBox="0 0 24 24" fill="#FF1F8E" style={{ width: 7, height: 7, flexShrink: 0 }}>
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                </svg>
-                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 13, fontWeight: 900, color: '#FF1F8E', lineHeight: 1 }}>
-                  {prediction!.homeScore}–{prediction!.awayScore}
+            <span style={{
+              fontSize: 8, fontWeight: 800, lineHeight: 1, textAlign: 'center',
+              fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.03em',
+              color: winnerSide === 'away' ? '#4A6090' : '#E8F0FF',
+              width: TEAM_W, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {isTbd ? (slotLabels?.[0] ?? 'TBD') : match.homeTeam.code}
+            </span>
+            <span style={{ fontSize: 7, fontWeight: 600, color: '#00C44F', lineHeight: 1 }}>Home</span>
+          </div>
+
+          {/* VS / Score center box */}
+          <div style={{
+            flex: 1, minWidth: VS_W,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 7, padding: '4px 3px', gap: 2, alignSelf: 'center',
+            height: KO_CARD_H - 22,
+          }}>
+            {hasScore ? (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 22, fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
+                  {match.homeScore}
+                </span>
+                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 13, fontWeight: 700, color: '#3A4E6E', lineHeight: 1 }}>:</span>
+                <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 22, fontWeight: 900, color: '#E8F0FF', lineHeight: 1 }}>
+                  {match.awayScore}
                 </span>
               </div>
-            </>
-          ) : (
-            <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 14, fontWeight: 900, color: '#3A4E6E', letterSpacing: '0.15em', lineHeight: 1 }}>VS</span>
-          )}
-          {isLive && (
-            <span style={{ fontSize: 7, fontWeight: 700, color: '#FFB020', letterSpacing: '0.08em', lineHeight: 1 }}>LIVE</span>
-          )}
-          {isFinished && !hasScore && (
-            <span style={{ fontSize: 7, fontWeight: 700, color: '#7A91BB', lineHeight: 1 }}>FT</span>
-          )}
-        </div>
-
-        {/* Away team */}
-        <div style={{ width: TEAM_W, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <div style={{
-            width: 26, height: 26, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            {isTbd
-              ? <span style={{ fontSize: 6, fontWeight: 700, color: '#7A91BB' }}>TBD</span>
-              : <FlagImage code={match.awayTeam.code} size={17} />
-            }
+            ) : hasPrediction && !isLocked ? (
+              <>
+                <span style={{ fontSize: 7, fontWeight: 700, color: '#FF1F8E', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1 }}>Predicted</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,31,142,0.1)', border: '1px solid rgba(255,31,142,0.2)', borderRadius: 10, padding: '2px 5px' }}>
+                  <svg viewBox="0 0 24 24" fill="#FF1F8E" style={{ width: 7, height: 7, flexShrink: 0 }}>
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                  </svg>
+                  <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 13, fontWeight: 900, color: '#FF1F8E', lineHeight: 1 }}>
+                    {prediction!.homeScore}–{prediction!.awayScore}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <span style={{ fontFamily: 'var(--font-barlow-condensed)', fontSize: 14, fontWeight: 900, color: '#3A4E6E', letterSpacing: '0.15em', lineHeight: 1 }}>VS</span>
+            )}
+            {isLive && (
+              <span style={{ fontSize: 7, fontWeight: 700, color: '#FFB020', letterSpacing: '0.08em', lineHeight: 1 }}>LIVE</span>
+            )}
+            {isFinished && !hasScore && (
+              <span style={{ fontSize: 7, fontWeight: 700, color: '#7A91BB', lineHeight: 1 }}>FT</span>
+            )}
           </div>
-          <span style={{
-            fontSize: 8, fontWeight: 800, lineHeight: 1, textAlign: 'center',
-            fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.03em',
-            color: winnerSide === 'home' ? '#4A6090' : '#E8F0FF',
-            width: TEAM_W, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {isTbd ? (slotLabels?.[1] ?? 'TBD') : match.awayTeam.code}
-          </span>
-          <span style={{ fontSize: 7, fontWeight: 600, color: '#FF1F8E', lineHeight: 1 }}>Away</span>
+
+          {/* Away team */}
+          <div style={{ width: TEAM_W, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              {isTbd
+                ? <span style={{ fontSize: 6, fontWeight: 700, color: '#7A91BB' }}>TBD</span>
+                : <FlagImage code={match.awayTeam.code} size={17} />
+              }
+            </div>
+            <span style={{
+              fontSize: 8, fontWeight: 800, lineHeight: 1, textAlign: 'center',
+              fontFamily: 'var(--font-barlow-condensed)', letterSpacing: '0.03em',
+              color: winnerSide === 'home' ? '#4A6090' : '#E8F0FF',
+              width: TEAM_W, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {isTbd ? (slotLabels?.[1] ?? 'TBD') : match.awayTeam.code}
+            </span>
+            <span style={{ fontSize: 7, fontWeight: 600, color: '#FF1F8E', lineHeight: 1 }}>Away</span>
+          </div>
+
         </div>
 
+        {/* Footer */}
+        <div style={{
+          height: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.05)',
+          padding: '0 6px', overflow: 'hidden',
+        }}>
+          <span style={{ fontSize: 7, color: '#5A6E94', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
+            <span style={{ color: '#7A91BB' }}>{fmtDate(match.kickoffAt)}</span>
+            {' · '}{match.city.split(',')[0]}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 3 }}>
+            {gameNumber && (
+              <span style={{ fontSize: 7, fontWeight: 700, color: '#FFB020', letterSpacing: '0.04em', lineHeight: 1 }}>
+                M{gameNumber}
+              </span>
+            )}
+            {candidates && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded(x => !x); }}
+                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', color: expanded ? '#FF4DA8' : '#5A6E94', fontSize: 8, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+              >
+                {expanded ? '▲' : '▼'}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Footer */}
-      <div style={{
-        height: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.05)',
-        padding: '0 6px', overflow: 'hidden',
-      }}>
-        <span style={{ fontSize: 7, color: '#5A6E94', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1 }}>
-          <span style={{ color: '#7A91BB' }}>{fmtDate(match.kickoffAt)}</span>
-          {' · '}{match.city.split(',')[0]}
-        </span>
-        {gameNumber && (
-          <span style={{ fontSize: 7, fontWeight: 700, color: '#FFB020', letterSpacing: '0.04em', flexShrink: 0, marginLeft: 4, lineHeight: 1 }}>
-            M{gameNumber}
-          </span>
-        )}
-      </div>
+      {/* Accordion panel — absolutely positioned below the card */}
+      {candidates && expanded && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute', top: KO_CARD_H - 1, left: 0, width: KO_CARD_W,
+            background: '#070C1B',
+            border: '1px solid rgba(255,255,255,0.09)',
+            borderTop: '1px solid rgba(255,255,255,0.04)',
+            borderRadius: '0 0 10px 10px',
+            padding: '5px 5px 4px',
+            zIndex: 50,
+          }}
+        >
+          <div style={{ display: 'flex', gap: 4 }}>
+            {/* Home column */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 6, fontWeight: 700, color: '#3A4E6E', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {slotLabels?.[0] ?? 'Home'}
+              </div>
+              {candidates.home.length === 0
+                ? <span style={{ fontSize: 7, color: '#3A4E6E' }}>TBD</span>
+                : candidates.home.slice(0, 4).map((c) => (
+                  <div key={c.team.id} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
+                    <FlagImage code={c.team.code} size={9} />
+                    <span style={{ flex: 1, fontSize: 8, fontWeight: 700, lineHeight: 1, color: c.confidence === 'likely' ? '#C8D8F0' : '#4A5E7A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.team.code}
+                    </span>
+                    <span style={{ fontSize: 7, color: c.confidence === 'likely' ? '#FF4DA8' : '#2E3F5A', lineHeight: 1, flexShrink: 0 }}>
+                      {c.confidence === 'likely' ? '★' : '·'}
+                    </span>
+                  </div>
+                ))
+              }
+            </div>
+
+            {/* Divider */}
+            <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch' }} />
+
+            {/* Away column */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 6, fontWeight: 700, color: '#3A4E6E', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {slotLabels?.[1] ?? 'Away'}
+              </div>
+              {candidates.away.length === 0
+                ? <span style={{ fontSize: 7, color: '#3A4E6E' }}>TBD</span>
+                : candidates.away.slice(0, 4).map((c) => (
+                  <div key={c.team.id} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
+                    <FlagImage code={c.team.code} size={9} />
+                    <span style={{ flex: 1, fontSize: 8, fontWeight: 700, lineHeight: 1, color: c.confidence === 'likely' ? '#C8D8F0' : '#4A5E7A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.team.code}
+                    </span>
+                    <span style={{ fontSize: 7, color: c.confidence === 'likely' ? '#FF4DA8' : '#2E3F5A', lineHeight: 1, flexShrink: 0 }}>
+                      {c.confidence === 'likely' ? '★' : '·'}
+                    </span>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+          {/* Legend */}
+          <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <span style={{ fontSize: 6, color: '#FF4DA8' }}>★ Most Likely</span>
+            <span style={{ fontSize: 6, color: '#3A4E6E' }}>· Possible</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -446,6 +659,15 @@ export function BracketView() {
   // Compute which teams advance to knockout rounds based on group results
   const ktm = useMemo(() => computeKnockoutTeams(updates), [updates]);
 
+  // Compute per-group standings for the accordion candidates
+  const groupStandingsMap = useMemo(() => {
+    const map = new Map<string, { standings: GroupStanding[]; complete: boolean }>();
+    for (const letter of Object.keys(GROUPS)) {
+      map.set(letter, buildGroupStandings(letter, updates));
+    }
+    return map;
+  }, [updates]);
+
   const handleMatchTap = (match: Match) => {
     if (!user || match.homeTeam.id === 'tbd') return;
     setSelectedMatch(match);
@@ -471,7 +693,11 @@ export function BracketView() {
 
   const matchesByStage: Partial<Record<Match['stage'], Match[]>> = {};
   for (const r of BRACKET_ROUNDS) {
-    matchesByStage[r.stage] = resolvedKnockoutMatches.filter(m => m.stage === r.stage);
+    const raw   = resolvedKnockoutMatches.filter(m => m.stage === r.stage);
+    const order = BRACKET_DISPLAY_ORDER[r.stage];
+    matchesByStage[r.stage] = order
+      ? order.map(id => raw.find(m => m.id === id)).filter((m): m is Match => !!m)
+      : raw;
   }
   const thirdPlace = resolvedKnockoutMatches.find(m => m.stage === 'third-place');
 
@@ -605,21 +831,29 @@ export function BracketView() {
             </svg>
 
             {BRACKET_ROUNDS.map((round, r) =>
-              (matchesByStage[round.stage] ?? []).map((match, i) => (
-                <div key={match.id} style={{
-                  position: 'absolute',
-                  left: r * (KO_CARD_W + COL_GAP),
-                  top: yCenter(r, i) - KO_CARD_H / 2,
-                }}>
-                  <KnockoutCardInner
-                    match={match}
-                    slotLabels={SLOTS[match.id]}
-                    prediction={saved[match.id]}
-                    gameNumber={FIFA_GAME[match.id]}
-                    onClick={() => handleMatchTap(match)}
-                  />
-                </div>
-              ))
+              (matchesByStage[round.stage] ?? []).map((match, i) => {
+                const candidates = round.stage === 'round-of-32'
+                  ? computeR32Candidates(match.id, groupStandingsMap) ?? undefined
+                  : round.stage === 'round-of-16'
+                  ? computeR16Candidates(match.id, ktm) ?? undefined
+                  : undefined;
+                return (
+                  <div key={match.id} style={{
+                    position: 'absolute',
+                    left: r * (KO_CARD_W + COL_GAP),
+                    top: yCenter(r, i) - KO_CARD_H / 2,
+                  }}>
+                    <KnockoutCardInner
+                      match={match}
+                      slotLabels={SLOTS[match.id]}
+                      prediction={saved[match.id]}
+                      gameNumber={FIFA_GAME[match.id]}
+                      onClick={() => handleMatchTap(match)}
+                      candidates={candidates}
+                    />
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

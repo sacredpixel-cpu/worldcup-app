@@ -13,7 +13,7 @@ import { uploadAvatar } from '@/lib/uploadService';
 import { COUNTRIES, US_STATES } from '@/data/countries';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { requestAndSaveToken, diagnoseNotifications, isNotificationSupported, needsPWAInstall } from '@/lib/notifications';
+import { requestAndSaveToken, diagnoseNotifications, getLastTokenError, isNotificationSupported, needsPWAInstall } from '@/lib/notifications';
 
 function ProfileContent() {
   const { user, clearAuth, updateAvatar, updateLocation } = useAuthStore();
@@ -48,7 +48,7 @@ function ProfileContent() {
       if (token) {
         setSynced(true);
       } else {
-        setSyncError('Token not returned — check browser console (F12) for details');
+        setSyncError(getLastTokenError() ?? 'getToken returned null — VAPID key may not match Firebase push certificate');
       }
     } finally {
       setEnabling(false);

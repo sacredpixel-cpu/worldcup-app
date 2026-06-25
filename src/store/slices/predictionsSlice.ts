@@ -6,6 +6,18 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Prediction } from '@/types/prediction';
 import { savePredictionToFirestore, saveAllPredictionsToFirestore, getUserPredictions, subscribeToCommunityPredictions } from '@/lib/predictionsService';
 
+async function saveWithRetry(prediction: Prediction, attempts = 3): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await savePredictionToFirestore(prediction);
+      return;
+    } catch (err) {
+      if (i === attempts - 1) console.error('Failed to save prediction after retries:', err);
+      else await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
+
 interface DraftEntry {
   homeScore: number;
   awayScore: number;
@@ -25,6 +37,7 @@ interface PredictionsState {
   getAllSaved: () => Prediction[];
   syncSavedToFirestore: (userId: string) => Promise<void>;
   loadFromFirestore: (userId: string) => Promise<void>;
+  pushLocalOnlyToFirestore: (userId: string) => Promise<void>;
   subscribeCommunity: () => () => void;
 }
 
@@ -79,8 +92,8 @@ export const usePredictionsStore = create<PredictionsState>()(
           saved: { ...s.saved, [matchId]: prediction },
           draft: (() => { const n = { ...s.draft }; delete n[matchId]; return n; })(),
         }));
-        // Fire-and-forget save to Firestore
-        savePredictionToFirestore(prediction).catch(console.error);
+        // Save with retry — 3 attempts with backoff so transient failures don't silently drop data
+        saveWithRetry(prediction);
         return prediction;
       },
 
@@ -111,6 +124,19 @@ export const usePredictionsStore = create<PredictionsState>()(
         predictions.forEach(p => { saved[p.matchId] = p; });
         // Merge with any local predictions, Firestore wins on conflict
         set((s) => ({ saved: { ...s.saved, ...saved }, syncedToFirestore: true }));
+      },
+
+      // Upload predictions that exist locally but are absent from Firestore.
+      // Safe to run on every login — never overwrites existing Firestore documents.
+      pushLocalOnlyToFirestore: async (userId) => {
+        const { saved } = get();
+        const local = Object.values(saved).filter(p => p.userId === userId);
+        if (local.length === 0) return;
+        const firestorePreds = await getUserPredictions(userId);
+        const firestoreMatchIds = new Set(firestorePreds.map(p => p.matchId));
+        const missing = local.filter(p => !firestoreMatchIds.has(p.matchId));
+        if (missing.length === 0) return;
+        await saveAllPredictionsToFirestore(missing);
       },
 
       subscribeCommunity: () => {

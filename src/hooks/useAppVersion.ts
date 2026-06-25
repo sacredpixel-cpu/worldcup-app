@@ -2,41 +2,76 @@
 
 import { useEffect, useState } from 'react';
 
-const VERSION_KEY = 'wc2026_build_id';
+const VERSION_KEY = 'wc2026_build_time';
+// Set by the controllerchange handler before reloading so the post-reload
+// version check knows the reload was SW-triggered and skips the banner.
+const SW_RELOAD_KEY = 'wc2026_sw_reloaded';
 
-// NEXT_PUBLIC_BUILD_ID is baked into the JS bundle at build time by next.config.js.
-// Vercel sets VERCEL_GIT_COMMIT_SHA (unique per deploy); locally falls back to Date.now().
-const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? '';
+async function fetchBuildTime(): Promise<string | null> {
+  try {
+    const res = await fetch('/version.json', { cache: 'no-store' });
+    const json = await res.json();
+    return String(json.buildTime ?? '');
+  } catch {
+    return null;
+  }
+}
 
 export function useAppVersion() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [liveId, setLiveId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!BUILD_ID) return;
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
-    function check() {
+    async function check() {
+      const id = await fetchBuildTime();
+      if (!id) return;
+
+      // We just reloaded because a new SW activated — silently accept this version,
+      // no banner needed (the page already has the new code).
+      if (sessionStorage.getItem(SW_RELOAD_KEY)) {
+        sessionStorage.removeItem(SW_RELOAD_KEY);
+        localStorage.setItem(VERSION_KEY, id);
+        return;
+      }
+
       const stored = localStorage.getItem(VERSION_KEY);
-      if (stored && stored !== BUILD_ID) {
-        // The JS bundle has a newer build ID than what was last acknowledged
+      if (!stored) {
+        localStorage.setItem(VERSION_KEY, id);
+      } else if (stored !== id) {
+        setLiveId(id);
         setUpdateAvailable(true);
-      } else if (!stored) {
-        // First launch — just store the current build ID, no banner
-        localStorage.setItem(VERSION_KEY, BUILD_ID);
       }
     }
 
     check();
 
-    // Re-check whenever the user switches back to the app
+    // When a new service worker activates (skipWaiting fires), reload silently so
+    // users get the latest HTML and JS without ever needing a manual action.
+    function handleControllerChange() {
+      sessionStorage.setItem(SW_RELOAD_KEY, '1');
+      window.location.reload();
+    }
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
     function handleVisibility() {
-      if (document.visibilityState === 'visible') check();
+      if (document.visibilityState !== 'visible') return;
+      check();
+      // iOS PWA does not re-check the SW script on app resume — force it explicitly
+      // so that a new SW (from a recent deploy) installs and triggers controllerchange.
+      navigator.serviceWorker.ready.then(reg => reg.update()).catch(() => {});
     }
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   function applyUpdate() {
-    localStorage.setItem(VERSION_KEY, BUILD_ID);
+    if (liveId) localStorage.setItem(VERSION_KEY, liveId);
     window.location.reload();
   }
 
