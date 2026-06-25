@@ -297,7 +297,14 @@ export function resolveMatchTeams(match: Match, ktm: KnockoutTeamMap): Match {
 
   if (match.stage === 'round-of-32') {
     const { homeTeam, awayTeam } = resolveR32Teams(match.id, ktm);
-    if (homeTeam && awayTeam) return { ...match, homeTeam, awayTeam };
+    // Partially resolve: show a confirmed team even if the other slot isn't ready yet
+    if (homeTeam || awayTeam) {
+      return {
+        ...match,
+        homeTeam: homeTeam ?? match.homeTeam,
+        awayTeam: awayTeam ?? match.awayTeam,
+      };
+    }
     return match;
   }
 

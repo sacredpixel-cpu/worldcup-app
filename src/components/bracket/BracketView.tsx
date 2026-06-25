@@ -334,7 +334,9 @@ function KnockoutCardInner({
   candidates?: CardCandidates;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const isTbd      = match.homeTeam.id === 'tbd';
+  const isHomeTbd  = match.homeTeam.id === 'tbd';
+  const isAwayTbd  = match.awayTeam.id === 'tbd';
+  const isTbd      = isHomeTbd && isAwayTbd;
   const isFinished = match.status === 'finished' && match.homeScore !== null;
   const isLive     = match.status === 'live';
   const hasScore   = match.homeScore !== null;
@@ -379,7 +381,7 @@ function KnockoutCardInner({
               background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
-              {isTbd
+              {isHomeTbd
                 ? <span style={{ fontSize: 6, fontWeight: 700, color: '#7A91BB' }}>TBD</span>
                 : <FlagImage code={match.homeTeam.code} size={17} />
               }
@@ -390,7 +392,7 @@ function KnockoutCardInner({
               color: winnerSide === 'away' ? '#4A6090' : '#E8F0FF',
               width: TEAM_W, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {isTbd ? (slotLabels?.[0] ?? 'TBD') : match.homeTeam.code}
+              {isHomeTbd ? (slotLabels?.[0] ?? 'TBD') : match.homeTeam.code}
             </span>
             <span style={{ fontSize: 7, fontWeight: 600, color: '#00C44F', lineHeight: 1 }}>Home</span>
           </div>
@@ -443,7 +445,7 @@ function KnockoutCardInner({
               background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
-              {isTbd
+              {isAwayTbd
                 ? <span style={{ fontSize: 6, fontWeight: 700, color: '#7A91BB' }}>TBD</span>
                 : <FlagImage code={match.awayTeam.code} size={17} />
               }
@@ -454,7 +456,7 @@ function KnockoutCardInner({
               color: winnerSide === 'home' ? '#4A6090' : '#E8F0FF',
               width: TEAM_W, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {isTbd ? (slotLabels?.[1] ?? 'TBD') : match.awayTeam.code}
+              {isAwayTbd ? (slotLabels?.[1] ?? 'TBD') : match.awayTeam.code}
             </span>
             <span style={{ fontSize: 7, fontWeight: 600, color: '#FF1F8E', lineHeight: 1 }}>Away</span>
           </div>
