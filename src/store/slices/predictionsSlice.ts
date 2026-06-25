@@ -127,16 +127,25 @@ export const usePredictionsStore = create<PredictionsState>()(
       },
 
       // Upload predictions that exist locally but are absent from Firestore.
+      // Checks ALL local predictions regardless of userId — re-stamps each with the
+      // current userId before uploading. This catches predictions made as a guest
+      // that were never migrated (syncSavedToFirestore only runs once per device).
       // Safe to run on every login — never overwrites existing Firestore documents.
       pushLocalOnlyToFirestore: async (userId) => {
         const { saved } = get();
-        const local = Object.values(saved).filter(p => p.userId === userId);
-        if (local.length === 0) return;
+        const allLocal = Object.values(saved);
+        if (allLocal.length === 0) return;
         const firestorePreds = await getUserPredictions(userId);
         const firestoreMatchIds = new Set(firestorePreds.map(p => p.matchId));
-        const missing = local.filter(p => !firestoreMatchIds.has(p.matchId));
+        const missing = allLocal
+          .filter(p => !firestoreMatchIds.has(p.matchId))
+          .map(p => ({ ...p, userId })); // re-stamp with current userId
         if (missing.length === 0) return;
         await saveAllPredictionsToFirestore(missing);
+        // Fix local state so userId is consistent going forward
+        const updated: Record<string, Prediction> = {};
+        for (const p of missing) updated[p.matchId] = p;
+        set((s) => ({ saved: { ...s.saved, ...updated } }));
       },
 
       subscribeCommunity: () => {
