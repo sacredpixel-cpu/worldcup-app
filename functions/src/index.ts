@@ -958,6 +958,8 @@ export const pollLiveScores = onSchedule(
       const homeScore  = m.home.score ?? 0;
       const awayScore  = m.away.score ?? 0;
 
+      const homeCode = TEAM_NAME_TO_CODE[homeNorm];
+      const awayCode = TEAM_NAME_TO_CODE[awayNorm];
       batch.set(
         db.collection('matches').doc(matchId),
         {
@@ -966,6 +968,8 @@ export const pollLiveScores = onSchedule(
           status:       appStatus,
           lastSyncAt:   admin.firestore.FieldValue.serverTimestamp(),
           rapidMatchId: m.id,
+          ...(homeCode ? { homeTeamCode: homeCode } : {}),
+          ...(awayCode ? { awayTeamCode: awayCode } : {}),
         },
         { merge: true },
       );
@@ -1055,9 +1059,18 @@ export const pollLiveScores = onSchedule(
       const homeScore = parseInt(homeComp.score ?? '0', 10);
       const awayScore = parseInt(awayComp.score ?? '0', 10);
 
+      const hNorm2 = normalise(homeComp.team.displayName);
+      const aNorm2 = normalise(awayComp.team.displayName);
+      const hCode2 = TEAM_NAME_TO_CODE[hNorm2];
+      const aCode2 = TEAM_NAME_TO_CODE[aNorm2];
       espnScoreBatch.set(
         db.collection('matches').doc(mid),
-        { homeScore, awayScore, status: appStatus, lastSyncAt: admin.firestore.FieldValue.serverTimestamp() },
+        {
+          homeScore, awayScore, status: appStatus,
+          lastSyncAt: admin.firestore.FieldValue.serverTimestamp(),
+          ...(hCode2 ? { homeTeamCode: hCode2 } : {}),
+          ...(aCode2 ? { awayTeamCode: aCode2 } : {}),
+        },
         { merge: true },
       );
       espnScoreCount++;

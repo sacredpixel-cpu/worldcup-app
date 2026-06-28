@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import type { Match, MatchEvent, MatchStats } from '@/types/match';
 import { subscribeToMatchUpdates } from '@/lib/matchesService';
 import type { GoalScorerEvent } from '@/lib/matchesService';
+import { TEAMS_BY_CODE } from '@/data/teams';
 
 interface MatchUpdate {
   homeScore: number | null;
@@ -14,6 +15,8 @@ interface MatchUpdate {
   goalScorerEvents?: GoalScorerEvent[];
   matchEvents?: MatchEvent[];
   matchStats?: MatchStats;
+  homeTeamCode?: string;
+  awayTeamCode?: string;
 }
 
 interface MatchesState {
@@ -52,8 +55,18 @@ export const useMatchesStore = create<MatchesState>()((set, get) => ({
       if (away.length > 0) awayScorers = away;
     }
 
+    // For TBD knockout slots: swap in real teams if the poller wrote codes to Firestore
+    const homeTeam = (match.homeTeam.id === 'tbd' && update.homeTeamCode)
+      ? (TEAMS_BY_CODE[update.homeTeamCode] ?? match.homeTeam)
+      : match.homeTeam;
+    const awayTeam = (match.awayTeam.id === 'tbd' && update.awayTeamCode)
+      ? (TEAMS_BY_CODE[update.awayTeamCode] ?? match.awayTeam)
+      : match.awayTeam;
+
     return {
       ...match,
+      homeTeam,
+      awayTeam,
       homeScore: update.homeScore,
       awayScore: update.awayScore,
       status: update.status,

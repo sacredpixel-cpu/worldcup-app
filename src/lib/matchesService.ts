@@ -22,6 +22,9 @@ export interface MatchScoreUpdate {
   goalScorerEvents?: GoalScorerEvent[];
   matchEvents?: MatchEvent[];
   matchStats?: MatchStats;
+  /** Written by the live-score poller for knockout matches resolved by kickoff time */
+  homeTeamCode?: string;
+  awayTeamCode?: string;
 }
 
 export async function updateMatchScore(
@@ -103,6 +106,8 @@ export function subscribeToMatchUpdates(
         goalScorerEvents: data.goalScorerEvents,
         matchEvents: data.matchEvents,
         matchStats: data.matchStats,
+        homeTeamCode: data.homeTeamCode,
+        awayTeamCode: data.awayTeamCode,
       };
     });
     cb(updates);

@@ -773,13 +773,10 @@ exports.pollLiveScores = (0, scheduler_1.onSchedule)({
         const appStatus = rapidToAppStatus(m);
         const homeScore = (_a = m.home.score) !== null && _a !== void 0 ? _a : 0;
         const awayScore = (_b = m.away.score) !== null && _b !== void 0 ? _b : 0;
-        batch.set(db.collection('matches').doc(matchId), {
-            homeScore,
-            awayScore,
-            status: appStatus,
-            lastSyncAt: admin.firestore.FieldValue.serverTimestamp(),
-            rapidMatchId: m.id,
-        }, { merge: true });
+        const homeCode = TEAM_NAME_TO_CODE[homeNorm];
+        const awayCode = TEAM_NAME_TO_CODE[awayNorm];
+        batch.set(db.collection('matches').doc(matchId), Object.assign(Object.assign({ homeScore,
+            awayScore, status: appStatus, lastSyncAt: admin.firestore.FieldValue.serverTimestamp(), rapidMatchId: m.id }, (homeCode ? { homeTeamCode: homeCode } : {})), (awayCode ? { awayTeamCode: awayCode } : {})), { merge: true });
         updateCount++;
         console.log(`  ${matchId}: ${homeNorm} ${homeScore}–${awayScore} ${awayNorm} [${appStatus}]`);
     }
@@ -869,7 +866,11 @@ exports.pollLiveScores = (0, scheduler_1.onSchedule)({
             continue;
         const homeScore = parseInt((_h = homeComp.score) !== null && _h !== void 0 ? _h : '0', 10);
         const awayScore = parseInt((_j = awayComp.score) !== null && _j !== void 0 ? _j : '0', 10);
-        espnScoreBatch.set(db.collection('matches').doc(mid), { homeScore, awayScore, status: appStatus, lastSyncAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        const hNorm2 = normalise(homeComp.team.displayName);
+        const aNorm2 = normalise(awayComp.team.displayName);
+        const hCode2 = TEAM_NAME_TO_CODE[hNorm2];
+        const aCode2 = TEAM_NAME_TO_CODE[aNorm2];
+        espnScoreBatch.set(db.collection('matches').doc(mid), Object.assign(Object.assign({ homeScore, awayScore, status: appStatus, lastSyncAt: admin.firestore.FieldValue.serverTimestamp() }, (hCode2 ? { homeTeamCode: hCode2 } : {})), (aCode2 ? { awayTeamCode: aCode2 } : {})), { merge: true });
         espnScoreCount++;
         espnOnlyLiveDoneIds.add(mid);
         console.log(`  ESPN supplement: ${mid} ${homeComp.team.displayName} ${homeScore}–${awayScore} ${awayComp.team.displayName} [${appStatus}]`);

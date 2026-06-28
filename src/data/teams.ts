@@ -131,3 +131,7 @@ export const GROUPS: Record<string, Team[]> = {
 };
 
 export const ALL_TEAMS: Team[] = Object.values(GROUPS).flat();
+
+export const TEAMS_BY_CODE: Record<string, Team> = Object.fromEntries(
+  ALL_TEAMS.map(t => [t.code, t])
+);
