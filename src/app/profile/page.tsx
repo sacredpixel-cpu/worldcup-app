@@ -16,7 +16,7 @@ import { auth } from '@/lib/firebase';
 import { requestAndSaveToken, diagnoseNotifications, getLastTokenError, isNotificationSupported, needsPWAInstall } from '@/lib/notifications';
 
 function ProfileContent() {
-  const { user, clearAuth, updateAvatar, updateLocation } = useAuthStore();
+  const { user, clearAuth, updateAvatar, updateLocation, updateDisplayName } = useAuthStore();
   const { saved } = usePredictionsStore();
   const { groups } = useGroupsStore();
   const { getLiveMatch, updates } = useMatchesStore();
@@ -28,6 +28,10 @@ function ProfileContent() {
   const [enabling, setEnabling] = useState(false);
   const [synced, setSynced] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+
+  const [nameInput, setNameInput] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
 
   useEffect(() => {
     if (!isNotificationSupported()) { setNotifStatus('unsupported'); return; }
@@ -67,6 +71,22 @@ function ProfileContent() {
       });
     } catch (e) {
       alert('Could not show test notification: ' + String(e));
+    }
+  }
+
+  async function handleSaveDisplayName() {
+    const trimmed = nameInput.trim();
+    if (!trimmed || !user || trimmed === user.displayName) return;
+    setNameSaving(true);
+    try {
+      const { saveUserProfile } = await import('@/lib/usersService');
+      await saveUserProfile({ userId: user.id, displayName: trimmed, avatarUrl: user.avatarUrl, country: user.country, countryCode: user.countryCode, state: user.state });
+      updateDisplayName(trimmed);
+      setNameInput('');
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 3000);
+    } finally {
+      setNameSaving(false);
     }
   }
 
@@ -259,6 +279,34 @@ function ProfileContent() {
           </div>
         </div>
       )}
+
+      {/* Display name */}
+      <div className="mx-4 mb-4 rounded-xl px-4 py-3.5" style={{ background: '#0E1535', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Display Name</h2>
+        <p className="mb-2.5 text-xs" style={{ color: '#7A91BB' }}>
+          Current: <span style={{ color: '#C8D8F0', fontWeight: 600 }}>{user.displayName}</span>
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={nameInput}
+            onChange={e => { setNameInput(e.target.value); setNameSaved(false); }}
+            onKeyDown={e => e.key === 'Enter' && handleSaveDisplayName()}
+            placeholder="New display name"
+            maxLength={30}
+            className="flex-1 rounded-lg px-3 py-2 text-sm focus:outline-none"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#E8F0FF' }}
+          />
+          <button
+            onClick={handleSaveDisplayName}
+            disabled={nameSaving || !nameInput.trim() || nameInput.trim() === user.displayName}
+            className="shrink-0 rounded-lg px-4 py-2 text-xs font-bold transition-opacity active:opacity-70 disabled:opacity-40"
+            style={{ background: nameSaved ? 'rgba(0,196,79,0.15)' : '#FF1F8E', color: nameSaved ? '#00C44F' : '#06091A', border: nameSaved ? '1px solid rgba(0,196,79,0.3)' : 'none' }}
+          >
+            {nameSaving ? '…' : nameSaved ? 'Saved ✓' : 'Save'}
+          </button>
+        </div>
+      </div>
 
       {/* Notifications */}
       {notifStatus !== 'loading' && notifStatus !== 'unsupported' && (
