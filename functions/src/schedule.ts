@@ -110,45 +110,45 @@ export const MATCH_SCHEDULE: Record<string, ScheduleEntry> = {
   'GS-L-5': { home: 'Panama',  away: 'England', kickoffAt: '2026-06-27T21:00:00Z' },
   'GS-L-6': { home: 'Croatia', away: 'Ghana',   kickoffAt: '2026-06-27T21:00:00Z' },
 
-  // ── Round of 32 (teams TBD) ───────────────────────────────────────────────
-  'R32-01': { home: '', away: '', kickoffAt: '2026-06-29T19:00:00Z' },
-  'R32-02': { home: '', away: '', kickoffAt: '2026-06-29T23:00:00Z' },
-  'R32-03': { home: '', away: '', kickoffAt: '2026-06-30T19:00:00Z' },
-  'R32-04': { home: '', away: '', kickoffAt: '2026-06-30T23:00:00Z' },
-  'R32-05': { home: '', away: '', kickoffAt: '2026-07-01T19:00:00Z' },
-  'R32-06': { home: '', away: '', kickoffAt: '2026-07-01T23:00:00Z' },
-  'R32-07': { home: '', away: '', kickoffAt: '2026-07-02T19:00:00Z' },
-  'R32-08': { home: '', away: '', kickoffAt: '2026-07-02T23:00:00Z' },
-  'R32-09': { home: '', away: '', kickoffAt: '2026-07-03T19:00:00Z' },
-  'R32-10': { home: '', away: '', kickoffAt: '2026-07-03T23:00:00Z' },
-  'R32-11': { home: '', away: '', kickoffAt: '2026-07-04T19:00:00Z' },
-  'R32-12': { home: '', away: '', kickoffAt: '2026-07-04T23:00:00Z' },
-  'R32-13': { home: '', away: '', kickoffAt: '2026-07-05T19:00:00Z' },
-  'R32-14': { home: '', away: '', kickoffAt: '2026-07-05T23:00:00Z' },
-  'R32-15': { home: '', away: '', kickoffAt: '2026-07-06T19:00:00Z' },
-  'R32-16': { home: '', away: '', kickoffAt: '2026-07-06T23:00:00Z' },
+  // ── Round of 32 (Jun 28 – Jul 3) ─────────────────────────────────────────
+  'R32-01': { home: '',        away: '',        kickoffAt: '2026-06-28T22:00:00Z' },
+  'R32-02': { home: '',        away: '',        kickoffAt: '2026-06-29T19:00:00Z' },
+  'R32-03': { home: '',        away: '',        kickoffAt: '2026-06-29T21:00:00Z' },
+  'R32-04': { home: '',        away: '',        kickoffAt: '2026-06-29T23:00:00Z' },
+  'R32-05': { home: 'France',  away: 'Sweden',  kickoffAt: '2026-06-30T19:00:00Z' },
+  'R32-06': { home: '',        away: '',        kickoffAt: '2026-06-30T21:00:00Z' },
+  'R32-07': { home: 'Mexico',  away: 'Ecuador', kickoffAt: '2026-06-30T23:00:00Z' },
+  'R32-08': { home: '',        away: '',        kickoffAt: '2026-07-01T19:00:00Z' },
+  'R32-09': { home: '',        away: '',        kickoffAt: '2026-07-01T21:00:00Z' },
+  'R32-10': { home: '',        away: '',        kickoffAt: '2026-07-01T23:00:00Z' },
+  'R32-11': { home: '',        away: '',        kickoffAt: '2026-07-02T19:00:00Z' },
+  'R32-12': { home: '',        away: '',        kickoffAt: '2026-07-02T21:00:00Z' },
+  'R32-13': { home: '',        away: '',        kickoffAt: '2026-07-02T23:00:00Z' },
+  'R32-14': { home: '',        away: '',        kickoffAt: '2026-07-03T19:00:00Z' },
+  'R32-15': { home: '',        away: '',        kickoffAt: '2026-07-03T21:00:00Z' },
+  'R32-16': { home: '',        away: '',        kickoffAt: '2026-07-03T23:00:00Z' },
 
-  // ── Round of 16 (teams TBD) ──────────────────────────────────────────────
-  'R16-01': { home: '', away: '', kickoffAt: '2026-07-08T19:00:00Z' },
-  'R16-02': { home: '', away: '', kickoffAt: '2026-07-08T23:00:00Z' },
-  'R16-03': { home: '', away: '', kickoffAt: '2026-07-09T19:00:00Z' },
-  'R16-04': { home: '', away: '', kickoffAt: '2026-07-09T23:00:00Z' },
-  'R16-05': { home: '', away: '', kickoffAt: '2026-07-10T19:00:00Z' },
-  'R16-06': { home: '', away: '', kickoffAt: '2026-07-10T23:00:00Z' },
-  'R16-07': { home: '', away: '', kickoffAt: '2026-07-11T19:00:00Z' },
-  'R16-08': { home: '', away: '', kickoffAt: '2026-07-11T23:00:00Z' },
+  // ── Round of 16 (Jul 4–7) ─────────────────────────────────────────────────
+  'R16-01': { home: '', away: '', kickoffAt: '2026-07-04T19:00:00Z' },
+  'R16-02': { home: '', away: '', kickoffAt: '2026-07-04T23:00:00Z' },
+  'R16-03': { home: '', away: '', kickoffAt: '2026-07-05T19:00:00Z' },
+  'R16-04': { home: '', away: '', kickoffAt: '2026-07-05T23:00:00Z' },
+  'R16-05': { home: '', away: '', kickoffAt: '2026-07-06T19:00:00Z' },
+  'R16-06': { home: '', away: '', kickoffAt: '2026-07-06T23:00:00Z' },
+  'R16-07': { home: '', away: '', kickoffAt: '2026-07-07T19:00:00Z' },
+  'R16-08': { home: '', away: '', kickoffAt: '2026-07-07T23:00:00Z' },
 
-  // ── Quarter-Finals (teams TBD) ───────────────────────────────────────────
-  'QF-01': { home: '', away: '', kickoffAt: '2026-07-14T20:00:00Z' },
-  'QF-02': { home: '', away: '', kickoffAt: '2026-07-15T00:00:00Z' },
-  'QF-03': { home: '', away: '', kickoffAt: '2026-07-15T20:00:00Z' },
-  'QF-04': { home: '', away: '', kickoffAt: '2026-07-16T00:00:00Z' },
+  // ── Quarter-Finals (Jul 9–11) ─────────────────────────────────────────────
+  'QF-01': { home: '', away: '', kickoffAt: '2026-07-09T19:00:00Z' },
+  'QF-02': { home: '', away: '', kickoffAt: '2026-07-10T22:00:00Z' },
+  'QF-03': { home: '', away: '', kickoffAt: '2026-07-11T19:00:00Z' },
+  'QF-04': { home: '', away: '', kickoffAt: '2026-07-11T23:00:00Z' },
 
-  // ── Semi-Finals (teams TBD) ──────────────────────────────────────────────
-  'SF-01': { home: '', away: '', kickoffAt: '2026-07-18T23:00:00Z' },
-  'SF-02': { home: '', away: '', kickoffAt: '2026-07-19T23:00:00Z' },
+  // ── Semi-Finals (Jul 14–15) ───────────────────────────────────────────────
+  'SF-01': { home: '', away: '', kickoffAt: '2026-07-14T23:00:00Z' },
+  'SF-02': { home: '', away: '', kickoffAt: '2026-07-15T23:00:00Z' },
 
-  // ── Third Place & Final (teams TBD) ──────────────────────────────────────
-  '3RD':   { home: '', away: '', kickoffAt: '2026-07-22T20:00:00Z' },
-  'FINAL': { home: '', away: '', kickoffAt: '2026-07-26T23:00:00Z' },
+  // ── Third Place & Final ───────────────────────────────────────────────────
+  '3RD':   { home: '', away: '', kickoffAt: '2026-07-18T20:00:00Z' },
+  'FINAL': { home: '', away: '', kickoffAt: '2026-07-19T22:00:00Z' },
 };
