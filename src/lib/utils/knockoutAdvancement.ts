@@ -265,9 +265,13 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
   // (provisional during the group stage; confirmed once all 12 groups are done)
   const top8Groups = allCurrentThirds.slice(0, 8).map(t => t.group).sort();
   const comboKey = top8Groups.join('');
+  // Only use the matrix if we have an exact match for this combo.
+  // The fallback heuristic mis-assigns groups when primary slots are missing
+  // from the combo (e.g. it assigned ECU to R32-05 instead of R32-07).
+  // Better to show TBD than wrong teams.
   const annexCMapping: Record<string, string> =
     top8Groups.length === 8
-      ? (ANNEX_C_MATRIX[comboKey] ?? buildFallbackAnnexC(top8Groups))
+      ? (ANNEX_C_MATRIX[comboKey] ?? {})
       : {};
 
   const matchWinners = new Map<string, Team>();
