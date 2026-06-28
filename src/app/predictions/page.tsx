@@ -1046,9 +1046,191 @@ function PointRulesTab() {
   );
 }
 
+// ─── Knockouts sub-tab ────────────────────────────────────────────────────────
+
+const KNOCKOUT_STAGE_ORDER: Match['stage'][] = ['round-of-32', 'round-of-16', 'quarter-final', 'semi-final', 'third-place', 'final'];
+
+function KnockoutsTab({ saved }: { saved: Record<string, Prediction> }) {
+  const { updates, getLiveMatch } = useMatchesStore();
+  const { user } = useAuthStore();
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  const liveKnockouts = useMemo(
+    () => KNOCKOUT_MATCHES.map(m => getLiveMatch(m)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [updates]
+  );
+
+  const totalPts = useMemo(() =>
+    liveKnockouts
+      .filter(m => m.status === 'finished' && saved[m.id])
+      .reduce((sum, m) => {
+        const pred = saved[m.id];
+        return sum + calcPoints(pred, { homeScore: m.homeScore!, awayScore: m.awayScore!, homeScorers: m.homeScorers, awayScorers: m.awayScorers });
+      }, 0),
+    [liveKnockouts, saved]
+  );
+
+  const stageGroups = KNOCKOUT_STAGE_ORDER.map(stage => ({
+    stage,
+    label: STAGE_LABELS[stage],
+    matches: liveKnockouts
+      .filter(m => m.stage === stage && saved[m.id])
+      .sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt)),
+  })).filter(g => g.matches.length > 0);
+
+  if (stageGroups.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+        <div className="mb-4 text-5xl">🏆</div>
+        <h2 className="mb-2 text-lg font-bold" style={{ color: '#E8F0FF' }}>No Knockout Picks Yet</h2>
+        <p className="text-sm" style={{ color: '#7A91BB' }}>Make predictions on knockout matches to see them here</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-3 px-4 pb-4">
+      {totalPts > 0 && (
+        <div className="flex items-center justify-between rounded-xl px-4 py-2.5"
+          style={{ background: 'rgba(255,176,32,0.08)', border: '1px solid rgba(255,176,32,0.2)' }}>
+          <span className="text-sm" style={{ color: '#7A91BB' }}>Knockout points earned</span>
+          <span className="text-lg font-black" style={{ color: '#FFB020' }}>+{totalPts} pts</span>
+        </div>
+      )}
+
+      {stageGroups.map(({ stage, label, matches }) => (
+        <div key={stage} className="rounded-xl overflow-hidden" style={{ background: '#0A1128', border: '1px solid rgba(255,255,255,0.07)' }}>
+          {/* Stage header */}
+          <div className="px-3 pt-3 pb-2">
+            <h3 className="text-sm font-black" style={{ color: '#E8F0FF' }}>{label}</h3>
+          </div>
+
+          {/* Match rows */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="flex items-center justify-between px-3 pt-2 pb-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Your Predictions</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#5A6E94' }}>Pts</p>
+            </div>
+
+            {matches.map(m => {
+              const pred = saved[m.id];
+              const isLive     = m.status === 'live' && m.homeScore !== null;
+              const isFinished = m.status === 'finished' && m.homeScore !== null;
+              const hasScore   = isLive || isFinished;
+              const matchPts   = isFinished && pred
+                ? calcPoints(pred, { homeScore: m.homeScore!, awayScore: m.awayScore!, homeScorers: m.homeScorers, awayScorers: m.awayScorers })
+                : null;
+              const isOpen     = expandedMatch === m.id;
+              const breakdown  = pred ? matchBreakdown(pred, m) : [];
+              const breakdownTotal = breakdown.filter(i => !i.na).reduce((s, i) => s + i.pts, 0);
+              const isMatchLocked  = new Date(m.kickoffAt) <= new Date() || m.status !== 'upcoming';
+              const canEdit = !!pred && !isMatchLocked && !!user;
+
+              return (
+                <div key={m.id} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <button
+                    className="no-press-ring w-full flex items-center gap-1.5 px-3 py-1.5 text-left"
+                    onClick={() => canEdit ? setEditingMatchId(m.id) : setExpandedMatch(isOpen ? null : m.id)}
+                  >
+                    <span className="shrink-0 text-[9px]" style={{ color: canEdit ? '#FF4DA8' : '#3A4E6E' }}>
+                      {canEdit ? '✎' : isOpen ? '▲' : '▾'}
+                    </span>
+                    <span className="w-9 shrink-0 text-[10px]" style={{ color: '#5A6E94' }}>{fmtDate(m.kickoffAt)}</span>
+                    <div className="flex flex-1 items-center gap-1 justify-end min-w-0">
+                      {m.homeTeam.flagUrl && <Image src={m.homeTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
+                      <span className="text-[10px] font-semibold shrink-0" style={{ color: '#C8D8F0' }}>{m.homeTeam.code}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {hasScore && (
+                        <span className="flex items-center gap-0.5">
+                          {isLive && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />}
+                          <span className="text-[10px] font-bold" style={{ color: isLive ? '#EF4444' : '#4A6090' }}>
+                            {m.homeScore}–{m.awayScore}
+                          </span>
+                        </span>
+                      )}
+                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded"
+                        style={{ background: pred ? 'rgba(255,31,142,0.1)' : 'rgba(255,255,255,0.04)',
+                                 color: pred ? '#FF4DA8' : '#3A4E6E',
+                                 border: pred ? '1px solid rgba(255,31,142,0.2)' : '1px solid rgba(255,255,255,0.06)' }}>
+                        {pred ? `${pred.homeScore}–${pred.awayScore}` : '–'}
+                      </span>
+                    </div>
+                    <div className="flex flex-1 items-center gap-1 min-w-0">
+                      <span className="text-[10px] font-semibold shrink-0" style={{ color: '#C8D8F0' }}>{m.awayTeam.code}</span>
+                      {m.awayTeam.flagUrl && <Image src={m.awayTeam.flagUrl} alt="" width={13} height={9} className="rounded-sm object-cover shrink-0" unoptimized />}
+                    </div>
+                    <span className="w-8 text-right text-[11px] font-black shrink-0"
+                      style={{ color: matchPts === null ? '#3A4E6E' : matchPts > 0 ? '#FFB020' : matchPts < 0 ? '#FF4D4D' : '#5A6E94' }}>
+                      {matchPts === null ? '—' : matchPts > 0 ? `+${matchPts}` : matchPts}
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="mx-3 mb-2 rounded-xl overflow-hidden" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {pred ? (
+                        <>
+                          {breakdown.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-3 py-1.5"
+                              style={{ borderBottom: idx < breakdown.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined }}>
+                              <span className="text-[10px]"
+                                style={{ color: item.na ? '#3A4E6E' : '#7A91BB', fontStyle: item.na ? 'italic' : undefined }}>
+                                {item.label}
+                              </span>
+                              <span className="text-[11px] font-bold ml-2 shrink-0"
+                                style={{ color: item.na ? '#3A4E6E' : item.pts > 0 ? '#00C44F' : item.pts < 0 ? '#FF4D4D' : '#5A6E94' }}>
+                                {item.na ? '—' : item.pts > 0 ? `+${item.pts}` : item.pts}
+                              </span>
+                            </div>
+                          ))}
+                          {isFinished && (
+                            <div className="flex items-center justify-between px-3 py-1.5"
+                              style={{ borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7A91BB' }}>Total</span>
+                              <span className="text-[12px] font-black"
+                                style={{ color: breakdownTotal > 0 ? '#FFB020' : breakdownTotal < 0 ? '#FF4D4D' : '#5A6E94' }}>
+                                {breakdownTotal > 0 ? `+${breakdownTotal}` : breakdownTotal} pts
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="px-3 py-2 text-[10px] text-center" style={{ color: '#5A6E94' }}>No prediction made for this match</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {user && editingMatchId && (() => {
+        const editMatch = liveKnockouts.find(m => m.id === editingMatchId);
+        if (!editMatch) return null;
+        return (
+          <PredictionModal
+            match={editMatch}
+            userId={user.id}
+            existing={saved[editingMatchId]}
+            open
+            onClose={() => setEditingMatchId(null)}
+          />
+        );
+      })()}
+    </div>
+  );
+}
+
 // ─── Groups tab ───────────────────────────────────────────────────────────────
 
 function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
+  const [predTab, setPredTab] = useState<'group-stage' | 'knockouts'>('group-stage');
   const { results, total } = useMemo(() => calcGroupPoints(saved), [saved]);
   const resultsByGroup = Object.fromEntries(results.map(r => [r.groupLetter, r]));
 
@@ -1077,22 +1259,44 @@ function GroupsTab({ saved }: { saved: Record<string, Prediction> }) {
   }, [saved]);
 
   return (
-    <div className="mt-4 flex flex-col gap-3 px-4">
-      {total > 0 && (
-        <div className="flex items-center justify-between rounded-xl bg-gold/10 border border-gold/30 px-4 py-2.5">
-          <span className="text-sm" style={{ color: '#7A91BB' }}>Group stage points earned</span>
-          <span className="text-lg font-black text-gold">+{total} pts</span>
+    <div className="flex flex-col">
+      {/* Sub-tab pills */}
+      <div className="flex gap-2 px-4 pt-3 pb-1">
+        {(['group-stage', 'knockouts'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setPredTab(t)}
+            className="rounded-full px-3 py-1 text-xs font-semibold transition-all"
+            style={predTab === t
+              ? { background: '#FF4DA8', color: '#06091A' }
+              : { background: 'rgba(255,255,255,0.07)', color: '#7A91BB' }}
+          >
+            {t === 'group-stage' ? 'Group Stage' : 'Knockouts'}
+          </button>
+        ))}
+      </div>
+
+      {predTab === 'group-stage' && (
+        <div className="mt-3 flex flex-col gap-3 px-4">
+          {total > 0 && (
+            <div className="flex items-center justify-between rounded-xl bg-gold/10 border border-gold/30 px-4 py-2.5">
+              <span className="text-sm" style={{ color: '#7A91BB' }}>Group stage points earned</span>
+              <span className="text-lg font-black text-gold">+{total} pts</span>
+            </div>
+          )}
+          <p className="text-xs -mb-1" style={{ color: '#7A91BB' }}>
+            Your predicted group standings — based on your score picks across all 6 group matches.
+            <span className="text-accent font-semibold"> Green = auto-advance</span>,{' '}
+            <span className="text-brand font-semibold">pink = best 3rd advances</span>.
+          </p>
+          {Object.keys(GROUPS).map(letter => (
+            <GroupCard key={letter} letter={letter} saved={saved} pointsResult={resultsByGroup[letter]} advancingThirdIds={advancingThirdIds} />
+          ))}
+          <BestThirdSection saved={saved} />
         </div>
       )}
-      <p className="text-xs -mb-1" style={{ color: '#7A91BB' }}>
-        Your predicted group standings — based on your score picks across all 6 group matches.
-        <span className="text-accent font-semibold"> Green = auto-advance</span>,{' '}
-        <span className="text-brand font-semibold">pink = best 3rd advances</span>.
-      </p>
-      {Object.keys(GROUPS).map(letter => (
-        <GroupCard key={letter} letter={letter} saved={saved} pointsResult={resultsByGroup[letter]} advancingThirdIds={advancingThirdIds} />
-      ))}
-      <BestThirdSection saved={saved} />
+
+      {predTab === 'knockouts' && <KnockoutsTab saved={saved} />}
     </div>
   );
 }
