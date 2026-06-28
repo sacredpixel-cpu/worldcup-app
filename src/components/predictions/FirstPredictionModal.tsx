@@ -47,12 +47,10 @@ export function FirstPredictionModal({ open, onClose }: Props) {
         <div className="px-6 pb-6 pt-2 flex flex-col items-center gap-4">
           <div className="flex flex-col gap-2">
             <h2 className="text-xl font-black" style={{ color: '#E8F0FF' }}>
-              Good job predicting your first match!
+              Nice pick! Don&rsquo;t stop there.
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: '#9AAED4' }}>
-              Predict all Group matches then go to the{' '}
-              <span className="font-semibold" style={{ color: '#E8F0FF' }}>Results</span>{' '}
-              page to see who you automatically chose to win all groups, runner-ups and third-place finish teams advancing to the knockouts!
+              The tournament moves fast. Keep predicting matches before they kick off — every correct score, result, and goal scorer adds to your total.
             </p>
           </div>
 
