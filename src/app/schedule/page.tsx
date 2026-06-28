@@ -167,7 +167,7 @@ function ScheduleContent() {
                 {filteredAll.map(match => (
                   <MatchCard
                     key={match.id}
-                    match={match}
+                    match={resolveMatchTeams(getLiveMatch(match), ktm)}
                     userPrediction={saved[match.id]}
                     allUserPredictions={allSaved}
                     isAuthenticated={!!user}
