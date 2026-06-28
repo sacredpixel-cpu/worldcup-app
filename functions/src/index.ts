@@ -482,7 +482,6 @@ export const morningResultsDigest = onSchedule(
  */
 const RAPIDAPI_HOST    = 'free-api-live-football-data.p.rapidapi.com';
 const RAPIDAPI_BY_DATE = `https://${RAPIDAPI_HOST}/football-get-matches-by-date`;
-const WC_2026_LEAGUE_ID = 894790;
 
 /**
  * ESPN public scoreboard + summary — used ONLY for goal scorer data.
@@ -856,8 +855,9 @@ export const pollLiveScores = onSchedule(
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
 
     // RapidAPI/ESPN use local venue dates (US timezones). A match at 02:00 UTC
-    // on the 13th may be listed under the 12th. Query today, yesterday, and the
-    // day before yesterday to avoid missing late-evening US kickoffs.
+    // on the 13th may be listed under the 12th. Query today ±1 and yesterday,
+    // day before yesterday to cover late-evening US kickoffs AND pre-populate
+    // tomorrow's confirmed knockout pairings as soon as the API has them.
     const yesterday = new Date(now);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     const yDateStr = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
@@ -865,6 +865,10 @@ export const pollLiveScores = onSchedule(
     const dayBeforeYesterday = new Date(now);
     dayBeforeYesterday.setUTCDate(dayBeforeYesterday.getUTCDate() - 2);
     const ddYDateStr = dayBeforeYesterday.toISOString().slice(0, 10).replace(/-/g, '');
+
+    const tomorrow = new Date(now);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const tomorrowDateStr = tomorrow.toISOString().slice(0, 10).replace(/-/g, '');
 
     const apiKey = RAPIDAPI_KEY.value().trim(); // trim newline that may be appended by secret manager
 
@@ -878,20 +882,23 @@ export const pollLiveScores = onSchedule(
       if (!res.ok) return [];
       const json = await res.json() as RapidMatchesResponse;
       const all  = json?.response?.matches ?? [];
-      // Filter to WC 2026 group stage only
-      return all.filter((m) => m.leagueId === WC_2026_LEAGUE_ID);
+      // Group stage used leagueId 894790, but knockout rounds may use a different
+      // leagueId. Drop the filter and let teamPairIndex/kickoffIndex act as the
+      // guard — any match not in our schedule is skipped downstream with a warn.
+      return all;
     };
 
     let rapidMatches: RapidMatch[] = [];
     try {
-      const [todayMatches, ydayMatches, ddyMatches] = await Promise.all([
+      const [todayMatches, ydayMatches, ddyMatches, tomorrowMatches] = await Promise.all([
         fetchRapidDate(dateStr),
         fetchRapidDate(yDateStr),
         fetchRapidDate(ddYDateStr),
+        fetchRapidDate(tomorrowDateStr),
       ]);
       // De-duplicate by match id
       const seen = new Set<number>();
-      for (const m of [...todayMatches, ...ydayMatches, ...ddyMatches]) {
+      for (const m of [...todayMatches, ...ydayMatches, ...ddyMatches, ...tomorrowMatches]) {
         if (!seen.has(m.id)) { seen.add(m.id); rapidMatches.push(m); }
       }
     } catch (err) {
@@ -996,13 +1003,14 @@ export const pollLiveScores = onSchedule(
 
     let espnEvents: EspnEvent[] = [];
     try {
-      const [todayEspn, ydayEspn, ddyEspn] = await Promise.all([
+      const [todayEspn, ydayEspn, ddyEspn, tomorrowEspn] = await Promise.all([
         fetchEspnDate(dateStr),
         fetchEspnDate(yDateStr),
         fetchEspnDate(ddYDateStr),
+        fetchEspnDate(tomorrowDateStr),
       ]);
       const seenEspn = new Set<string>();
-      for (const ev of [...todayEspn, ...ydayEspn, ...ddyEspn]) {
+      for (const ev of [...todayEspn, ...ydayEspn, ...ddyEspn, ...tomorrowEspn]) {
         if (!seenEspn.has(ev.id)) { seenEspn.add(ev.id); espnEvents.push(ev); }
       }
     } catch {
