@@ -25,8 +25,8 @@ export function KnockoutRulesModal({ open, onClose }: Props) {
       >
         {/* Top visual — "90'" representing regular time */}
         <div
-          className="relative w-full flex flex-col items-center justify-center gap-1"
-          style={{ background: '#000', height: 220 }}
+          className="relative w-full flex flex-col justify-center gap-2"
+          style={{ background: '#000', height: 160 }}
         >
           {/* Subtle radial glow */}
           <div
@@ -36,25 +36,27 @@ export function KnockoutRulesModal({ open, onClose }: Props) {
               pointerEvents: 'none',
             }}
           />
-          <span
-            style={{
-              fontFamily: 'var(--font-barlow-condensed), sans-serif',
-              fontSize: 96, fontWeight: 900, lineHeight: 1,
-              color: '#E0E1DD', letterSpacing: '-0.02em',
-              position: 'relative',
-            }}
-          >
-            90&prime;
-          </span>
-          <span
-            style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.16em',
-              textTransform: 'uppercase', color: '#415A77',
-              position: 'relative',
-            }}
-          >
-            Regular time only
-          </span>
+          <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-barlow-condensed), sans-serif',
+                fontSize: 96, fontWeight: 900, lineHeight: 1,
+                color: '#E0E1DD',
+              }}
+            >
+              90<span style={{ display: 'inline-block', marginRight: '-0.35em' }}>&prime;</span>
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
+            <span
+              style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.16em',
+                textTransform: 'uppercase', color: '#415A77',
+              }}
+            >
+              Knockout Round Points Rules
+            </span>
+          </div>
           {/* Fade into card */}
           <div
             className="absolute bottom-0 left-0 right-0 h-16"
@@ -69,7 +71,7 @@ export function KnockoutRulesModal({ open, onClose }: Props) {
               Penalty kicks don&rsquo;t count.
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: '#9AAED4' }}>
-              Predictions are scored on the result at the end of regular time. If a match goes to extra time and teams are still level, that draw is what we use — goals scored in a penalty shootout are not counted.
+              In the knockout rounds, ties are settled by extra time and penalty shootouts — but your prediction is scored on the result at the end of regular time only. Goals in a shootout don&rsquo;t count.
             </p>
           </div>
 
