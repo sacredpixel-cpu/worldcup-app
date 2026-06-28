@@ -16,9 +16,9 @@ export function FirebaseAuthSync() {
         loginWithGoogle(firebaseUser);
         // Persist user to Firestore so the fan count and leaderboard stay current.
         // saveUserProfile uses merge:true, so existing fields are preserved.
+        // Only sync avatarUrl/email — never overwrite a custom displayName the user set in Firestore
         saveUserProfile({
           userId: firebaseUser.uid,
-          displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
           avatarUrl: firebaseUser.photoURL ?? null,
           email: firebaseUser.email ?? undefined,
         }).catch(console.error);

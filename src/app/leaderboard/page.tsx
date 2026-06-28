@@ -364,7 +364,7 @@ function LeaderboardContent() {
 
       return {
         userId: profile.userId,
-        displayName: profile.displayName,
+        displayName: profile.displayName ?? profile.userId,
         avatarUrl: profile.avatarUrl,
         totalPoints: pts,
         correctScores: exact,
@@ -431,7 +431,7 @@ function LeaderboardContent() {
     const entries: LeaderboardEntry[] = Object.values(userProfiles).map(profile => {
       const preds = (user && profile.userId === user.id) ? saved : (predsByUser[profile.userId] ?? {});
       const { pts, exact, correct } = calcR32Pts(preds);
-      return { userId: profile.userId, displayName: profile.displayName, avatarUrl: profile.avatarUrl, totalPoints: pts, correctScores: exact, correctOutcomes: correct, country: profile.country, countryCode: profile.countryCode };
+      return { userId: profile.userId, displayName: profile.displayName ?? profile.userId, avatarUrl: profile.avatarUrl, totalPoints: pts, correctScores: exact, correctOutcomes: correct, country: profile.country, countryCode: profile.countryCode };
     });
 
     if (user && !userProfiles[user.id]) {

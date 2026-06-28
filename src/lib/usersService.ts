@@ -3,7 +3,7 @@ import { db } from './firebase';
 
 export interface UserProfile {
   userId: string;
-  displayName: string;
+  displayName?: string;
   avatarUrl: string | null;
   email?: string;
   country?: string;

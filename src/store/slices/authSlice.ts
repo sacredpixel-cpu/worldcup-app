@@ -45,7 +45,8 @@ export const useAuthStore = create<AuthState>()(
         const isSameUser = existing?.id === firebaseUser.uid;
         const user: User = {
           id: firebaseUser.uid,
-          displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
+          // Preserve custom display name if already set; fall back to Firebase Auth name
+          displayName: isSameUser && existing!.displayName ? existing!.displayName : (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User'),
           // Preserve custom avatar if already set; fall back to Google photo
           avatarUrl: isSameUser && existing!.avatarUrl ? existing!.avatarUrl : firebaseUser.photoURL,
           email: firebaseUser.email ?? '',
@@ -118,6 +119,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: {
               ...user,
+              displayName: profile.displayName ?? user.displayName,
               avatarUrl: profile.avatarUrl ?? user.avatarUrl,
               country: profile.country ?? user.country,
               countryCode: profile.countryCode ?? user.countryCode,
