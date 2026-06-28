@@ -145,7 +145,7 @@ export const KNOCKOUT_MATCHES: Match[] = [
   tbd('R32-02', 'round-of-32', '2026-06-29T19:00:00Z', 'Gillette Stadium',        'Foxborough, MA'),      // W E vs Best 3rd
   tbd('R32-03', 'round-of-32', '2026-06-29T21:00:00Z', 'Estadio BBVA',            'Guadalupe, Mexico'),   // W F vs R/U C
   tbd('R32-04', 'round-of-32', '2026-06-29T23:00:00Z', 'NRG Stadium',             'Houston, TX'),         // W C vs R/U F
-  tbd('R32-05', 'round-of-32', '2026-06-30T19:00:00Z', 'MetLife Stadium',         'East Rutherford, NJ'), // W I vs Best 3rd
+  m('R32-05', 'round-of-32', FRA, SWE,                  '2026-06-30T19:00:00Z', 'MetLife Stadium',         'East Rutherford, NJ'), // W I (FRA) vs Best 3rd (SWE)
   tbd('R32-06', 'round-of-32', '2026-06-30T21:00:00Z', 'AT&T Stadium',            'Arlington, TX'),       // R/U E vs R/U I
   m('R32-07', 'round-of-32', MEX, ECU,                  '2026-06-30T23:00:00Z', 'Estadio Azteca',          'Mexico City, Mexico'), // W A (MEX) vs Best 3rd (ECU)
   tbd('R32-08', 'round-of-32', '2026-07-01T19:00:00Z', 'Mercedes-Benz Stadium',   'Atlanta, GA'),         // W L vs Best 3rd
