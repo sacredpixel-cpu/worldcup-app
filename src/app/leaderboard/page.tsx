@@ -5,8 +5,6 @@ import { useAuthStore, usePredictionsStore } from '@/store';
 import { useMatchesStore } from '@/store/slices/matchesSlice';
 import { subscribeToUserProfiles, type UserProfile } from '@/lib/usersService';
 import { subscribeToCommunityPredictions } from '@/lib/predictionsService';
-import { getAllGroups } from '@/lib/groupsService';
-import type { Group, GroupMember } from '@/types/group';
 import type { Prediction } from '@/types/prediction';
 import type { Match } from '@/types/match';
 import { ALL_MATCHES } from '@/data/matches';
@@ -27,20 +25,6 @@ interface LeaderboardEntry {
   country?: string;
   countryCode?: string;
 }
-
-// Seed mock global users
-const MOCK_USERS: LeaderboardEntry[] = [
-  { userId: 'mock-1', displayName: 'Cristiano_Fan', avatarUrl: `https://i.pravatar.cc/150?u=1`, totalPoints: 42, correctScores: 3, correctOutcomes: 9, country: 'Brazil', countryCode: 'br' },
-  { userId: 'mock-2', displayName: 'GoalKing88', avatarUrl: `https://i.pravatar.cc/150?u=2`, totalPoints: 38, correctScores: 2, correctOutcomes: 8, country: 'Mexico', countryCode: 'mx' },
-  { userId: 'mock-3', displayName: 'TacticsMaestro', avatarUrl: `https://i.pravatar.cc/150?u=3`, totalPoints: 35, correctScores: 1, correctOutcomes: 8, country: 'Germany', countryCode: 'de' },
-  { userId: 'mock-4', displayName: 'SoccerOracle', avatarUrl: `https://i.pravatar.cc/150?u=4`, totalPoints: 31, correctScores: 2, correctOutcomes: 7, country: 'Argentina', countryCode: 'ar' },
-  { userId: 'mock-5', displayName: 'PredictionKing', avatarUrl: `https://i.pravatar.cc/150?u=5`, totalPoints: 28, correctScores: 1, correctOutcomes: 7, country: 'France', countryCode: 'fr' },
-  { userId: 'mock-6', displayName: 'WorldCupWizard', avatarUrl: `https://i.pravatar.cc/150?u=6`, totalPoints: 25, correctScores: 0, correctOutcomes: 6, country: 'Spain', countryCode: 'es' },
-  { userId: 'mock-7', displayName: 'FootballGuru', avatarUrl: `https://i.pravatar.cc/150?u=7`, totalPoints: 22, correctScores: 1, correctOutcomes: 5, country: 'England', countryCode: 'gb-eng' },
-  { userId: 'mock-8', displayName: 'MatchAnalyst', avatarUrl: `https://i.pravatar.cc/150?u=8`, totalPoints: 18, correctScores: 0, correctOutcomes: 5, country: 'Italy', countryCode: 'it' },
-  { userId: 'mock-9', displayName: 'BallPark99', avatarUrl: `https://i.pravatar.cc/150?u=9`, totalPoints: 15, correctScores: 1, correctOutcomes: 4, country: 'United States', countryCode: 'us' },
-  { userId: 'mock-10', displayName: 'TacticsNerd', avatarUrl: `https://i.pravatar.cc/150?u=10`, totalPoints: 12, correctScores: 0, correctOutcomes: 4, country: 'Japan', countryCode: 'jp' },
-];
 
 // ─── Last-match prediction modal ─────────────────────────────────────────────
 
@@ -264,80 +248,16 @@ function LeaderboardRow({ entry, rank, isMe, profile, onClick }: { entry: Leader
   );
 }
 
-// ─── Group leaderboard helpers ────────────────────────────────────────────────
-
-interface GroupEntry {
-  group: Group;
-  score: number;
-  /** Up to 2 members whose points make up the score, sorted desc */
-  topMembers: GroupMember[];
-  isMine: boolean;
-}
-
-/** Top-2 members aggregate — only the best 2 players' points count for a group's score */
-function calcGroupScore(
-  members: GroupMember[],
-  currentUserId?: string,
-  currentUserPts?: number,
-): number {
-  return [...members]
-    .map(m => ({ ...m, totalPoints: m.userId === currentUserId ? (currentUserPts ?? m.totalPoints) : m.totalPoints }))
-    .sort((a, b) => b.totalPoints - a.totalPoints)
-    .slice(0, 2)
-    .reduce((sum, m) => sum + m.totalPoints, 0);
-}
-
-function GroupLeaderboardRow({ entry, rank }: { entry: GroupEntry; rank: number }) {
-  return (
-    <div
-      className="flex items-center gap-3 rounded-xl px-4 py-3"
-      style={entry.isMine
-        ? { border: '1px solid rgba(255,31,142,0.3)', background: 'rgba(255,31,142,0.08)' }
-        : { background: '#0E1535', border: '1px solid rgba(255,255,255,0.06)' }}
-    >
-      <RankBadge rank={rank} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <p className="truncate text-sm font-semibold" style={{ color: entry.isMine ? '#FF4DA8' : '#C8D8F0' }}>
-            {entry.group.name}
-          </p>
-          {entry.isMine && (
-            <span
-              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
-              style={{ background: 'rgba(255,31,142,0.15)', color: '#FF4DA8' }}
-            >
-              You
-            </span>
-          )}
-        </div>
-        <p className="text-xs mt-0.5" style={{ color: '#7A91BB' }}>
-          {entry.group.members.length} member{entry.group.members.length !== 1 ? 's' : ''}
-          {entry.group.members.length > 2 ? ' · top 2 scoring' : ''}
-        </p>
-        <p className="text-[10px] truncate mt-0.5" style={{ color: '#5A6E94' }}>
-          {entry.topMembers.map(m => m.displayName).join(' · ')}
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-lg font-black" style={{ color: '#FFB020', fontFamily: 'var(--font-barlow-condensed)' }}>{entry.score}</p>
-        <p className="text-[10px]" style={{ color: '#7A91BB' }}>pts</p>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main content ─────────────────────────────────────────────────────────────
 
 function LeaderboardContent() {
   const { user } = useAuthStore();
   const { saved } = usePredictionsStore();
   const { getLiveMatch, updates } = useMatchesStore();
-  const [tab, setTab] = useState<'global' | 'groups'>('global');
+  const [tab, setTab] = useState<'round32' | 'global'>('round32');
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [allPredictions, setAllPredictions] = useState<Prediction[]>([]);
   const [boardLoading, setBoardLoading] = useState(true);
-  const [allGroups, setAllGroups] = useState<Group[]>([]);
-  const [allGroupsLoading, setAllGroupsLoading] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<LeaderboardEntry | null>(null);
 
   useEffect(() => {
@@ -352,16 +272,6 @@ function LeaderboardContent() {
     });
     return () => unsub();
   }, []);
-
-  // Fetch all groups when the groups tab is first opened
-  useEffect(() => {
-    if (tab !== 'groups') return;
-    setAllGroupsLoading(true);
-    getAllGroups().then(gs => {
-      setAllGroups(gs);
-      setAllGroupsLoading(false);
-    });
-  }, [tab]);
 
   const userEntry = useMemo<LeaderboardEntry | null>(() => {
     if (!user) return null;
@@ -493,57 +403,54 @@ function LeaderboardContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfiles, allPredictions, user, userEntry, updates]);
 
-  const rankedGroups = useMemo<GroupEntry[]>(() => {
-    if (!allGroups.length) return [];
-    const userId = user?.id;
+  const R32_STAGE = 'round-of-32' as const;
 
-    // Index community predictions by userId → matchId (same data used for global leaderboard)
+  const r32Board = useMemo(() => {
+    const r32Matches = ALL_MATCHES.filter(m => m.stage === R32_STAGE).map(getLiveMatch);
+    const r32Finished = r32Matches.filter(m => m.status === 'finished' && m.homeScore !== null);
+
     const predsByUser: Record<string, Record<string, Prediction>> = {};
     for (const pred of allPredictions) {
       if (!predsByUser[pred.userId]) predsByUser[pred.userId] = {};
       predsByUser[pred.userId][pred.matchId] = pred;
     }
-    const finishedMatches = ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore !== null);
 
-    return [...allGroups]
-      .map(g => {
-        // Calculate every member's live points dynamically (not the stale join-time snapshot)
-        const scoredMembers = g.members.map(m => {
-          const preds = m.userId === userId ? saved : (predsByUser[m.userId] ?? {});
-          let pts = 0;
-          finishedMatches.forEach(match => {
-            const p = preds[match.id];
-            if (!p) return;
-            pts += calcPoints(p, {
-              homeScore: match.homeScore!,
-              awayScore: match.awayScore!,
-              homeScorers: match.homeScorers,
-              awayScorers: match.awayScorers,
-            });
-          });
-          pts += calcGroupPoints(preds, updates).total;
-          return { ...m, totalPoints: pts };
-        });
-
-        const sorted = [...scoredMembers].sort((a, b) => b.totalPoints - a.totalPoints);
-        // Only the best 2 players' points count toward the group's leaderboard score
-        const top2 = sorted.slice(0, 2);
-        return {
-          group: g,
-          score: top2.reduce((sum, m) => sum + m.totalPoints, 0),
-          topMembers: top2,
-          isMine: userId ? g.members.some(m => m.userId === userId) : false,
-        };
-      })
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return a.group.name.localeCompare(b.group.name); // alphabetical on tie
+    const calcR32Pts = (preds: Record<string, Prediction>) => {
+      let pts = 0, exact = 0, correct = 0;
+      r32Finished.forEach(m => {
+        const p = preds[m.id];
+        if (!p) return;
+        const earned = calcPoints(p, { homeScore: m.homeScore!, awayScore: m.awayScore!, homeScorers: m.homeScorers, awayScorers: m.awayScorers });
+        pts += earned;
+        if (p.homeScore === m.homeScore && p.awayScore === m.awayScore) exact++;
+        if (earned > 0) correct++;
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allGroups, allPredictions, saved, user, updates]);
+      return { pts, exact, correct };
+    };
 
-  const board = globalBoard;
-  const userRank = (tab !== 'groups' && user) ? board.findIndex(e => e.userId === user.id) + 1 : -1;
+    const entries: LeaderboardEntry[] = Object.values(userProfiles).map(profile => {
+      const preds = (user && profile.userId === user.id) ? saved : (predsByUser[profile.userId] ?? {});
+      const { pts, exact, correct } = calcR32Pts(preds);
+      return { userId: profile.userId, displayName: profile.displayName, avatarUrl: profile.avatarUrl, totalPoints: pts, correctScores: exact, correctOutcomes: correct, country: profile.country, countryCode: profile.countryCode };
+    });
+
+    if (user && !userProfiles[user.id]) {
+      const { pts, exact, correct } = calcR32Pts(saved);
+      entries.push({ userId: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, totalPoints: pts, correctScores: exact, correctOutcomes: correct });
+    }
+
+    return entries.sort((a, b) => b.totalPoints !== a.totalPoints ? b.totalPoints - a.totalPoints : a.displayName.localeCompare(b.displayName));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfiles, allPredictions, user, saved, updates]);
+
+  const r32AllDone = useMemo(
+    () => ALL_MATCHES.filter(m => m.stage === R32_STAGE).map(getLiveMatch).every(m => m.status === 'finished'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [updates],
+  );
+
+  const board = tab === 'round32' ? r32Board : globalBoard;
+  const userRank = user ? board.findIndex(e => e.userId === user.id) + 1 : -1;
 
   return (
     <div className="flex flex-col">
@@ -554,28 +461,65 @@ function LeaderboardContent() {
       {/* Tab selector */}
       <div className="no-scrollbar flex gap-1 overflow-x-auto px-4 pb-3">
         {([
-          { id: 'global' as const, label: 'Top Fans'   },
-          { id: 'groups' as const, label: 'Top Groups' },
+          { id: 'round32' as const, label: 'Round 32', isNew: true },
+          { id: 'global'  as const, label: 'Top Fans' },
         ]).map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className="no-press-ring flex-shrink-0 whitespace-nowrap"
             style={tab === t.id
-              ? { fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,31,142,0.12)', border: '1px solid rgba(255,31,142,0.35)', color: '#FF4DA8', cursor: 'pointer' }
-              : { fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#7A91BB', cursor: 'pointer' }}
+              ? { display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,31,142,0.12)', border: '1px solid rgba(255,31,142,0.35)', color: '#FF4DA8', cursor: 'pointer' }
+              : { display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#7A91BB', cursor: 'pointer' }}
           >
             {t.label}
+            {t.isNew && (
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
+                background: tab === t.id ? 'rgba(255,31,142,0.25)' : 'rgba(255,176,32,0.2)',
+                color: tab === t.id ? '#FF4DA8' : '#FFB020',
+                border: `1px solid ${tab === t.id ? 'rgba(255,31,142,0.4)' : 'rgba(255,176,32,0.35)'}`,
+                borderRadius: 4, padding: '1px 5px',
+              }}>NEW</span>
+            )}
           </button>
         ))}
       </div>
+
+      {/* Round 32 info banner */}
+      {tab === 'round32' && (
+        <a
+          href="https://inchastudios.com"
+          style={{
+            margin: '0 16px 12px', borderRadius: 12, padding: '10px 14px',
+            background: 'rgba(255,176,32,0.06)', border: '1px solid rgba(255,176,32,0.2)',
+            display: 'flex', alignItems: 'center', gap: 8,
+            textDecoration: 'none', cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 16, flexShrink: 0 }}>🏆</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#FFB020' }}>
+              Round of 32 Leaderboard
+              {r32AllDone && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', background: 'rgba(0,196,79,0.15)', color: '#00C44F', border: '1px solid rgba(0,196,79,0.3)', borderRadius: 4, padding: '1px 5px', verticalAlign: 'middle' }}>FINAL</span>}
+            </p>
+            <p style={{ margin: 0, fontSize: 11, color: '#7A91BB', marginTop: 2, lineHeight: 1.4 }}>
+              Fresh start — only Round of 32 predictions count here. Top 2 win{' '}
+              <span style={{ color: '#778DA9', textDecoration: 'underline', fontWeight: 600 }}>inchastudios.com</span>
+              {' '}gear.
+            </p>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/inchalogo.png" alt="InchaStudios" style={{ width: 40, height: 34, objectFit: 'contain', filter: 'invert(1) brightness(0.7)', flexShrink: 0, marginLeft: 4 }} />
+        </a>
+      )}
 
       {/* Your rank summary */}
       {user && userRank > 0 && (
         <div className="mx-4 mb-3 flex items-center justify-between rounded-xl px-4 py-2.5" style={{ background: 'rgba(255,31,142,0.08)', border: '1px solid rgba(255,31,142,0.2)' }}>
           <span className="text-sm" style={{ color: '#7A91BB' }}>Your rank</span>
           <span className="text-2xl font-black" style={{ color: '#FF4DA8', fontFamily: 'var(--font-barlow-condensed)' }}>#{userRank}</span>
-          <span className="text-sm font-semibold" style={{ color: '#FFB020' }}>{userEntry?.totalPoints ?? 0} pts</span>
+          <span className="text-sm font-semibold" style={{ color: '#FFB020' }}>{board.find(e => e.userId === user?.id)?.totalPoints ?? 0} pts</span>
         </div>
       )}
 
@@ -587,27 +531,7 @@ function LeaderboardContent() {
       )}
 
       {/* Board */}
-      {tab === 'groups' ? (
-        <div className="flex flex-col gap-2 px-4 pb-4">
-          {allGroupsLoading ? (
-            [...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl" style={{ background: '#0E1535' }} />
-            ))
-          ) : rankedGroups.length === 0 ? (
-            <div className="flex flex-col items-center py-14 text-center">
-              <div className="mb-3 text-4xl">👥</div>
-              <p className="text-sm font-semibold" style={{ color: '#E8F0FF' }}>No groups yet</p>
-              <p className="text-xs mt-1" style={{ color: '#7A91BB' }}>
-                Groups will appear here once members start predicting
-              </p>
-            </div>
-          ) : (
-            rankedGroups.map((entry, i) => (
-              <GroupLeaderboardRow key={entry.group.id} entry={entry} rank={i + 1} />
-            ))
-          )}
-        </div>
-      ) : boardLoading ? (
+      {boardLoading ? (
         <div className="flex flex-col gap-2 px-4 pb-4">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="h-16 animate-pulse rounded-xl" style={{ background: '#0E1535' }} />

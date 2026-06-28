@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node -e \"const fs=require('fs');fs.writeFileSync('public/version.json',JSON.stringify({buildTime:Date.now()}))\"",
+    "prebuild": "node -e \"const fs=require('fs');if(process.env.BUMP_VERSION==='true'){fs.writeFileSync('public/version.json',JSON.stringify({buildTime:Date.now()}))}\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

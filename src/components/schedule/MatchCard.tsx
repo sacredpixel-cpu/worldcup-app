@@ -267,7 +267,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
           </span>
           <div className="flex items-center gap-2">
             {getMatchNumber(liveMatch.id) !== null && (
-              <span className="text-[10px] font-bold" style={{ color: '#3A4E6E' }}>
+              <span className="text-[10px] font-bold" style={{ color: '#FFFFFF' }}>
                 M{getMatchNumber(liveMatch.id)}
               </span>
             )}

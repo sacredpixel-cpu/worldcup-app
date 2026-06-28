@@ -22,6 +22,7 @@ import { FirebaseAuthSync } from '@/components/FirebaseAuthSync';
 import { PredictionsSync } from '@/components/PredictionsSync';
 import { MatchUpdatesSync } from '@/components/MatchUpdatesSync';
 import { ForegroundNotifications } from '@/components/ForegroundNotifications';
+import { Rd32Modal } from '@/components/Rd32Modal';
 
 export const metadata: Metadata = {
   title: 'World Cup 2026',
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           {/* Mobile frame wrapper */}
           <div className="mx-auto flex h-dvh max-w-[430px] flex-col bg-[#06091A]">
+            <Rd32Modal />
             <UpdateBanner />
             <FirebaseAuthSync />
             <PredictionsSync />

@@ -27,13 +27,12 @@ export interface GroupStanding {
 export interface KnockoutTeamMap {
   /** Group slot key → resolved Team. Keys like "W-A", "RU-A", "W-B", etc. */
   bySlot: Map<string, Team>;
-  /**
-   * Best 8 third-place teams (sorted by pts → GD → GF).
-   * Indices 0–7 correspond to the 8 BEST3RD slots in R32 order:
-   *   0 = R32-02 away, 1 = R32-05 away, 2 = R32-07 away, 3 = R32-08 away,
-   *   4 = R32-09 away, 5 = R32-10 away, 6 = R32-13 away, 7 = R32-15 away
-   */
+  /** Best 8 third-place teams from COMPLETED groups only (sorted by pts → GD → GF). */
   bestThirds: Team[];
+  /** Current 3rd-place team per group letter, including incomplete groups (provisional). */
+  thirdsByGroup: Map<string, Team>;
+  /** Annex C assignment: BEST3RD match ID → source group letter (e.g. 'R32-07' → 'F'). */
+  annexCMapping: Record<string, string>;
   completedGroups: Set<string>;
   allGroupsComplete: boolean;
   /**
@@ -101,32 +100,86 @@ export function buildGroupStandings(
 
 // ─── R32 slot mapping ─────────────────────────────────────────────────────────
 // Each entry maps an R32 matchId → [homeSlotKey, awaySlotKey].
-// "BEST3RD" entries are assigned sequentially in R32 order (R32-01 → R32-16).
+// "BEST3RD" slots are assigned via FIFA Annex C matrix (not sequential).
 
 export const R32_TEAM_SLOTS: Record<string, [string, string]> = {
   'R32-01': ['RU-A',    'RU-B'],
-  'R32-02': ['W-E',     'BEST3RD'],   // BEST3RD index 0
+  'R32-02': ['W-E',     'BEST3RD'],
   'R32-03': ['W-F',     'RU-C'],
   'R32-04': ['W-C',     'RU-F'],
-  'R32-05': ['W-I',     'BEST3RD'],   // BEST3RD index 1
+  'R32-05': ['W-I',     'BEST3RD'],
   'R32-06': ['RU-E',    'RU-I'],
-  'R32-07': ['W-A',     'BEST3RD'],   // BEST3RD index 2
-  'R32-08': ['W-L',     'BEST3RD'],   // BEST3RD index 3
-  'R32-09': ['W-D',     'BEST3RD'],   // BEST3RD index 4
-  'R32-10': ['W-G',     'BEST3RD'],   // BEST3RD index 5
+  'R32-07': ['W-A',     'BEST3RD'],
+  'R32-08': ['W-L',     'BEST3RD'],
+  'R32-09': ['W-D',     'BEST3RD'],
+  'R32-10': ['W-G',     'BEST3RD'],
   'R32-11': ['RU-K',    'RU-L'],
   'R32-12': ['W-H',     'RU-J'],
-  'R32-13': ['W-B',     'BEST3RD'],   // BEST3RD index 6
+  'R32-13': ['W-B',     'BEST3RD'],
   'R32-14': ['W-J',     'RU-H'],
-  'R32-15': ['W-K',     'BEST3RD'],   // BEST3RD index 7
+  'R32-15': ['W-K',     'BEST3RD'],
   'R32-16': ['RU-D',    'RU-G'],
 };
 
-// Sequential BEST3RD slot index for each R32 match's away position
-const BEST3RD_IDX: Record<string, number> = {
-  'R32-02': 0, 'R32-05': 1, 'R32-07': 2, 'R32-08': 3,
-  'R32-09': 4, 'R32-10': 5, 'R32-13': 6, 'R32-15': 7,
+// ─── Annex C 3rd-place assignment ────────────────────────────────────────────
+
+export const BEST3RD_SLOTS = ['R32-02', 'R32-05', 'R32-07', 'R32-08', 'R32-09', 'R32-10', 'R32-13', 'R32-15'] as const;
+
+// Which group's winner is home for each BEST3RD slot (no-rematch constraint reference)
+const BEST3RD_WINNER_GROUP: Record<string, string> = {
+  'R32-02': 'E', 'R32-05': 'I', 'R32-07': 'A', 'R32-08': 'L',
+  'R32-09': 'D', 'R32-10': 'G', 'R32-13': 'B', 'R32-15': 'K',
 };
+
+// Default/primary group assigned to each slot when that group qualifies a 3rd-place team
+const BEST3RD_PRIMARY_GROUP: Record<string, string> = {
+  'R32-02': 'A', 'R32-05': 'C', 'R32-07': 'F', 'R32-08': 'H',
+  'R32-09': 'B', 'R32-10': 'J', 'R32-13': 'I', 'R32-15': 'D',
+};
+
+// Known Annex C matrix rows (alphabetical combo string → slot → source group)
+const ANNEX_C_MATRIX: Record<string, Record<string, string>> = {
+  'ABCDFHJL': {
+    'R32-02': 'A', 'R32-05': 'C', 'R32-07': 'F', 'R32-08': 'H',
+    'R32-09': 'B', 'R32-10': 'J', 'R32-13': 'L', 'R32-15': 'D',
+  },
+};
+
+/**
+ * Builds an Annex C mapping when the exact combo isn't in the matrix.
+ * Tries primary assignments first, then slides to the next available group
+ * in alphabetical order, always avoiding own-group rematches.
+ */
+function buildFallbackAnnexC(comboLetters: string[]): Record<string, string> {
+  const comboSet = new Set(comboLetters);
+  const unassigned = new Set(comboLetters);
+  const result: Record<string, string> = {};
+
+  // Pass 1: assign slots whose primary group is in combo with no own-group conflict
+  for (const slot of BEST3RD_SLOTS) {
+    const primary = BEST3RD_PRIMARY_GROUP[slot];
+    const homeGroup = BEST3RD_WINNER_GROUP[slot];
+    if (primary && comboSet.has(primary) && primary !== homeGroup && unassigned.has(primary)) {
+      result[slot] = primary;
+      unassigned.delete(primary);
+    }
+  }
+
+  // Pass 2: fill remaining slots from leftover groups (alphabetical), no own-group conflict
+  for (const slot of BEST3RD_SLOTS) {
+    if (result[slot]) continue;
+    const homeGroup = BEST3RD_WINNER_GROUP[slot];
+    for (const group of [...unassigned].sort()) {
+      if (group !== homeGroup) {
+        result[slot] = group;
+        unassigned.delete(group);
+        break;
+      }
+    }
+  }
+
+  return result;
+}
 
 // ─── R16–Final feeder mapping ─────────────────────────────────────────────────
 // "W:<matchId>" = winner of that match, "L:<matchId>" = loser (3rd-place only)
@@ -176,33 +229,54 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
   // ── Phase 1: group standings ──────────────────────────────────────────────
   const bySlot = new Map<string, Team>();
   const completedGroups = new Set<string>();
-  const thirds: Array<GroupStanding> = [];
+  const thirdsByGroup = new Map<string, Team>();
+  const completeThirds: Array<{ team: Team; pts: number; gf: number; ga: number }> = [];
+  const allCurrentThirds: Array<{ group: string; pts: number; gf: number; ga: number }> = [];
 
   for (const letter of Object.keys(GROUPS)) {
     const { standings, complete } = buildGroupStandings(letter, updates);
-    if (!complete) continue;
 
+    if (standings[2]) {
+      thirdsByGroup.set(letter, standings[2].team);
+      allCurrentThirds.push({ group: letter, pts: standings[2].pts, gf: standings[2].gf, ga: standings[2].ga });
+    }
+
+    if (!complete) continue;
     completedGroups.add(letter);
     if (standings[0]) bySlot.set(`W-${letter}`,  standings[0].team);
     if (standings[1]) bySlot.set(`RU-${letter}`, standings[1].team);
-    if (standings[2]) thirds.push(standings[2]);
+    if (standings[2]) completeThirds.push(standings[2]);
   }
 
-  thirds.sort((a, b) => {
+  const sortByPtsGdGf = (a: { pts: number; gf: number; ga: number }, b: { pts: number; gf: number; ga: number }) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
     const gd = (b.gf - b.ga) - (a.gf - a.ga);
     if (gd !== 0) return gd;
     return b.gf - a.gf;
-  });
-  const bestThirds = thirds.slice(0, 8).map(t => t.team);
+  };
+
+  completeThirds.sort(sortByPtsGdGf);
+  allCurrentThirds.sort(sortByPtsGdGf);
+
+  const bestThirds = completeThirds.slice(0, 8).map(t => t.team);
   const allGroupsComplete = completedGroups.size === Object.keys(GROUPS).length;
+
+  // Build Annex C mapping from the current best-8 thirds across all groups
+  // (provisional during the group stage; confirmed once all 12 groups are done)
+  const top8Groups = allCurrentThirds.slice(0, 8).map(t => t.group).sort();
+  const comboKey = top8Groups.join('');
+  const annexCMapping: Record<string, string> =
+    top8Groups.length === 8
+      ? (ANNEX_C_MATRIX[comboKey] ?? buildFallbackAnnexC(top8Groups))
+      : {};
 
   const matchWinners = new Map<string, Team>();
   const resolvedMatchTeams = new Map<string, { homeTeam: Team; awayTeam: Team }>();
 
   // Partial ktm used by resolveR32Teams — new maps start empty but that's fine
   const partialKtm: KnockoutTeamMap = {
-    bySlot, bestThirds, completedGroups, allGroupsComplete,
+    bySlot, bestThirds, thirdsByGroup, annexCMapping,
+    completedGroups, allGroupsComplete,
     matchWinners, resolvedMatchTeams,
   };
 
@@ -253,7 +327,7 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
     }
   }
 
-  return { bySlot, bestThirds, completedGroups, allGroupsComplete, matchWinners, resolvedMatchTeams };
+  return { bySlot, bestThirds, thirdsByGroup, annexCMapping, completedGroups, allGroupsComplete, matchWinners, resolvedMatchTeams };
 }
 
 /**
@@ -271,10 +345,11 @@ export function resolveR32Teams(
 
   const resolveKey = (key: string, matchId: string): Team | null => {
     if (key === 'BEST3RD') {
-      const idx = BEST3RD_IDX[matchId] ?? -1;
-      // Only show best thirds once ALL groups are complete (assignment is total ordering)
+      // Bracket card only shows confirmed team once ALL groups are done
       if (!ktm.allGroupsComplete) return null;
-      return ktm.bestThirds[idx] ?? null;
+      const sourceGroup = ktm.annexCMapping[matchId];
+      if (!sourceGroup) return null;
+      return ktm.thirdsByGroup.get(sourceGroup) ?? null;
     }
     return ktm.bySlot.get(key) ?? null;
   };

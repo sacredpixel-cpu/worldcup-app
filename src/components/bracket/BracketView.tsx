@@ -149,21 +149,16 @@ interface CardCandidates {
 function slotKeyCandidates(
   key: string,
   groupStandingsMap: Map<string, { standings: GroupStanding[]; complete: boolean }>,
+  matchId: string,
+  annexCMapping: Record<string, string>,
 ): TeamCandidate[] {
   if (key === 'BEST3RD') {
-    const thirds: Array<{ team: Team; pts: number; gd: number; gf: number }> = [];
-    for (const { standings } of groupStandingsMap.values()) {
-      if (standings[2]) {
-        const s = standings[2];
-        thirds.push({ team: s.team, pts: s.pts, gd: s.gf - s.ga, gf: s.gf });
-      }
-    }
-    thirds.sort((a, b) => b.pts !== a.pts ? b.pts - a.pts : b.gd !== a.gd ? b.gd - a.gd : b.gf - a.gf);
-    const hasActivity = thirds.some(t => t.pts > 0 || t.gf > 0);
-    return thirds.slice(0, 4).map((t, i) => ({
-      team: t.team,
-      confidence: (hasActivity && i === 0) ? 'likely' : 'possible',
-    }));
+    // Use Annex C to show the single provisionally-assigned group's current 3rd-place team
+    const sourceGroup = annexCMapping[matchId];
+    if (!sourceGroup) return [];
+    const result = groupStandingsMap.get(sourceGroup);
+    if (!result || !result.standings[2]) return [];
+    return [{ team: result.standings[2].team, confidence: result.complete ? 'likely' : 'possible' }];
   }
 
   const dashIdx   = key.indexOf('-');
@@ -190,12 +185,13 @@ function slotKeyCandidates(
 function computeR32Candidates(
   matchId: string,
   groupStandingsMap: Map<string, { standings: GroupStanding[]; complete: boolean }>,
+  annexCMapping: Record<string, string>,
 ): CardCandidates | null {
   const slots = R32_TEAM_SLOTS[matchId];
   if (!slots) return null;
   return {
-    home: slotKeyCandidates(slots[0], groupStandingsMap),
-    away: slotKeyCandidates(slots[1], groupStandingsMap),
+    home: slotKeyCandidates(slots[0], groupStandingsMap, matchId, annexCMapping),
+    away: slotKeyCandidates(slots[1], groupStandingsMap, matchId, annexCMapping),
   };
 }
 
@@ -835,7 +831,7 @@ export function BracketView() {
             {BRACKET_ROUNDS.map((round, r) =>
               (matchesByStage[round.stage] ?? []).map((match, i) => {
                 const candidates = round.stage === 'round-of-32'
-                  ? computeR32Candidates(match.id, groupStandingsMap) ?? undefined
+                  ? computeR32Candidates(match.id, groupStandingsMap, ktm.annexCMapping) ?? undefined
                   : round.stage === 'round-of-16'
                   ? computeR16Candidates(match.id, ktm) ?? undefined
                   : undefined;
