@@ -47,8 +47,9 @@ export const useMatchesStore = create<MatchesState>()((set, get) => ({
     if (update.goalScorerEvents && update.goalScorerEvents.length > 0) {
       const home: string[] = [];
       const away: string[] = [];
+      const homeCode = update.homeTeamCode ?? match.homeTeam.code;
       for (const ev of update.goalScorerEvents) {
-        const list = ev.teamCode === match.homeTeam.code ? home : away;
+        const list = ev.teamCode === homeCode ? home : away;
         for (let i = 0; i < ev.goals; i++) list.push(ev.player);
       }
       if (home.length > 0) homeScorers = home;
