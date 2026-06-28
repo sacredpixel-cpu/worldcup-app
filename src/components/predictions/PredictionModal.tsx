@@ -400,11 +400,14 @@ interface PredictionModalProps {
   open: boolean;
   onClose: () => void;
   onFirstEverPrediction?: () => void;
+  onFirstKnockoutPrediction?: () => void;
 }
 
-const FIRST_EVER_KEY = 'wc2026_first_match_done';
+const FIRST_EVER_KEY     = 'wc2026_first_match_done';
+const FIRST_KNOCKOUT_KEY = 'wc2026_first_knockout_done';
+const KNOCKOUT_STAGES    = new Set(['round-of-32', 'round-of-16', 'quarter-final', 'semi-final', 'third-place', 'final']);
 
-export function PredictionModal({ match, userId, existing, open, onClose, onFirstEverPrediction }: PredictionModalProps) {
+export function PredictionModal({ match, userId, existing, open, onClose, onFirstEverPrediction, onFirstKnockoutPrediction }: PredictionModalProps) {
   const { setDraft, submitPrediction } = usePredictionsStore();
 
   const isFirstUse = !existing;
@@ -422,6 +425,8 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
   const [justSaved,  setJustSaved]  = useState<Prediction | null>(null);
   // true when this is the user's very first ever prediction (drives post-close popup)
   const [isFirstEver, setIsFirstEver] = useState(false);
+  // true when this is the user's first ever knockout prediction
+  const [isFirstKnockout, setIsFirstKnockout] = useState(false);
   // brief "Saved ✓" flash for return-user saves
   const [savedFlash, setSavedFlash] = useState(false);
 
@@ -498,6 +503,12 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
     // Push to draft store then commit
     setDraft(match.id, finalHome, finalAway, homePicks, awayPicks);
     const saved = submitPrediction(match.id, userId);
+    const isKnockout = KNOCKOUT_STAGES.has(match.stage);
+    const firstKnockout = isKnockout && typeof window !== 'undefined' && !localStorage.getItem(FIRST_KNOCKOUT_KEY);
+    if (firstKnockout) {
+      localStorage.setItem(FIRST_KNOCKOUT_KEY, '1');
+      setIsFirstKnockout(true);
+    }
     if (isFirstUse) {
       // Detect very first prediction ever across all matches
       const firstEver = typeof window !== 'undefined' && !localStorage.getItem(FIRST_EVER_KEY);
@@ -510,7 +521,11 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
     } else {
       // Flash "Saved ✓" briefly before closing so the user gets clear feedback
       setSavedFlash(true);
-      setTimeout(() => { setSavedFlash(false); onClose(); }, 900);
+      setTimeout(() => {
+        setSavedFlash(false);
+        if (firstKnockout && onFirstKnockoutPrediction) onFirstKnockoutPrediction();
+        onClose();
+      }, 900);
     }
   }
 
@@ -532,6 +547,7 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
         <button
           onClick={() => {
             if (isFirstEver && onFirstEverPrediction) onFirstEverPrediction();
+            if (isFirstKnockout && onFirstKnockoutPrediction) onFirstKnockoutPrediction();
             onClose();
           }}
           style={{ width: '100%', padding: '14px 0', borderRadius: 14, fontSize: 15, fontWeight: 700, background: '#FF1F8E', color: '#fff', border: 'none' }}

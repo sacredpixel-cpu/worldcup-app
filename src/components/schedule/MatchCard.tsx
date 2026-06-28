@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { FlagImage } from '@/components/ui/FlagImage';
 import { PredictionModal } from '@/components/predictions/PredictionModal';
 import { FirstPredictionModal } from '@/components/predictions/FirstPredictionModal';
+import { KnockoutRulesModal } from '@/components/predictions/KnockoutRulesModal';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 import { formatKickoff } from '@/lib/utils/formatDate';
@@ -119,6 +120,7 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
   // Stats panel: open by default when live, closed by default when finished
   const [statsOpen, setStatsOpen] = useState(() => isLive);
   const [showFirstPrediction, setShowFirstPrediction] = useState(false);
+  const [showKnockoutRules, setShowKnockoutRules] = useState(false);
 
   // Auto-collapse stats when match transitions from live → finished
   useEffect(() => {
@@ -564,10 +566,15 @@ export function MatchCard({ match, userPrediction, allUserPredictions, isAuthent
             open={modalOpen}
             onClose={() => setModalOpen(false)}
             onFirstEverPrediction={() => setShowFirstPrediction(true)}
+            onFirstKnockoutPrediction={() => setShowKnockoutRules(true)}
           />
           <FirstPredictionModal
             open={showFirstPrediction}
             onClose={() => setShowFirstPrediction(false)}
+          />
+          <KnockoutRulesModal
+            open={showKnockoutRules}
+            onClose={() => setShowKnockoutRules(false)}
           />
         </>
       )}
