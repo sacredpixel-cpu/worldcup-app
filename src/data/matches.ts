@@ -140,23 +140,23 @@ function tbd(id: string, stage: Match['stage'], kickoffUTC: string, venue: strin
 }
 
 export const KNOCKOUT_MATCHES: Match[] = [
-  // Round of 32  (Jun 28 – Jul 3) — official 2026 FIFA World Cup schedule
-  tbd('R32-01', 'round-of-32', '2026-06-28T22:00:00Z', 'SoFi Stadium',            'Inglewood, CA'),       // R/U A vs R/U B
-  tbd('R32-02', 'round-of-32', '2026-06-29T19:00:00Z', 'Gillette Stadium',        'Foxborough, MA'),      // W E vs Best 3rd
-  tbd('R32-03', 'round-of-32', '2026-06-29T21:00:00Z', 'Estadio BBVA',            'Guadalupe, Mexico'),   // W F vs R/U C
-  tbd('R32-04', 'round-of-32', '2026-06-29T23:00:00Z', 'NRG Stadium',             'Houston, TX'),         // W C vs R/U F
-  m('R32-05', 'round-of-32', FRA, SWE,                  '2026-06-30T19:00:00Z', 'MetLife Stadium',         'East Rutherford, NJ'), // W I (FRA) vs Best 3rd (SWE)
-  tbd('R32-06', 'round-of-32', '2026-06-30T21:00:00Z', 'AT&T Stadium',            'Arlington, TX'),       // R/U E vs R/U I
-  m('R32-07', 'round-of-32', MEX, ECU,                  '2026-06-30T23:00:00Z', 'Estadio Azteca',          'Mexico City, Mexico'), // W A (MEX) vs Best 3rd (ECU)
-  tbd('R32-08', 'round-of-32', '2026-07-01T19:00:00Z', 'Mercedes-Benz Stadium',   'Atlanta, GA'),         // W L vs Best 3rd
-  tbd('R32-09', 'round-of-32', '2026-07-01T21:00:00Z', "Levi's Stadium",          'Santa Clara, CA'),     // W D vs Best 3rd
-  tbd('R32-10', 'round-of-32', '2026-07-01T23:00:00Z', 'Lumen Field',             'Seattle, WA'),         // W G vs Best 3rd
-  tbd('R32-11', 'round-of-32', '2026-07-02T19:00:00Z', 'BMO Field',               'Toronto, Canada'),     // R/U K vs R/U L
-  tbd('R32-12', 'round-of-32', '2026-07-02T21:00:00Z', 'SoFi Stadium',            'Inglewood, CA'),       // W H vs R/U J
-  tbd('R32-13', 'round-of-32', '2026-07-02T23:00:00Z', 'BC Place',                'Vancouver, Canada'),   // W B vs Best 3rd
-  tbd('R32-14', 'round-of-32', '2026-07-03T19:00:00Z', 'Hard Rock Stadium',       'Miami Gardens, FL'),   // W J vs R/U H
-  tbd('R32-15', 'round-of-32', '2026-07-03T21:00:00Z', 'Arrowhead Stadium',       'Kansas City, MO'),     // W K vs Best 3rd
-  tbd('R32-16', 'round-of-32', '2026-07-03T23:00:00Z', 'AT&T Stadium',            'Arlington, TX'),       // R/U D vs R/U G
+  // Round of 32  (Jun 28 – Jul 3) — confirmed 2026 FIFA World Cup bracket
+  m('R32-01', 'round-of-32', ZAF, CAN, '2026-06-28T22:00:00Z', 'SoFi Stadium',            'Inglewood, CA'),
+  m('R32-02', 'round-of-32', DEU, PRY, '2026-06-29T19:00:00Z', 'Gillette Stadium',        'Foxborough, MA'),
+  m('R32-03', 'round-of-32', NLD, MAR, '2026-06-29T21:00:00Z', 'Estadio BBVA',            'Guadalupe, Mexico'),
+  m('R32-04', 'round-of-32', BRA, JPN, '2026-06-29T23:00:00Z', 'NRG Stadium',             'Houston, TX'),
+  m('R32-05', 'round-of-32', FRA, SWE, '2026-06-30T19:00:00Z', 'MetLife Stadium',         'East Rutherford, NJ'),
+  m('R32-06', 'round-of-32', CIV, NOR, '2026-06-30T21:00:00Z', 'AT&T Stadium',            'Arlington, TX'),
+  m('R32-07', 'round-of-32', MEX, ECU, '2026-06-30T23:00:00Z', 'Estadio Azteca',          'Mexico City, Mexico'),
+  m('R32-08', 'round-of-32', ENG, COD, '2026-07-01T19:00:00Z', 'Mercedes-Benz Stadium',   'Atlanta, GA'),
+  m('R32-09', 'round-of-32', USA, BIH, '2026-07-01T21:00:00Z', "Levi's Stadium",          'Santa Clara, CA'),
+  m('R32-10', 'round-of-32', BEL, SEN, '2026-07-01T23:00:00Z', 'Lumen Field',             'Seattle, WA'),
+  m('R32-11', 'round-of-32', PRT, HRV, '2026-07-02T19:00:00Z', 'BMO Field',               'Toronto, Canada'),
+  m('R32-12', 'round-of-32', ESP, AUT, '2026-07-02T21:00:00Z', 'SoFi Stadium',            'Inglewood, CA'),
+  m('R32-13', 'round-of-32', CHE, DZA, '2026-07-02T23:00:00Z', 'BC Place',                'Vancouver, Canada'),
+  m('R32-14', 'round-of-32', ARG, CPV, '2026-07-03T19:00:00Z', 'Hard Rock Stadium',       'Miami Gardens, FL'),
+  m('R32-15', 'round-of-32', COL, GHA, '2026-07-03T21:00:00Z', 'Arrowhead Stadium',       'Kansas City, MO'),
+  m('R32-16', 'round-of-32', AUS, EGY, '2026-07-03T23:00:00Z', 'AT&T Stadium',            'Arlington, TX'),
 
   // Round of 16  (Jul 4–7)
   tbd('R16-01', 'round-of-16', '2026-07-04T19:00:00Z', 'Lincoln Financial Field', 'Philadelphia, PA'),    // W R32-02 vs W R32-05
