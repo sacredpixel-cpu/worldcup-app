@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getPrediction } from '@/lib/predictionsService';
 import { useAuthStore } from '@/store';
+import { teamDisplayCode } from '@/lib/utils/teamDisplayCode';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
 
@@ -94,8 +95,8 @@ export function BragCardClient({
   const stmt = (() => {
     if (cardType === 'perfect') return { s1: 'I PREDICTED THE', s2: 'EXACT FINAL', s3: 'SCORE' };
     if (predOutcome === 0)      return { s1: 'I PREDICTED', s2: 'IT ENDS IN', s3: 'A DRAW' };
-    const winner = predOutcome > 0 ? match.homeTeam.name : match.awayTeam.name;
-    return { s1: 'I PREDICTED', s2: `${winner.toUpperCase()} WOULD`, s3: 'WIN' };
+    const winner = teamDisplayCode(predOutcome > 0 ? match.homeTeam.name : match.awayTeam.name);
+    return { s1: 'I PREDICTED', s2: `${winner} WOULD`, s3: 'WIN' };
   })();
 
   const homeFlag = match.homeTeam.flagUrl.replace('/w40/', '/w80/');
@@ -254,7 +255,7 @@ export function BragCardClient({
                 fontSize: 19, color: '#FFFFFF',
                 letterSpacing: '0.08em', textTransform: 'uppercase',
               }}>
-                {match.homeTeam.name}
+                {teamDisplayCode(match.homeTeam.name)}
               </span>
             </div>
 
@@ -286,7 +287,7 @@ export function BragCardClient({
                 fontSize: 19, color: '#FFFFFF',
                 letterSpacing: '0.08em', textTransform: 'uppercase',
               }}>
-                {match.awayTeam.name}
+                {teamDisplayCode(match.awayTeam.name)}
               </span>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { ALL_MATCHES } from '@/data/matches';
+import { teamDisplayCode } from '@/lib/utils/teamDisplayCode';
 import fs from 'fs';
 import path from 'path';
 
@@ -70,8 +71,8 @@ export async function GET(request: NextRequest) {
   } else if (predOutcome === 0) {
     stmt1 = 'I PREDICTED'; stmt2 = 'IT ENDS IN'; stmt3 = 'A DRAW';
   } else {
-    const winner = predOutcome > 0 ? match.homeTeam.name : match.awayTeam.name;
-    stmt1 = 'I PREDICTED'; stmt2 = `${winner.toUpperCase()} WOULD`; stmt3 = 'WIN';
+    const winner = teamDisplayCode(predOutcome > 0 ? match.homeTeam.name : match.awayTeam.name);
+    stmt1 = 'I PREDICTED'; stmt2 = `${winner} WOULD`; stmt3 = 'WIN';
   }
 
   const kickoff = new Date(match.kickoffAt);
@@ -144,14 +145,14 @@ export async function GET(request: NextRequest) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <div style={{ background: 'rgba(4,10,18,0.80)', borderRadius: 14, border: `2px solid ${accent}`, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
               {homeFlag && <img src={homeFlag} width={54} height={36} style={{ objectFit: 'cover', borderRadius: 3 }} alt="" />}
-              <div style={{ fontSize: 30, fontWeight: 800, color: '#FFFFFF', display: 'flex' }}>{match.homeTeam.name}</div>
+              <div style={{ fontSize: 30, fontWeight: 800, color: '#FFFFFF', display: 'flex' }}>{teamDisplayCode(match.homeTeam.name)}</div>
             </div>
             <div style={{ fontSize: 88, fontWeight: 900, color: scoreColor, minWidth: 100, textAlign: 'center', lineHeight: 1, display: 'flex', justifyContent: 'center' }}>
               {`${h}–${a}`}
             </div>
             <div style={{ background: 'rgba(4,10,18,0.80)', borderRadius: 14, border: `2px solid ${accent}`, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
               {awayFlag && <img src={awayFlag} width={54} height={36} style={{ objectFit: 'cover', borderRadius: 3 }} alt="" />}
-              <div style={{ fontSize: 30, fontWeight: 800, color: '#FFFFFF', display: 'flex' }}>{match.awayTeam.name}</div>
+              <div style={{ fontSize: 30, fontWeight: 800, color: '#FFFFFF', display: 'flex' }}>{teamDisplayCode(match.awayTeam.name)}</div>
             </div>
           </div>
         </div>
