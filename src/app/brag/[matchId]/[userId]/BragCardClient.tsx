@@ -95,8 +95,8 @@ export function BragCardClient({
   const stmt = (() => {
     if (cardType === 'perfect') return { s1: 'I PREDICTED THE', s2: 'EXACT FINAL', s3: 'SCORE' };
     if (predOutcome === 0)      return { s1: 'I PREDICTED', s2: 'IT ENDS IN', s3: 'A DRAW' };
-    const winner = teamDisplayCode(predOutcome > 0 ? match.homeTeam.name : match.awayTeam.name);
-    return { s1: 'I PREDICTED', s2: `${winner} WOULD`, s3: 'WIN' };
+    const winner = predOutcome > 0 ? match.homeTeam.name : match.awayTeam.name;
+    return { s1: 'I PREDICTED', s2: `${winner.toUpperCase()} WOULD`, s3: 'WIN' };
   })();
 
   const homeFlag = match.homeTeam.flagUrl.replace('/w40/', '/w80/');

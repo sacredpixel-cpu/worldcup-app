@@ -71,8 +71,8 @@ export async function GET(request: NextRequest) {
   } else if (predOutcome === 0) {
     stmt1 = 'I PREDICTED'; stmt2 = 'IT ENDS IN'; stmt3 = 'A DRAW';
   } else {
-    const winner = teamDisplayCode(predOutcome > 0 ? match.homeTeam.name : match.awayTeam.name);
-    stmt1 = 'I PREDICTED'; stmt2 = `${winner} WOULD`; stmt3 = 'WIN';
+    const winner = predOutcome > 0 ? match.homeTeam.name : match.awayTeam.name;
+    stmt1 = 'I PREDICTED'; stmt2 = `${winner.toUpperCase()} WOULD`; stmt3 = 'WIN';
   }
 
   const kickoff = new Date(match.kickoffAt);
