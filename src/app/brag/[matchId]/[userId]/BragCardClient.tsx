@@ -54,7 +54,6 @@ export function BragCardClient({
 
   const [pred, setPred] = useState<Prediction | null>(null);
   const [copied, setCopied] = useState(false);
-  const [sharing, setSharing] = useState(false);
 
   // Apply hex pattern to the card background overlay
   useEffect(() => {
@@ -126,36 +125,6 @@ export function BragCardClient({
       window.open(ogImgUrl, '_blank');
     }
   }, [ogImgUrl, matchId]);
-
-  const shareNative = useCallback(async () => {
-    setSharing(true);
-    try {
-      // Try sharing the actual image file (enables Instagram Stories on mobile)
-      const res  = await fetch(ogImgUrl);
-      const blob = await res.blob();
-      const file = new File([blob], 'worldcup-brag.png', { type: 'image/png' });
-
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: shareTitle, text: shareText });
-      } else if (navigator.share) {
-        await navigator.share({ title: shareTitle, text: shareText, url: pageUrl });
-      } else {
-        window.open(
-          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`,
-          '_blank', 'width=600,height=400,noopener,noreferrer',
-        );
-      }
-    } catch (e) {
-      if ((e as Error).name !== 'AbortError') {
-        // If image fetch fails, fall back to URL-only share
-        try {
-          await navigator.share?.({ title: shareTitle, text: shareText, url: pageUrl });
-        } catch {}
-      }
-    } finally {
-      setSharing(false);
-    }
-  }, [ogImgUrl, shareTitle, shareText, pageUrl]);
 
   const shareToInstagram = useCallback(async () => {
     try {
@@ -401,25 +370,25 @@ export function BragCardClient({
                     Total pts
                   </div>
                 </div>
-                {user?.globalRank && (
+                {user?.r32Rank && (
                   <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.07)' }} />
                 )}
               </>
             )}
-            {user?.globalRank && (
+            {user?.r32Rank && (
               <div style={{ flex: 1, textAlign: 'center', padding: '0 4px' }}>
                 <div style={{
                   fontFamily: 'var(--font-barlow-condensed)',
                   fontSize: 26, color: '#FFFFFF', lineHeight: 1,
                 }}>
-                  #{user.globalRank}
+                  #{user.r32Rank}
                 </div>
                 <div style={{
                   fontSize: 10, color: '#3D6580',
                   letterSpacing: '0.14em', textTransform: 'uppercase',
                   marginTop: 3, fontWeight: 700,
                 }}>
-                  Global rank
+                  Rank
                 </div>
               </div>
             )}
@@ -451,31 +420,6 @@ export function BragCardClient({
         <p style={{ fontSize: 13, fontWeight: 600, color: '#E8F0FF', margin: '0 0 0.875rem' }}>
           Share your result
         </p>
-
-        {/* Primary share button */}
-        <button
-          onClick={shareNative}
-          disabled={sharing}
-          style={{
-            width: '100%', background: '#FF4DA8', border: 'none',
-            borderRadius: 12, padding: '15px 0', fontSize: 15, fontWeight: 700,
-            color: '#06091A', cursor: sharing ? 'default' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            marginBottom: '1rem', opacity: sharing ? 0.7 : 1,
-            transition: 'opacity 0.15s',
-          }}
-        >
-          {sharing ? 'Opening…' : '🏆 Brag on socials'}
-        </button>
-
-        {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem' }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>
-            or share directly to
-          </span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
-        </div>
 
         {/* 2×2 grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>

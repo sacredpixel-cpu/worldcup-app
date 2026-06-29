@@ -251,7 +251,7 @@ function LeaderboardRow({ entry, rank, isMe, profile, onClick }: { entry: Leader
 // ─── Main content ─────────────────────────────────────────────────────────────
 
 function LeaderboardContent() {
-  const { user } = useAuthStore();
+  const { user, setR32Rank } = useAuthStore();
   const { saved } = usePredictionsStore();
   const { getLiveMatch, updates } = useMatchesStore();
   const [tab, setTab] = useState<'round32' | 'global'>('round32');
@@ -451,6 +451,12 @@ function LeaderboardContent() {
 
   const board = tab === 'round32' ? r32Board : globalBoard;
   const userRank = user ? board.findIndex(e => e.userId === user.id) + 1 : -1;
+
+  // Keep r32Rank in the auth store so the brag card can show it without reloading everything
+  const r32UserRank = user ? r32Board.findIndex(e => e.userId === user.id) + 1 : -1;
+  useEffect(() => {
+    setR32Rank(r32UserRank > 0 ? r32UserRank : null);
+  }, [r32UserRank, setR32Rank]);
 
   return (
     <div className="flex flex-col">

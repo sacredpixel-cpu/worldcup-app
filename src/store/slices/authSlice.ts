@@ -25,6 +25,7 @@ interface AuthState {
   updateDisplayName: (name: string) => void;
   updateLocation: (country: string, countryCode: string, state?: string) => void;
   loadProfileFromFirestore: (userId: string) => Promise<void>;
+  setR32Rank: (rank: number | null) => void;
 }
 
 const safeStorage = typeof window !== 'undefined'
@@ -129,6 +130,12 @@ export const useAuthStore = create<AuthState>()(
         } catch (e) {
           console.error('loadProfileFromFirestore', e);
         }
+      },
+
+      setR32Rank: (rank) => {
+        const { user } = get();
+        if (!user) return;
+        set({ user: { ...user, r32Rank: rank } });
       },
 
       updateLocation: (country, countryCode, state) => {
