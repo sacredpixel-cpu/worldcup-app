@@ -23,6 +23,7 @@ import { PredictionsSync } from '@/components/PredictionsSync';
 import { MatchUpdatesSync } from '@/components/MatchUpdatesSync';
 import { ForegroundNotifications } from '@/components/ForegroundNotifications';
 import { Rd32Modal } from '@/components/Rd32Modal';
+import { BragCardAutoPopup } from '@/components/BragCardAutoPopup';
 
 export const metadata: Metadata = {
   title: 'World Cup 2026',
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <FirebaseAuthSync />
             <PredictionsSync />
             <MatchUpdatesSync />
+            <BragCardAutoPopup />
             <ForegroundNotifications />
             <AuthBanner />
             <main className="flex-1 overflow-y-auto pb-[72px]">
