@@ -59,7 +59,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
+      images: [{ url: imageUrl, width: 1080, height: 1350, alt: title }],
       siteName: 'MyWorldCupSchedule.com',
       type: 'website',
     },
