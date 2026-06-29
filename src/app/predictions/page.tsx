@@ -348,6 +348,27 @@ function GroupCard({ letter, saved, pointsResult, advancingThirdIds }: {
                               </span>
                             </div>
                           )}
+                          {isFinished && pred && user && (() => {
+                            const gs = getGradingScore(m);
+                            if (!gs) return null;
+                            const ph = pred.homeScore!, pa = pred.awayScore!;
+                            const isCorrect = Math.sign(ph - pa) === Math.sign(gs.homeScore - gs.awayScore);
+                            if (!isCorrect) return null;
+                            const isPerfect = ph === gs.homeScore && pa === gs.awayScore;
+                            const bragUrl = `/brag/${m.id}/${user.id}?h=${gs.homeScore}&a=${gs.awayScore}&ph=${ph}&pa=${pa}`;
+                            return (
+                              <Link
+                                href={bragUrl}
+                                target="_blank"
+                                className="flex items-center justify-center gap-1.5 w-full py-2 text-[11px] font-bold tracking-wide transition-opacity active:opacity-70"
+                                style={{ background: isPerfect ? 'rgba(255,77,168,0.15)' : 'rgba(29,158,117,0.15)', color: isPerfect ? '#FF4DA8' : '#1D9E75', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                              >
+                                <span>🏆</span>
+                                <span>Share your brag card</span>
+                                <span style={{ fontSize: 9, opacity: 0.7 }}>↗</span>
+                              </Link>
+                            );
+                          })()}
                         </>
                       ) : (
                         <p className="px-3 py-2 text-[10px] text-center" style={{ color: '#5A6E94' }}>No prediction made for this match</p>

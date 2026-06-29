@@ -737,6 +737,27 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
                     <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#7A91BB' }}>Points Earned</span>
                     <span className="text-2xl font-black" style={{ fontFamily: 'var(--font-barlow-condensed)', color: ptColor }}>{ptLabel}</span>
                   </div>
+                  {(() => {
+                    const h = gradingScore.homeScore, a = gradingScore.awayScore;
+                    const ph = existing.homeScore!, pa = existing.awayScore!;
+                    const isCorrect = Math.sign(ph - pa) === Math.sign(h - a);
+                    if (!isCorrect) return null;
+                    const bragUrl = `/brag/${match.id}/${userId}?h=${h}&a=${a}&ph=${ph}&pa=${pa}`;
+                    const isPerfect = ph === h && pa === a;
+                    return (
+                      <a
+                        href={bragUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 font-bold text-sm tracking-wide transition-opacity active:opacity-70"
+                        style={{ background: isPerfect ? '#FF4DA8' : '#1D9E75', color: '#FFFFFF', borderTop: '1px solid rgba(255,255,255,0.08)' }}
+                      >
+                        <span>🏆</span>
+                        <span>Share your brag card</span>
+                        <span style={{ fontSize: 10, opacity: 0.8 }}>↗</span>
+                      </a>
+                    );
+                  })()}
                 </div>
               );
             })()}
