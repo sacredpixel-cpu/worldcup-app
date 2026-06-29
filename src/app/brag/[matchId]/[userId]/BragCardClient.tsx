@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getPrediction } from '@/lib/predictionsService';
 import { useAuthStore } from '@/store';
+import { usePredictionsStore } from '@/store/slices/predictionsSlice';
+import { useMatchesStore } from '@/store/slices/matchesSlice';
+import { ALL_MATCHES } from '@/data/matches';
+import { calcPoints } from '@/lib/utils/calcPoints';
 import { teamDisplayCode } from '@/lib/utils/teamDisplayCode';
 import type { Match } from '@/types/match';
 import type { Prediction } from '@/types/prediction';
@@ -47,6 +51,8 @@ export function BragCardClient({
 }) {
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
+  const { saved } = usePredictionsStore();
+  const { getLiveMatch, updates } = useMatchesStore();
 
   const urlH  = searchParams.get('h');
   const urlA  = searchParams.get('a');
@@ -88,7 +94,28 @@ export function BragCardClient({
 
   const accent     = cardType === 'perfect' ? '#FF4DA8' : '#1D9E75';
   const scoreColor = cardType === 'perfect' ? '#FF4DA8' : '#FFFFFF';
-  const pts        = pred?.pointsEarned ?? null;
+
+  // Compute match points directly — same as AuthBanner/leaderboard, not from stored pointsEarned
+  const pts = useMemo(() => {
+    if (actualH === null || actualA === null || predH === null || predA === null) return null;
+    const prediction = pred ?? { homeScore: predH, awayScore: predA, homeScorerPicks: [], awayScorerPicks: [], matchId };
+    return calcPoints(prediction as Prediction, {
+      homeScore: actualH, awayScore: actualA,
+      homeScorers: match.homeScorers, awayScorers: match.awayScorers,
+    });
+  }, [actualH, actualA, predH, predA, pred, match.homeScorers, match.awayScorers, matchId]);
+
+  // Compute total points across all finished matches — mirrors AuthBanner logic
+  const totalPts = useMemo(() => {
+    if (!user) return null;
+    const finished = ALL_MATCHES.map(getLiveMatch).filter(m => m.status === 'finished' && m.homeScore !== null);
+    return finished.reduce((sum, m) => {
+      const p = saved[m.id];
+      if (!p) return sum;
+      return sum + calcPoints(p, { homeScore: m.homeScore!, awayScore: m.awayScore!, homeScorers: m.homeScorers, awayScorers: m.awayScorers });
+    }, 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, saved, updates]);
 
   // Statement text
   const predOutcome = predH !== null && predA !== null ? Math.sign(predH - predA) : 0;
@@ -354,14 +381,14 @@ export function BragCardClient({
                 <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.07)' }} />
               </>
             )}
-            {user?.totalPoints !== undefined && (
+            {totalPts !== null && (
               <>
                 <div style={{ flex: 1, textAlign: 'center', padding: '0 4px' }}>
                   <div style={{
                     fontFamily: 'var(--font-barlow-condensed)',
                     fontSize: 26, color: '#FFFFFF', lineHeight: 1,
                   }}>
-                    {user.totalPoints}
+                    {totalPts}
                   </div>
                   <div style={{
                     fontSize: 10, color: '#3D6580',
