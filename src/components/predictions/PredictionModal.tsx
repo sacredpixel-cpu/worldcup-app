@@ -720,7 +720,7 @@ export function PredictionModal({ match, userId, existing, open, onClose, onFirs
             {isLocked && existing && match.status === 'finished' && match.homeScore !== null && (() => {
               const gradingScore = getGradingScore(match);
               if (!gradingScore) return null;
-              const pts = calcPoints(existing, { homeScore: gradingScore.homeScore, awayScore: gradingScore.awayScore });
+              const pts = calcPoints(existing, { homeScore: gradingScore.homeScore, awayScore: gradingScore.awayScore, homeScorers: match.homeScorers, awayScorers: match.awayScorers });
               const ptColor = pts >= 3 ? '#FFB020' : pts > 0 ? '#00C44F' : pts < 0 ? '#FF4D4D' : '#7A91BB';
               const ptLabel = pts >= 6 ? `🌟 +${pts} pts` : pts >= 3 ? `⭐ +${pts} pts` : pts > 0 ? `✓ +${pts} pts` : pts < 0 ? `✗ ${pts} pts` : '✗ 0 pts';
               return (
