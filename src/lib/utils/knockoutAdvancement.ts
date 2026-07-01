@@ -11,9 +11,20 @@
  *   const resolved = resolveMatchTeams(match, ktm);
  */
 
-import { GROUP_STAGE_MATCHES } from '@/data/matches';
+import { GROUP_STAGE_MATCHES, KNOCKOUT_MATCHES } from '@/data/matches';
 import { GROUPS } from '@/data/teams';
 import type { Match, Team } from '@/types/match';
+
+// Pre-build a lookup of static R32 match teams for fallback resolution.
+// R32 matches whose slots include BEST3RD can't be resolved from standings
+// alone until all groups finish, but the teams may already be hardcoded in
+// the static match data. We use those as a fallback so winner tracking
+// works for finished matches even while other groups are still in progress.
+const STATIC_R32: Map<string, { homeTeam: Team; awayTeam: Team }> = new Map(
+  KNOCKOUT_MATCHES
+    .filter(m => m.stage === 'round-of-32' && m.homeTeam.id !== 'tbd' && m.awayTeam.id !== 'tbd')
+    .map(m => [m.id, { homeTeam: m.homeTeam, awayTeam: m.awayTeam }]),
+);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -286,7 +297,17 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
 
   // ── Phase 2: resolve R32 teams from group standings ───────────────────────
   for (const matchId of R32_IDS) {
-    const { homeTeam, awayTeam } = resolveR32Teams(matchId, partialKtm);
+    let { homeTeam, awayTeam } = resolveR32Teams(matchId, partialKtm);
+
+    // Fallback: if slot resolution couldn't determine a team (e.g. BEST3RD slot
+    // is unresolvable while groups are in progress), use the static match data.
+    // This allows winner tracking for finished matches even before all groups end.
+    const staticTeams = STATIC_R32.get(matchId);
+    if (staticTeams) {
+      if (!homeTeam) homeTeam = staticTeams.homeTeam;
+      if (!awayTeam) awayTeam = staticTeams.awayTeam;
+    }
+
     if (!homeTeam || !awayTeam) continue;
 
     resolvedMatchTeams.set(matchId, { homeTeam, awayTeam });
