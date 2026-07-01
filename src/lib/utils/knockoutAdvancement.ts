@@ -56,6 +56,12 @@ export interface KnockoutTeamMap {
    * both feeders are known (R32 through Final).
    */
   resolvedMatchTeams: Map<string, { homeTeam: Team; awayTeam: Team }>;
+  /**
+   * Partially resolved teams for R16+ matches where at least one feeder's
+   * winner is known but the other isn't yet. Null means "still TBD."
+   * Used to show advancing teams immediately in the bracket.
+   */
+  partialMatchTeams: Map<string, { homeTeam: Team | null; awayTeam: Team | null }>;
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -287,12 +293,13 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
 
   const matchWinners = new Map<string, Team>();
   const resolvedMatchTeams = new Map<string, { homeTeam: Team; awayTeam: Team }>();
+  const partialMatchTeams = new Map<string, { homeTeam: Team | null; awayTeam: Team | null }>();
 
   // Partial ktm used by resolveR32Teams — new maps start empty but that's fine
   const partialKtm: KnockoutTeamMap = {
     bySlot, bestThirds, thirdsByGroup, annexCMapping,
     completedGroups, allGroupsComplete,
-    matchWinners, resolvedMatchTeams,
+    matchWinners, resolvedMatchTeams, partialMatchTeams,
   };
 
   // ── Phase 2: resolve R32 teams from group standings ───────────────────────
@@ -335,6 +342,14 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
 
       const homeTeam = matchWinners.get(feeders[0]) ?? null;
       const awayTeam = matchWinners.get(feeders[1]) ?? null;
+
+      // Partial resolution: show confirmed team(s) in the bracket immediately,
+      // even if the other feeder match hasn't been played yet.
+      if (homeTeam || awayTeam) {
+        partialMatchTeams.set(matchId, { homeTeam, awayTeam });
+      }
+
+      // Full resolution required for winner tracking and further cascading.
       if (!homeTeam || !awayTeam) continue;
 
       resolvedMatchTeams.set(matchId, { homeTeam, awayTeam });
@@ -352,7 +367,7 @@ export function computeKnockoutTeams(updates: MatchUpdateRecord): KnockoutTeamMa
     }
   }
 
-  return { bySlot, bestThirds, thirdsByGroup, annexCMapping, completedGroups, allGroupsComplete, matchWinners, resolvedMatchTeams };
+  return { bySlot, bestThirds, thirdsByGroup, annexCMapping, completedGroups, allGroupsComplete, matchWinners, resolvedMatchTeams, partialMatchTeams };
 }
 
 /**
@@ -408,7 +423,19 @@ export function resolveMatchTeams(match: Match, ktm: KnockoutTeamMap): Match {
     return match;
   }
 
+  // Full resolution (both feeders' winners known)
   const resolved = ktm.resolvedMatchTeams.get(match.id);
-  if (!resolved) return match;
-  return { ...match, homeTeam: resolved.homeTeam, awayTeam: resolved.awayTeam };
+  if (resolved) return { ...match, homeTeam: resolved.homeTeam, awayTeam: resolved.awayTeam };
+
+  // Partial resolution: show confirmed team(s) immediately, keep TBD for the unknown slot
+  const partial = ktm.partialMatchTeams.get(match.id);
+  if (partial) {
+    return {
+      ...match,
+      homeTeam: partial.homeTeam ?? match.homeTeam,
+      awayTeam: partial.awayTeam ?? match.awayTeam,
+    };
+  }
+
+  return match;
 }

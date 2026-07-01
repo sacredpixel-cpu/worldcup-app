@@ -667,7 +667,7 @@ export function BracketView() {
   }, [updates]);
 
   const handleMatchTap = (match: Match) => {
-    if (!user || match.homeTeam.id === 'tbd') return;
+    if (!user || match.homeTeam.id === 'tbd' || match.awayTeam.id === 'tbd') return;
     setSelectedMatch(match);
   };
 
